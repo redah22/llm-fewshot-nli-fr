@@ -1,0 +1,8 @@
+{
+  "model": "camembert-base",
+  "dataset": "gqnli_fr",
+  "train_size": 180,
+  "eval_size": 60,
+  "accuracy": 0.7833333333333333,
+  "epochs": 10
+}

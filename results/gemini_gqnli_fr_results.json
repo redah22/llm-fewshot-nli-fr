@@ -1,0 +1,14 @@
+{
+  "0-shot": {
+    "accuracy": 0.9
+  },
+  "1-shot": {
+    "accuracy": 0.45
+  },
+  "3-shot": {
+    "accuracy": 0.4
+  },
+  "5-shot": {
+    "accuracy": 0.4
+  }
+}

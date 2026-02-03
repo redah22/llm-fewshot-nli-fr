@@ -1,0 +1,101 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*.ipynb
+
+# PyCharm
+.idea/
+
+# VS Code
+.vscode/
+
+# Environment Variables
+.env
+.env.local
+configs/config.yaml
+
+# API Keys (IMPORTANT!)
+*_api_key.txt
+secrets/
+
+# Data (datasets can be large)
+data/raw/*
+data/processed/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# Models (Heavy files)
+*.bin
+*.pt
+*.pth
+*.safetensors
+checkpoints/
+models/
+!models/.gitkeep
+
+# Results & Logs
+logs/
+wandb/
+runs/
+# We keep JSON results, but ignore large logs or temp files
+results/predictions/
+results/figures/
+
+# Logs
+logs/
+*.log
+wandb/
+runs/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# LaTeX
+rapport/*.aux
+rapport/*.log
+rapport/*.out
+rapport/*.toc
+rapport/*.bbl
+rapport/*.blg
+rapport/*.synctex.gz
+rapport/*.fdb_latexmk
+rapport/*.fls
+
+# Keep .gitkeep files
+!.gitkeep

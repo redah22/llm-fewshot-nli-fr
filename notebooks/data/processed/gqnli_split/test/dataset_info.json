@@ -1,0 +1,62 @@
+{
+  "builder_name": "csv",
+  "citation": "",
+  "config_name": "default",
+  "dataset_name": "gqnli-fr",
+  "dataset_size": 103396,
+  "description": "",
+  "download_checksums": {
+    "hf://datasets/maximoss/gqnli-fr@3089f0b591628692e7c4d4122804f6995380bdad/gqnli.test.fr.tsv": {
+      "num_bytes": 95863,
+      "checksum": null
+    }
+  },
+  "download_size": 95863,
+  "features": {
+    "uid": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "premise": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "hypothesis": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "label": {
+      "dtype": "int64",
+      "_type": "Value"
+    },
+    "label_text": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "premise_original": {
+      "dtype": "string",
+      "_type": "Value"
+    },
+    "hypothesis_original": {
+      "dtype": "string",
+      "_type": "Value"
+    }
+  },
+  "homepage": "",
+  "license": "",
+  "size_in_bytes": 199259,
+  "splits": {
+    "test": {
+      "name": "test",
+      "num_bytes": 103396,
+      "num_examples": 300,
+      "dataset_name": "gqnli-fr"
+    }
+  },
+  "version": {
+    "version_str": "0.0.0",
+    "major": 0,
+    "minor": 0,
+    "patch": 0
+  }
+}

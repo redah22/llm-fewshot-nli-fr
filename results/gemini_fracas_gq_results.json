@@ -1,0 +1,18 @@
+{
+  "0-shot": {
+    "accuracy": 0.0,
+    "n_examples": 16
+  },
+  "1-shot": {
+    "accuracy": 0.0,
+    "n_examples": 16
+  },
+  "3-shot": {
+    "accuracy": 0.0,
+    "n_examples": 16
+  },
+  "5-shot": {
+    "accuracy": 0.0,
+    "n_examples": 16
+  }
+}

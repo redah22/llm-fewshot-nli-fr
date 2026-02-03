@@ -1,0 +1,109 @@
+"""
+Configuration template for the project.
+
+Copy this file to config.yaml and fill in your API keys.
+"""
+
+# API Keys (KEEP THESE SECRET!)
+api_keys:
+  openai: "YOUR_OPENAI_API_KEY_HERE"
+  google: "YOUR_GOOGLE_API_KEY_HERE"
+  mistral: "YOUR_MISTRAL_API_KEY_HERE"
+
+# Model Configurations
+models:
+  # GPT Models
+  gpt-4:
+    temperature: 0.0
+    max_tokens: 10
+    
+  gpt-4o:
+    temperature: 0.0
+    max_tokens: 10
+  
+  # Gemini Models
+  gemini-2.0-flash:
+    temperature: 0.0
+    max_tokens: 10
+    
+  # Mistral Models
+  mistral-large:
+    temperature: 0.0
+    max_tokens: 10
+  
+  # Local Models
+  camembert-base:
+    model_id: "camembert/camembert-base"
+    num_labels: 3
+    
+  camembert-xnli:
+    model_id: "BaptisteDoyen/camembert-base-xnli"  # Example, verify actual model
+    num_labels: 3
+
+# Dataset Configurations
+datasets:
+  xnli:
+    source: "huggingface"
+    name: "xnli"
+    language: "fr"
+    
+  daccord:
+    source: "local"
+    path: "data/raw/daccord"
+    
+  rte3_fr:
+    source: "local"
+    path: "data/raw/rte3_fr"
+    
+  gqnli_fr:
+    source: "local"
+    path: "data/raw/gqnli_fr"
+    
+  sick_fr:
+    source: "local"
+    path: "data/raw/sick_fr"
+    
+  lingnli_fr:
+    source: "local"
+    path: "data/raw/lingnli_fr"
+
+# Experiment Configurations
+experiments:
+  few_shot:
+    num_shots: [0, 1, 3, 5, 10]
+    selection_strategy: "stratified"  # random, stratified, diverse
+    
+  fine_tuning:
+    batch_size: 16
+    learning_rate: 2e-5
+    num_epochs: 3
+    warmup_steps: 500
+    weight_decay: 0.01
+    
+  peft:
+    method: "lora"  # lora, qlora
+    lora_r: 16
+    lora_alpha: 32
+    lora_dropout: 0.1
+    target_modules: ["query", "value"]
+
+# Evaluation
+evaluation:
+  metrics: ["accuracy", "f1_macro", "f1_micro", "confusion_matrix"]
+  batch_size: 32
+
+# Logging
+logging:
+  use_wandb: true
+  wandb_project: "ter-m1-french-nli"
+  wandb_entity: "YOUR_WANDB_ENTITY"  # Optional
+  
+  use_tensorboard: true
+  tensorboard_dir: "runs/"
+
+# Paths
+paths:
+  data_dir: "data/"
+  cache_dir: "data/cache/"
+  results_dir: "results/"
+  checkpoints_dir: "checkpoints/"

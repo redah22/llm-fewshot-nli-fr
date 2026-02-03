@@ -1,0 +1,8 @@
+{
+  "model": "camembert-base",
+  "dataset": "fracas_gq",
+  "train_size": 48,
+  "eval_size": 16,
+  "accuracy": 0.5625,
+  "epochs": 10
+}

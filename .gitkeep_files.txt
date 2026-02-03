@@ -1,0 +1,23 @@
+# Émacs et autres éditeurs
+*~
+
+# Python cache
+__pycache__/
+
+# Données
+data/raw/.gitkeep
+data/processed/.gitkeep
+data/few_shot_examples/.gitkeep
+
+# Résultats
+results/predictions/.gitkeep
+results/metrics/.gitkeep
+results/figures/.gitkeep
+
+# Init files
+src/__init__.py
+src/data/__init__.py
+src/models/__init__.py
+src/evaluation/__init__.py
+src/prompts/__init__.py
+src/experiments/__init__.py
