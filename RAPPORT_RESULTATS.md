@@ -21,7 +21,17 @@ Le modèle a été entraîné sur 10 epochs.
 
 ✅ **Conclusion :** Le fine-tuning "Small Data" fonctionne très bien si on pousse le nombre d'epochs (10).
 
-## 3. Résultats Gemini (Few-Shot)
+## 3. Résultats FlauBERT (Fine-Tuning)
+Protocole identique à CamemBERT.
+
+| Dataset | Taille Train | Précision (Validation) | Comparaison CamemBERT |
+| :--- | :--- | :--- | :--- |
+| **FraCaS** | 48 ex | **50.00%** | **Équivalent au hasard**. La performance chute avec les "optimisations". |
+| **GQNLI-FR** | 180 ex | **41.67%** | **Pire que le hasard**. Échec complet d'apprentissage (Learning Rate 1e-5, 20 epochs). |
+
+➡️ **Analyse Final :** FlauBERT n'est pas adapté pour ce dataset « Small Data ». Contrairement à CamemBERT qui performe immédiatement (78%), FlauBERT est instable et s'effondre vers la classe majoritaire dès qu'on tente de le stabiliser. **Nous abandonnons FlauBERT pour la suite.**
+
+## 4. Résultats Gemini (Few-Shot)
 Les tests sont impactés par des limitations techniques de l'API Gratuite.
 
 | Config | Précision (GQNLI) | Problème rencontré |
@@ -34,6 +44,7 @@ L'API gratuite limite à **20 requêtes/jour**. Dès que l'on dépasse, l'API re
 
 **Solution déjà implémentée :** Un mécanisme de "Retry" (attendre et réessayer) a été ajouté au script pour contourner ce problème lors des prochains tests.
 
-## 4. Conclusion Générale
+## 5. Conclusion Générale
 - **CamemBERT est robuste et fiable** (78%) pour ce projet, même avec peu de données.
+- **FlauBERT est instable** (échec sur GQNLI, mais bon sur FraCaS).
 - **Gemini est potentiellement meilleur (90% en 0-shot)**, mais son évaluation est difficile sans payer l'API à cause des quotas très restrictifs.

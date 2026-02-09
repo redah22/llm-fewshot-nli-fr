@@ -1,0 +1,8 @@
+{
+  "model": "flaubert/flaubert_base_cased",
+  "dataset": "gqnli_fr",
+  "train_size": 180,
+  "eval_size": 60,
+  "accuracy": 0.4166666666666667,
+  "epochs": 20
+}

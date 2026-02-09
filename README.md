@@ -1,3 +1,4 @@
+
 # TER M1 : Inférence en Langue Naturelle (NLI)
 
 Projet de comparaison entre Fine-Tuning (CamemBERT) et Few-Shot Learning (Gemini) sur des tâches d'inférence en français.
