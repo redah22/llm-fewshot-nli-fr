@@ -145,6 +145,7 @@ training_args = TrainingArguments(
     logging_steps=2,  # More frequent logging to monitor loss
     report_to='none',
     remove_unused_columns=False,
+    save_total_limit=1,  # Keep only the last checkpoint
 )
 
 # Trainer
