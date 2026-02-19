@@ -1,0 +1,9 @@
+{
+  "model": "camembert-base",
+  "dataset": "gqnli_fr",
+  "mode": "train_eval",
+  "training_status": "fine-tuned",
+  "eval_size": 75,
+  "accuracy": 0.37333333333333335,
+  "baseline_accuracy": 0.18666666666666668
+}

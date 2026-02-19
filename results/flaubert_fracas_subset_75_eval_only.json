@@ -1,0 +1,7 @@
+{
+  "model": "models/flaubert_gqnli_fr",
+  "dataset": "fracas_subset_75",
+  "mode": "eval_only",
+  "eval_size": 75,
+  "accuracy": 0.3333333333333333
+}
