@@ -23,16 +23,20 @@ print("="*60)
 
 # Mode selection
 print("\nQuel mode?")
-print("1. Fine-tuning + Evaluation (Default)")
+print("1. Fine-tuning + Evaluation (cross-dataset)")
 print("2. Evaluation Only (Load Checkpoint)")
-mode_choice = input("\nVotre choix (1 ou 2): ").strip()
+print("3. Fine-tuning + Evaluation (même dataset, split 70/15/15)")
+mode_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
 
 if mode_choice == "2":
     mode = "eval_only"
     print("\n🔹 Mode: Evaluation Only")
+elif mode_choice == "3":
+    mode = "same_dataset"
+    print("\n🔹 Mode: Same-Dataset Split (70% train / 15% val / 15% test)")
 else:
     mode = "train_eval"
-    print("\n🔹 Mode: Train & Eval")
+    print("\n🔹 Mode: Train & Eval (cross-dataset)")
 
 
 # ---------------------------------------------------------
@@ -44,8 +48,10 @@ def ask_dataset(type_str="l'évaluation"):
     print("1. GQNLI-FR")
     print("2. FraCaS GQ")
     print("3. FraCaS (Lignes 0-74)")
+    print("4. DACCORD")
+    print("5. RTE3-French")
     
-    c = input(f"\nVotre choix (1, 2 ou 3): ").strip()
+    c = input(f"\nVotre choix (1, 2, 3, 4 ou 5): ").strip()
     
     name = ""
     path = ""
@@ -66,6 +72,16 @@ def ask_dataset(type_str="l'évaluation"):
         path = "data/processed/fracas_subset_75"
         pkey = "premises"
         print(f"\n📊 Dataset {type_str}: FraCaS (Lignes 0-74)")
+    elif c == "4":
+        name = "daccord"
+        path = "data/processed/daccord"
+        pkey = "premise"
+        print(f"\n📊 Dataset {type_str}: DACCORD")
+    elif c == "5":
+        name = "rte3_fr"
+        path = "data/processed/rte3_fr"
+        pkey = "premise"
+        print(f"\n📊 Dataset {type_str}: RTE3-French")
     else:
         print("❌ Choix invalide!")
         exit(1)
@@ -80,6 +96,9 @@ eval_data = None
 eval_premise_key = None
 test_data = None
 
+
+# Variables for same_dataset mode
+test_dataset = None
 
 if mode == "train_eval":
     # 1. Training Dataset
@@ -100,9 +119,37 @@ if mode == "train_eval":
     except Exception as e:
         print(f"❌ Erreur chargement EVAL: {e}")
         exit(1)
-        
-    dataset_name = train_dataset_name # For checkpoint naming convention
-    
+
+    dataset_name = train_dataset_name
+
+elif mode == "same_dataset":
+    # Single dataset split into train / val / test (70 / 15 / 15)
+    eval_dataset_name, eval_path, eval_premise_key = ask_dataset("le split")
+    train_dataset_name = eval_dataset_name
+    train_premise_key = eval_premise_key
+    dataset_name = eval_dataset_name
+
+    try:
+        ds_all = DatasetDict.load_from_disk(eval_path)
+        # Concatenate all available splits to get the full dataset
+        from datasets import concatenate_datasets
+        all_splits = list(ds_all.values())
+        full_ds = concatenate_datasets(all_splits).shuffle(seed=42)
+    except Exception as e:
+        print(f"❌ Erreur chargement dataset: {e}")
+        exit(1)
+
+    n = len(full_ds)
+    n_test = max(1, int(n * 0.15))
+    n_val  = max(1, int(n * 0.15))
+    n_train = n - n_test - n_val
+
+    train_data = full_ds.select(range(n_train))
+    eval_data  = full_ds.select(range(n_train, n_train + n_val))
+    test_data  = full_ds.select(range(n_train + n_val, n))
+
+    print(f"\n✂️  Split: {n_train} train / {n_val} val / {len(test_data)} test (seed=42)")
+
 else:
     # Eval Only
     eval_dataset_name, eval_path, eval_premise_key = ask_dataset("l'évaluation")
@@ -113,11 +160,13 @@ else:
     except Exception as e:
         print(f"❌ Erreur chargement EVAL: {e}")
         exit(1)
-    
-    dataset_name = eval_dataset_name # For results naming convention
+
+    dataset_name = eval_dataset_name
 
 print(f"\nTrain: {len(train_data) if train_data else 0} exemples")
 print(f"Validation: {len(eval_data) if eval_data else 0} exemples")
+if mode == "same_dataset" and test_data is not None:
+    print(f"Test (hold-out): {len(test_data)} exemples")
 
 
 
@@ -198,16 +247,23 @@ tokenized_datasets = {}
 if train_data:
     print(f"Tokenizing TRAIN ({len(train_data)} examples using key '{train_premise_key}')")
     tokenized_datasets['train'] = train_data.map(
-        get_tokenize_function(train_premise_key), 
-        batched=True, 
+        get_tokenize_function(train_premise_key),
+        batched=True,
         remove_columns=train_data.column_names
     )
 if eval_data:
     print(f"Tokenizing EVAL ({len(eval_data)} examples using key '{eval_premise_key}')")
     tokenized_datasets['validation'] = eval_data.map(
-        get_tokenize_function(eval_premise_key), 
-        batched=True, 
+        get_tokenize_function(eval_premise_key),
+        batched=True,
         remove_columns=eval_data.column_names
+    )
+if mode == "same_dataset" and test_data is not None:
+    print(f"Tokenizing TEST ({len(test_data)} examples using key '{eval_premise_key}')")
+    tokenized_datasets['test'] = test_data.map(
+        get_tokenize_function(eval_premise_key),
+        batched=True,
+        remove_columns=test_data.column_names
     )
 
 
@@ -217,6 +273,7 @@ for split in tokenized_datasets:
 
 train_dataset = tokenized_datasets.get('train')
 eval_dataset = tokenized_datasets.get('validation')
+test_dataset = tokenized_datasets.get('test')
 
 # Métriques
 def compute_metrics(eval_pred):
@@ -259,7 +316,7 @@ from transformers import DataCollatorWithPadding
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=train_dataset if mode == "train_eval" else None,
+    train_dataset=train_dataset if mode in ("train_eval", "same_dataset") else None,
     eval_dataset=eval_dataset,
     data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
     compute_metrics=compute_metrics,
@@ -269,19 +326,20 @@ trainer = Trainer(
 # 0. Évaluation AVANT entraînement (Baseline)
 baseline_acc = None
 
-if mode == "train_eval":
+if mode in ("train_eval", "same_dataset"):
     print("\n" + "="*60)
     print("PHASE 1: BASELINE (Avant entraînement)")
     print("="*60)
+    eval_target_for_baseline = eval_dataset
     print("Évaluation du modèle 'vierge' sur le validation set...")
-    if eval_dataset:
+    if eval_target_for_baseline:
         baseline_metrics = trainer.evaluate()
         baseline_acc = baseline_metrics['eval_accuracy']
         print(f">> Précision Baseline: {baseline_acc:.2%} (Attendu: ~33% hasard)")
     else:
         print("⚠️ Pas de dataset de validation, impossible d'évaluer la baseline.")
 
-    # 1. Fine-tuning
+    # Fine-tuning
     print("\n" + "="*60)
     print("PHASE 2: FINE-TUNING")
     print("="*60)
@@ -289,74 +347,92 @@ if mode == "train_eval":
         print(f"Epochs: {training_args.num_train_epochs}")
         print(f"Batch size: {training_args.per_device_train_batch_size}")
         print(f"Learning rate: {training_args.learning_rate}")
-        
+
         trainer.train()
         print("\n✅ Fine-tuning terminé!")
-        
+
         # Sauvegarder
         print("\nSauvegarde...")
         os.makedirs(f'models/camembert_{dataset_name}', exist_ok=True)
-        # ⚠️ On save manuellement car save_strategy='no'
         trainer.save_model(f'models/camembert_{dataset_name}')
         tokenizer.save_pretrained(f'models/camembert_{dataset_name}')
         print(f"✅ Modèle: models/camembert_{dataset_name}")
     else:
         print("⚠️ Pas de dataset d'entraînement!")
 
-# Évaluation Final (Common to both modes)
+# Évaluation Finale
 print("\n" + "="*60)
 print("ÉVALUATION FINALE")
 print("="*60)
 
-if eval_dataset:
-    # DEBUG: Inspect data
+# In same_dataset mode, evaluate on the held-out test set
+# In other modes, evaluate on the validation set as before
+final_eval_dataset = test_dataset if (mode == "same_dataset" and test_dataset is not None) else eval_dataset
+final_eval_split_name = "test (hold-out)" if (mode == "same_dataset" and test_dataset is not None) else "validation"
+
+if final_eval_dataset:
+    print(f"\n📋 Évaluation sur le set: {final_eval_split_name} ({len(final_eval_dataset)} exemples)")
+
+    # Pour évaluer sur le test set en mode same_dataset, on remplace temporairement
+    # le eval_dataset du Trainer
+    if mode == "same_dataset" and test_dataset is not None:
+        trainer.eval_dataset = test_dataset
+
+    # DEBUG: Inspect first 5 examples
     print("\n🔍 DEBUG: Inspecting first 5 examples...")
-    for i in range(min(5, len(eval_dataset))):
-        example = eval_dataset[i]
+    for i in range(min(5, len(final_eval_dataset))):
+        example = final_eval_dataset[i]
         input_ids = example['input_ids']
         label = example['labels']
         decoded = tokenizer.decode(input_ids)
         print(f"\nExample {i}:")
         print(f"  Label (Int): {label}")
-        print(f"  Text: {decoded[:200]}...") # Truncate for readability
-        
-        # Predict validation
+        print(f"  Text: {decoded[:200]}...")
+
         with torch.no_grad():
-            outputs = model(input_ids.unsqueeze(0).to(model.device), attention_mask=example['attention_mask'].unsqueeze(0).to(model.device))
+            outputs = model(
+                input_ids.unsqueeze(0).to(model.device),
+                attention_mask=example['attention_mask'].unsqueeze(0).to(model.device)
+            )
             logits = outputs.logits
             pred = torch.argmax(logits, dim=1).item()
             print(f"  Prediction: {pred} (Logits: {logits.cpu().numpy()})")
-            
+
     eval_results = trainer.evaluate()
-    print(f"Accuracy: {eval_results['eval_accuracy']:.2%}")
+    final_accuracy = eval_results['eval_accuracy']
+    print(f"Accuracy ({final_eval_split_name}): {final_accuracy:.2%}")
     if baseline_acc is not None:
-        print(f"(Baseline était: {baseline_acc:.2%})")
-    
+        print(f"(Baseline validation était: {baseline_acc:.2%})")
 
     # Résultats
     os.makedirs('results', exist_ok=True)
-    
-    # Add baseline suffix if using base model AND eval mode only
-    # In train_eval mode, result is definitely fine-tuned even if model started as base
+
     is_baseline_run = (mode == "eval_only" and model_name == "camembert-base")
-    
     baseline_suffix = "_baseline" if is_baseline_run else ""
     result_filename = f'results/camembert_{dataset_name}_{mode}{baseline_suffix}.json'
-    
     status = "baseline" if is_baseline_run else "fine-tuned"
-    
+
     data_to_save = {
         'model': model_name,
         'dataset': dataset_name,
         'mode': mode,
         'training_status': status,
-        'eval_size': len(eval_dataset),
-        'accuracy': eval_results['eval_accuracy'],
+        'eval_split': final_eval_split_name,
+        'eval_size': len(final_eval_dataset),
+        'accuracy': final_accuracy,
     }
-    
+
+    if mode == "same_dataset":
+        data_to_save['split_info'] = {
+            'train': len(train_data),
+            'val': len(eval_data),
+            'test': len(test_data),
+            'seed': 42
+        }
+
     if baseline_acc is not None:
         data_to_save['baseline_accuracy'] = baseline_acc
-        
+
     with open(result_filename, 'w') as f:
         json.dump(data_to_save, f, indent=2)
     print(f"✅ Résultats: {result_filename}")

@@ -27,9 +27,10 @@ Protocole identique à CamemBERT.
 | Dataset | Taille Train | Précision (Validation) | Comparaison CamemBERT |
 | :--- | :--- | :--- | :--- |
 | **FraCaS** | 48 ex | **50.00%** | **Équivalent au hasard**. La performance chute avec les "optimisations". |
-| **GQNLI-FR** | 180 ex | **41.67%** | **Pire que le hasard**. Échec complet d'apprentissage (Learning Rate 1e-5, 20 epochs). |
+| **GQNLI-FR (Base)** | 210 ex | **55.56%** | L'apprentissage est difficile et instable en partant de zéro. |
+| **GQNLI-FR (XNLI Transfer)**| 210 ex | **62.22%** | **Gros progrès.** En pré-entraînant FlauBERT sur XNLI (fr), le modèle gagne presque 10 points. |
 
-➡️ **Analyse Final :** FlauBERT n'est pas adapté pour ce dataset « Small Data ». Contrairement à CamemBERT qui performe immédiatement (78%), FlauBERT est instable et s'effondre vers la classe majoritaire dès qu'on tente de le stabiliser. **Nous abandonnons FlauBERT pour la suite.**
+➡️ **Analyse Finale :** FlauBERT "Base" n'est pas très bien adapté pour un apprentissage direct sur ce dataset « Small Data » (55%). En revanche, la technique de **Transfer Learning** (Fine-tuning intermédiaire sur le grand corpus XNLI structuré NLI, puis affinage sur GQNLI-FR) permet de le stabiliser et de le faire monter à 62.22% sans effort. Les modèles ont plus de mal que CamemBERT, mais l'approche XNLI sauve la mise.
 
 ## 4. Résultats Gemini (Few-Shot)
 Les tests sont impactés par des limitations techniques de l'API Gratuite.
@@ -45,6 +46,6 @@ L'API gratuite limite à **20 requêtes/jour**. Dès que l'on dépasse, l'API re
 **Solution déjà implémentée :** Un mécanisme de "Retry" (attendre et réessayer) a été ajouté au script pour contourner ce problème lors des prochains tests.
 
 ## 5. Conclusion Générale
-- **CamemBERT est robuste et fiable** (78%) pour ce projet, même avec peu de données.
-- **FlauBERT est instable** (échec sur GQNLI, mais bon sur FraCaS).
-- **Gemini est potentiellement meilleur (90% en 0-shot)**, mais son évaluation est difficile sans payer l'API à cause des quotas très restrictifs.
+- **CamemBERT est robuste et fiable** (~84%) pour ce projet, même avec peu de données de départ.
+- **FlauBERT nécessite du Transfer Learning** (62.22% avec XNLI contre 55% de base) car il a du mal avec les très petits datasets NLI.
+- **Gemini est potentiellement meilleur (90% en 0-shot)**, mais son évaluation est difficile en version gratuite à cause des quotas très restrictifs.

@@ -1,0 +1,16 @@
+{
+  "model": "camembert-base",
+  "dataset": "fracas_gq",
+  "mode": "same_dataset",
+  "training_status": "fine-tuned",
+  "eval_split": "test (hold-out)",
+  "eval_size": 12,
+  "accuracy": 0.25,
+  "split_info": {
+    "train": 56,
+    "val": 12,
+    "test": 12,
+    "seed": 42
+  },
+  "baseline_accuracy": 0.08333333333333333
+}
