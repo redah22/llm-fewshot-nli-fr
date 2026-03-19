@@ -67,6 +67,7 @@ runs/
 # We keep JSON results, but ignore large logs or temp files
 results/predictions/
 results/figures/
+results/metrics/
 
 # Logs
 logs/
