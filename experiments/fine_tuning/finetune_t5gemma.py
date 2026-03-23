@@ -8,7 +8,7 @@ T5Gemma est un modèle encoder-decoder : contrairement à CamemBERT
 Référence modèle : https://huggingface.co/google/t5gemma-2-270m-270m
 
 Utilisation :
-    python3 experiments/finetune_t5gemma.py
+    python3 experiments/fine_tuning/finetune_t5gemma.py
 
 Prérequis :
     pip install -U transformers torch accelerate

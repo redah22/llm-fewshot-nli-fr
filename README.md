@@ -25,15 +25,15 @@ pip install -r requirements.txt
 ### 2. Fine-Tuning CamemBERT (Recommandé)
 Entraîne le modèle sur vos données (10 epochs).
 ```bash
-python3 experiments/setup_data.py   # Étape 1 : Préparer les données
-python3 experiments/eval_camembert.py   # Étape 2 : Entraîner
+python3 experiments/data_utils/setup_data.py   # Étape 1 : Préparer les données
+python3 experiments/fine_tuning/eval_camembert.py   # Étape 2 : Entraîner
 ```
 *Choisissez "GQNLI-FR" (1) pour les meilleurs résultats.*
 
 ### 3. Few-Shot Gemini
 Test avec l'API Google (attention aux quotas).
 ```bash
-python3 experiments/eval_gemini_few_shot.py
+python3 experiments/few_shot/eval_gemini_few_shot.py
 ```
 
 ## 📊 Résultats Clés

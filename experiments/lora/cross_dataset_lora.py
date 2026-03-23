@@ -14,7 +14,7 @@ matrices de rang faible insérées dans les couches d'attention.
   EXP 3 — Fine-tuning LoRA sur RTE3-DEV       → test sur DACCORD + RTE3-TEST
 
 Utilisation :
-    python3 experiments/cross_dataset_lora.py
+    python3 experiments/lora/cross_dataset_lora.py
 
 Prérequis :
     pip install peft   (déjà installé si vous avez suivi le setup)
@@ -208,6 +208,7 @@ def make_lora_model(base_model_name):
         lora_alpha=LORA_ALPHA,            # Facteur d'échelle
         lora_dropout=LORA_DROPOUT,        # Dropout sur les couches LoRA
         target_modules=LORA_TARGET_MODULES,  # Couches où appliquer LoRA
+        modules_to_save=["classifier"],   # ⚠️ Essentiel : forcer l'entraînement de toute la tête de classification
         bias="none",                      # Ne pas entraîner les biais
     )
 
@@ -249,15 +250,15 @@ class MetricsCollectorCallback(TrainerCallback):
             })
 
 
-def make_trainer(model, tokenizer, train_ds, eval_ds, run_name, epochs=20):
-    """Crée un Trainer LoRA avec early stopping (patience=3) et collecte de métriques."""
+def make_trainer(model, tokenizer, train_ds, eval_ds, run_name, epochs=40):
+    """Crée un Trainer LoRA avec early stopping (patience=10) et collecte de métriques."""
     metrics_cb = MetricsCollectorCallback()
     args = TrainingArguments(
         output_dir=f"checkpoints/{MODEL_SHORT}_lora_{run_name}",
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=2,
-        learning_rate=3e-4,
+        learning_rate=5e-4,  # LoRA a souvent besoin d'un learning rate plus élevé
         per_device_train_batch_size=4,
         per_device_eval_batch_size=4,
         num_train_epochs=epochs,
@@ -276,7 +277,7 @@ def make_trainer(model, tokenizer, train_ds, eval_ds, run_name, epochs=20):
         eval_dataset=eval_ds,
         data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3), metrics_cb],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=10), metrics_cb],
     )
     trainer._metrics_cb = metrics_cb
     return trainer
@@ -299,7 +300,7 @@ def save_results(results: dict, filename: str, trainer=None):
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f"\u2705 Résultats sauvegardés : {path}")
     if trainer is not None and hasattr(trainer, "_metrics_cb") and trainer._metrics_cb.eval_history:
-        print(f"   → Pour les graphiques : python3 experiments/plot_training.py {path}")
+        print(f"   → Pour les graphiques : python3 experiments/utils/plot_training.py {path}")
 
 
 def print_header(title):
@@ -340,7 +341,7 @@ def check_dataset(key):
     info = DATASETS[key]
     if not os.path.isdir(info["path"]):
         print(f"❌ Dataset '{info['label']}' introuvable : {info['path']}")
-        print(f"   → Lancez : python3 experiments/setup_data.py")
+        print(f"   → Lancez : python3 experiments/data_utils/setup_data.py")
         return False
     return True
 

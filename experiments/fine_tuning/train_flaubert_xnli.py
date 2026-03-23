@@ -27,7 +27,7 @@ print("="*60)
 data_path = "data/processed/xnli_fr"
 if not os.path.exists(data_path):
     print(f"❌ Erreur: Le dataset XNLI introuvable à {data_path}")
-    print("Veuillez d'abord exécuter: python3 experiments/setup_xnli.py")
+    print("Veuillez d'abord exécuter: python3 experiments/data_utils/setup_xnli.py")
     sys.exit(1)
 
 print("\nChargement du dataset XNLI...")

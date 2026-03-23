@@ -8,7 +8,7 @@ similaire à Gemini, mais en local (pas d'API nécessaire).
 Référence : https://huggingface.co/google/t5gemma-2-1b-1b
 
 Utilisation :
-    python3 experiments/eval_t5gemma.py
+    python3 experiments/few_shot/eval_t5gemma.py
 
 Prérequis :
     pip install -U transformers torch

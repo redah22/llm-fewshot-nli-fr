@@ -13,13 +13,13 @@ La deuxième étape consistera à reproduire ces mêmes expériences
 avec LoRA-PEFT pour comparer les résultats.
 
 Utilisation :
-    python3 experiments/cross_dataset_eval.py
+    python3 experiments/fine_tuning/cross_dataset_eval.py
 
 Prérequis (données) :
-    python3 experiments/setup_data.py   # Choix 1 (GQNLI-FR)
-    python3 experiments/setup_data.py   # Choix 3 (FraCaS 0-74)
-    python3 experiments/setup_data.py   # Choix 4 (DACCORD)
-    python3 experiments/setup_data.py   # Choix 5 (RTE3-French)
+    python3 experiments/data_utils/setup_data.py   # Choix 1 (GQNLI-FR)
+    python3 experiments/data_utils/setup_data.py   # Choix 3 (FraCaS 0-74)
+    python3 experiments/data_utils/setup_data.py   # Choix 4 (DACCORD)
+    python3 experiments/data_utils/setup_data.py   # Choix 5 (RTE3-French)
 """
 
 import os
@@ -249,7 +249,7 @@ def save_results(results: dict, filename: str, trainer=None):
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f"\u2705 Résultats sauvegardés : {path}")
     if trainer is not None and hasattr(trainer, "_metrics_cb") and trainer._metrics_cb.eval_history:
-        print(f"   → Pour les graphiques : python3 experiments/plot_training.py {path}")
+        print(f"   → Pour les graphiques : python3 experiments/utils/plot_training.py {path}")
 
 
 def print_header(title):
@@ -291,7 +291,7 @@ def check_dataset(key):
     disk_path = info["path"]
     if not os.path.isdir(disk_path):
         print(f"❌ Dataset '{info['label']}' introuvable : {disk_path}")
-        print(f"   → Lancez : python3 experiments/setup_data.py")
+        print(f"   → Lancez : python3 experiments/data_utils/setup_data.py")
         return False
     return True
 

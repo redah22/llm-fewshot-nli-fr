@@ -11,8 +11,8 @@ et génère un fichier PNG avec 4 graphiques :
   4. Grad Norm par step                 → détecte les instabilités
 
 Utilisation :
-    python3 experiments/plot_training.py
-    python3 experiments/plot_training.py results/mon_fichier.json
+    python3 experiments/utils/plot_training.py
+    python3 experiments/utils/plot_training.py results/mon_fichier.json
 
 Le graphique est sauvegardé dans : results/<nom_du_fichier>.png
 """
@@ -42,7 +42,7 @@ else:
     ]
     if not result_files:
         print("❌ Aucun fichier de résultats avec historique d'entraînement trouvé.")
-        print("   Lancez d'abord : python3 experiments/eval_daccord_binary.py")
+        print("   Lancez d'abord : python3 experiments/fine_tuning/eval_daccord_binary.py")
         exit(1)
     # Prendre le plus récent
     json_path = "results/metrics/" + sorted(

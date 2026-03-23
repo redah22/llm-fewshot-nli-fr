@@ -15,13 +15,13 @@ Expériences :
   3. Évaluation  : test sur le split test de DACCORD
 
 Les matrices de confusion AVANT et APRÈS + métriques par epoch sont dans le JSON.
-Pour générer les graphiques : python3 experiments/plot_training.py
+Pour générer les graphiques : python3 experiments/utils/plot_training.py
 
 Utilisation :
-    python3 experiments/eval_daccord_binary.py
+    python3 experiments/fine_tuning/eval_daccord_binary.py
 
 Prérequis :
-    python3 experiments/setup_data.py   # Choix 4 (DACCORD)
+    python3 experiments/data_utils/setup_data.py   # Choix 4 (DACCORD)
 """
 
 import os
@@ -74,7 +74,7 @@ print(f"📦 Modèle : {BASE_MODEL}")
 
 if not os.path.isdir(DATASET_PATH):
     print(f"\n❌ Dataset DACCORD introuvable : {DATASET_PATH}")
-    print("   → Lancez : python3 experiments/setup_data.py  (choix 4)")
+    print("   → Lancez : python3 experiments/data_utils/setup_data.py  (choix 4)")
     exit(1)
 
 print(f"\n📂 Chargement de DACCORD...")
@@ -370,4 +370,4 @@ with open(results_path, "w", encoding="utf-8") as f:
 print(f"\n✅ Résultats complets sauvegardés : {results_path}")
 print(f"   → Meilleure epoch    : {best_epoch}")
 print(f"   → Meilleure val acc  : {best_val_acc:.2%}")
-print(f"   → Pour les graphiques : python3 experiments/plot_training.py")
+print(f"   → Pour les graphiques : python3 experiments/utils/plot_training.py")
