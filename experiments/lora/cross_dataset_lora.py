@@ -22,9 +22,12 @@ Prérequis :
 """
 
 import os
+os.environ["WANDB_PROJECT"] = "fewshot-nli-fr" # Nom du projet sur l'interface web
+
 import json
 import numpy as np
 import torch
+import wandb
 
 from datasets import DatasetDict, concatenate_datasets
 from transformers import (
@@ -267,7 +270,8 @@ def make_trainer(model, tokenizer, train_ds, eval_ds, run_name, epochs=40):
         metric_for_best_model="accuracy",
         greater_is_better=True,
         logging_steps=10,
-        report_to="none",
+        report_to="wandb", # Envoie toutes les courbes en direct à WandB
+        run_name=f"{MODEL_SHORT}-lora-{run_name}", # Nom d'affichage de la courbe
         remove_unused_columns=False,
     )
     trainer = Trainer(

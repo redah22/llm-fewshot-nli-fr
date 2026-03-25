@@ -46,5 +46,8 @@ sentencepiece>=0.1.99
 # Model Quantization (optional, for QLoRA)
 bitsandbytes>=0.42.0
 
+#Monitoring training
+wandb
+
 # French NLP
 # python -m spacy download fr_core_news_md

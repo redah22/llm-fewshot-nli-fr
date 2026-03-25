@@ -16,9 +16,12 @@ Utilisation :
 """
 
 import os
+os.environ["WANDB_PROJECT"] = "fewshot-nli-fr" # Nom du projet sur l'interface web
+
 import json
 import numpy as np
 import torch
+import wandb
 
 from datasets import DatasetDict, concatenate_datasets
 from transformers import (
@@ -142,10 +145,34 @@ def save_results(results: dict, filename: str, trainer=None):
 # 3. PIPELINE LORA SEQ2SEQ
 # ─────────────────────────────────────────────────────────
 
+from transformers import BitsAndBytesConfig
+
+USE_QLORA = torch.cuda.is_available()  # QLoRA automatique si GPU détecté
+
 def get_lora_model_and_tokenizer():
     processor = AutoProcessor.from_pretrained(BASE_MODEL)
     tok = processor.tokenizer
-    base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL, torch_dtype=torch.float32, device_map="auto")
+    
+    if USE_QLORA:
+        # === QLoRA 4-bit (GPU CUDA détecté) === #
+        print("\n🚀 GPU détecté → Chargement en QLoRA 4-bit (économie ~75% VRAM)")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_use_double_quant=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16
+        )
+        base_model = AutoModelForSeq2SeqLM.from_pretrained(
+            BASE_MODEL,
+            device_map="auto",
+            quantization_config=bnb_config
+        )
+    else:
+        # === LoRA classique FP32 (CPU) === #
+        print("\n🐢 CPU détecté → Chargement classique FP32")
+        base_model = AutoModelForSeq2SeqLM.from_pretrained(BASE_MODEL, torch_dtype=torch.float32, device_map="auto")
+    
+    base_model.config.use_cache = False
     
     # Configuration PEFT LoRA pour un modèle Encoder-Decoder (Seq2Seq)
     lora_config = LoraConfig(
@@ -154,15 +181,17 @@ def get_lora_model_and_tokenizer():
         lora_alpha=LORA_ALPHA,
         lora_dropout=LORA_DROPOUT,
         bias="none",
-        target_modules=["q_proj", "v_proj"] # Les modules ciblés standard pour l'attention de t5gemma/gemma
+        target_modules=["q_proj", "v_proj"]
     )
     
     model = get_peft_model(base_model, lora_config)
-    model = model.float() # Forcer FP32 sur CPU
+    if not USE_QLORA:
+        model = model.float()  # FP32 sur CPU uniquement
     
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
-    print(f"\n📐 LoRA Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
+    mode_str = "QLoRA 4-bit" if USE_QLORA else "LoRA FP32"
+    print(f"\n📐 {mode_str} — Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
     
     return tok, model
 
@@ -218,7 +247,8 @@ def make_trainer(model, tok, train_ds, eval_ds, run_name, epochs=30):
         weight_decay=0.01,
         load_best_model_at_end=True, metric_for_best_model="accuracy",
         predict_with_generate=True, generation_max_length=4,
-        logging_steps=10, report_to="none", save_total_limit=2,
+        logging_steps=10, report_to="wandb", run_name=f"{MODEL_SHORT}-lora-{run_name}", 
+        save_total_limit=2, save_only_model=True,
         gradient_checkpointing=True, dataloader_pin_memory=False
     )
     collator = DataCollatorForSeq2Seq(tokenizer=tok, model=None, padding=True, pad_to_multiple_of=8)
