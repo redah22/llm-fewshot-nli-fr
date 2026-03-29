@@ -12,6 +12,7 @@ Utilisation :
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU (Corrige le bug Kaggle T4x2)
 
 import json
 import numpy as np
