@@ -130,10 +130,10 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [4, 8, 16, 32]},
-        "lora_alpha": {"values": [8, 16, 32, 64]},
-        "learning_rate": {"values": [1e-4, 3e-4, 5e-4, 1e-3]},
-        "lora_dropout": {"values": [0.1]},
+        "lora_r": {"values": [8, 16]},
+        "lora_alpha": {"values": [32, 64]},
+        "learning_rate": {"values": [5e-4, 1e-3]},
+        "lora_dropout": {"values": [0.0, 0.05, 0.1, 0.2]},
     }
 }
 
