@@ -106,12 +106,12 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [4, 8, 16]},
-        "lora_alpha": {"values": [8, 16]},
-        "learning_rate": {"values": [3e-4, 5e-4]},
-        "lora_dropout": {"values": [0.1]},
+        "lora_r": {"values": [8, 16, 32]},
+        "lora_alpha": {"values": [32, 64, 128]},
+        "learning_rate": {"values": [1e-3, 5e-4]},
+        "lora_dropout": {"values": [0.05, 0.1, 0.2]},
     }
-} # Total : 3 x 2 x 2 x 1 = 12 runs (idéal pour tester rapidement la robustesse)
+}
 
 import sys
 
