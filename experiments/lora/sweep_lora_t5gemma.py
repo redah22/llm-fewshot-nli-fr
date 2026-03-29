@@ -1,18 +1,10 @@
 """
-WandB Sweep — QLoRA T5Gemma 2 (270M)
-=====================================================================
-
-Script autonome optimisé pour Kaggle/Colab (GPU requis pour QLoRA).
-Télécharge et prépare dynamiquement les datasets sans dépendre de setup_data.py.
-Lance un sweep automatique sur WandB pour trouver les meilleurs hyperparamètres.
-
-Utilisation :
-    python3 experiments/lora/sweep_lora_t5gemma.py
+Script de Sweep WandB pour T5Gemma (Architecture Encoder-Decoder).
 """
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU (Corrige le bug Kaggle T4x2)
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU
 
 import json
 import numpy as np
@@ -33,25 +25,19 @@ from transformers import (
 from peft import get_peft_model, LoraConfig, TaskType
 from sklearn.metrics import confusion_matrix
 
-print("=" * 60)
-print("WANDB SWEEP — QLORA T5GEMMA (KAGGLE EDITION)")
-print("=" * 60)
-
 BASE_MODEL = "google/t5gemma-2-270m-270m"
 MODEL_SHORT = "t5gemma"
 
 if not torch.cuda.is_available():
-    print("❌ ERREUR CRITIQUE : Ce script nécessite un GPU CUDA pour QLoRA.")
+    print("ERREUR CRITIQUE : Ce script nécessite un GPU CUDA pour QLoRA.")
     print("Veuillez activer le GPU T4 x2 (ou P100) dans les paramètres de votre Notebook Kaggle.")
     exit(1)
 
-# ─────────────────────────────────────────────────────────
 # 1. TÉLÉCHARGEMENT & PRÉPARATION DE DONNÉES À LA VOLÉE
-# ─────────────────────────────────────────────────────────
 
 def get_dataset(name):
     """Télécharge et segmente dynamiquement le jeu de données depuis Hub."""
-    print(f"📥 Téléchargement et structuration de {name}...")
+    print(f"Téléchargement et structuration de {name}...")
     if name == "gqnli_fr":
         gqnli = load_dataset('maximoss/gqnli-fr')['test']
         train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
@@ -98,9 +84,7 @@ def get_dataset(name):
         
     raise ValueError(f"Dataset {name} inconnu.")
 
-# ─────────────────────────────────────────────────────────
 # 2. CONFIGURATION DU SWEEP (RÉDUIT)
-# ─────────────────────────────────────────────────────────
 
 SWEEP_CONFIG = {
     "method": "grid",
@@ -136,15 +120,11 @@ elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_t5gemma"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 else:
-    print("❌ Choix invalide!"); exit(1)
+    print("Choix invalide!"); exit(1)
 
 # On télécharge les datasets cibles
 TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
-
-# ─────────────────────────────────────────────────────────
-# 3. PRE-PROCESSING
-# ─────────────────────────────────────────────────────────
 
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
 LABEL_MAP = {"yes": "0", "entailment": "0", "unknown": "1", "undef": "1", "neutral": "1", "no": "2", "contradiction": "2"}
@@ -187,24 +167,22 @@ def compute_metrics(eval_pred):
     
     try:
         cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
-        print(f"\n📊 CM (Vrai En Ligne, Préd En Colonne):\n{cm}")
+        print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
     
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
     return {"accuracy": acc}
 
-# ─────────────────────────────────────────────────────────
 # 4. FONCTION D'ENTRAÎNEMENT (POUR WANDB SWEEP)
-# ─────────────────────────────────────────────────────────
 
 def train_t5_qlora():
     run = wandb.init()
     config = wandb.config
 
     run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
-    print(f"\n{'='*60}\n🔄 SWEEP T5GEMMA RUN: {run_label}\n{'='*60}")
+    print(f"\n{'='*60}\nSWEEP T5GEMMA RUN: {run_label}\n{'='*60}")
 
-    print("🚀 Chargement en QLoRA 4-bit...")
+    print("Chargement en QLoRA 4-bit...")
     bnb_config = BitsAndBytesConfig(
         load_in_4bit=True,
         bnb_4bit_use_double_quant=True,
@@ -230,7 +208,7 @@ def train_t5_qlora():
     model = get_peft_model(base_model, lora_config)
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
-    print(f"📐 Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
+    print(f"Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
 
     args = Seq2SeqTrainingArguments(
         output_dir=f"/tmp/checkpoints_{EXP_NAME}_{run_label}", # Kaggle limite l'espace disque permanent
@@ -242,7 +220,7 @@ def train_t5_qlora():
         per_device_train_batch_size=8,   # Réduit pour + de mises à jour/epoch sur petit dataset
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
-        num_train_epochs=50,             # 🔥 50 epochs pour laisser le Seq2Seq converger
+        num_train_epochs=50,             # 50 epochs pour laisser le Seq2Seq converger
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -251,7 +229,7 @@ def train_t5_qlora():
         logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
-        dataloader_num_workers=2,        # 🧵 Multithreading CPU pour préparer les données
+        dataloader_num_workers=2,        # Multithreading CPU pour préparer les données
         dataloader_pin_memory=True
     )
 
@@ -264,16 +242,16 @@ def train_t5_qlora():
         eval_dataset=val_data,
         data_collator=collator,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],  # ⏳ Patience augmentée
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],  # Patience augmentée
     )
 
     trainer.train()
 
     # Evaluation Finale sur Test Cross-Dataset
-    print("\n🎯 Évaluation Cross-Dataset Finale...")
+    print("\nÉvaluation Cross-Dataset Finale...")
     test_results = trainer.evaluate(test_data)
     test_acc = test_results["eval_accuracy"]
-    print(f"✅ FINAL TEST ACCURACY : {test_acc:.2%}")
+    print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
 
     wandb.log({"test/cross_dataset_accuracy": test_acc})
     wandb.summary["test_cross_dataset_accuracy"] = test_acc
@@ -284,10 +262,6 @@ def train_t5_qlora():
 
     wandb.finish()
 
-# ─────────────────────────────────────────────────────────
-# 5. DÉMARRAGE
-# ─────────────────────────────────────────────────────────
-
 if __name__ == "__main__":
     total_runs = 1
     for param in SWEEP_CONFIG["parameters"].values():
@@ -296,13 +270,13 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         confirm = "o" # Mode automatique sans confirmation
     else:
-        confirm = input(f"\n⚠️  KAGGLE: Lancer automatiquement {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
+        confirm = input(f"\nLancer automatiquement {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
         
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
-        print(f"\n✅ Sweep créé ! ID: {sweep_id}")
+        print(f"\nSweep créé ! ID: {sweep_id}")
         print(f"📊 Suivez en direct : https://wandb.ai/votre_profil/fewshot-nli-fr/sweeps/{sweep_id}")
         wandb.agent(sweep_id, function=train_t5_qlora, count=total_runs)
-        print("\n✅ Terminé ! Consultez les résultats sur WandB.")
+        print("\nTerminé ! Consultez les résultats sur WandB.")
     else:
-        print("❌ Annulé.")
+        print("Annulé.")
