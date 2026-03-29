@@ -147,16 +147,16 @@ TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 # ─────────────────────────────────────────────────────────
 
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
-LABEL_MAP_STR = {"yes": "0", "entailment": "0", "unknown": "1", "undef": "1", "neutral": "1", "no": "2", "contradiction": "2"}
+LABEL_MAP = {"yes": "0", "entailment": "0", "unknown": "1", "undef": "1", "neutral": "1", "no": "2", "contradiction": "2"}
 
 def normalize_label(label):
-    if isinstance(label, int): return str(label) if label in [0, 1, 2] else "1"
-    label_str = str(label).lower().strip()
-    if label_str in LABEL_MAP_STR: return LABEL_MAP_STR[label_str]
+    if isinstance(label, int) and label in [0, 1, 2]: return str(label)
+    s = str(label).lower().strip()
+    if s in LABEL_MAP: return LABEL_MAP[s]
     try:
-        val = int(label_str)
+        val = int(s)
         return str(val) if val in [0, 1, 2] else "1"
-    except ValueError:
+    except:
         return "1"
 
 def preprocess_fn(examples, p_key):

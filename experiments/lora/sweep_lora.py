@@ -146,7 +146,12 @@ LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, 
 
 def map_label(label):
     if isinstance(label, int) and label in [0, 1, 2]: return label
-    return LABEL_MAP.get(str(label).lower().strip(), 1)
+    s = str(label).lower().strip()
+    if s in LABEL_MAP: return LABEL_MAP[s]
+    try:
+        return int(s)
+    except:
+        return 1
 
 def tokenize_fn(examples, p_key):
     res = global_tokenizer(examples[p_key], examples["hypothesis"], truncation=True, padding="max_length", max_length=128)
