@@ -106,12 +106,12 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [8, 16, 32]},
-        "lora_alpha": {"values": [32, 64, 128]},
-        "learning_rate": {"values": [1e-3, 5e-4]},
-        "lora_dropout": {"values": [0.05, 0.1, 0.2]},
+        "lora_r": {"values": [16, 32]},
+        "lora_alpha": {"values": [32, 64]},
+        "learning_rate": {"values": [5e-4]},
+        "lora_dropout": {"values": [0.05, 0.1]},
     }
-}
+} # Total : 2 x 2 x 1 x 2 = 8 runs (valeurs sûres uniquement)
 
 import sys
 
@@ -239,10 +239,10 @@ def train_t5_qlora():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=16,  # 🚀 Batch 8x plus grand (remplit le GPU, soulage le CPU)
-        per_device_eval_batch_size=16,
+        per_device_train_batch_size=8,   # Réduit pour + de mises à jour/epoch sur petit dataset
+        per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
-        num_train_epochs=20,
+        num_train_epochs=50,             # 🔥 50 epochs pour laisser le Seq2Seq converger
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -264,7 +264,7 @@ def train_t5_qlora():
         eval_dataset=val_data,
         data_collator=collator,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=6)],
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],  # ⏳ Patience augmentée
     )
 
     trainer.train()
