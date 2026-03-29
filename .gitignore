@@ -74,6 +74,9 @@ logs/
 *.log
 wandb/
 runs/
+*.md
+!README.md
+!RAPPORT_RESULTATS.md
 
 # macOS
 .DS_Store
