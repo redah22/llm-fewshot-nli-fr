@@ -112,12 +112,18 @@ SWEEP_CONFIG = {
     }
 } # Total : 3 x 2 x 2 x 1 = 12 runs (idéal pour tester rapidement la robustesse)
 
-print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
-print("1. FraCaS (0-74)  →  test GQNLI-FR")
-print("2. GQNLI-FR       →  test FraCaS (0-74)")
-print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
+import sys
 
-exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
+# Si on passe un argument (ex: python script.py 2), on prend cet argument sans demander
+if len(sys.argv) > 1:
+    exp_choice = sys.argv[1].strip()
+    print(f"\nVotre choix (1, 2 ou 3): {exp_choice} (via argument)")
+else:
+    print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
+    print("1. FraCaS (0-74)  →  test GQNLI-FR")
+    print("2. GQNLI-FR       →  test FraCaS (0-74)")
+    print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
+    exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
@@ -285,7 +291,11 @@ if __name__ == "__main__":
     for param in SWEEP_CONFIG["parameters"].values():
         total_runs *= len(param["values"])
     
-    confirm = input(f"\n⚠️  KAGGLE: Lancer automatiquement {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
+    if len(sys.argv) > 1:
+        confirm = "o" # Mode automatique sans confirmation
+    else:
+        confirm = input(f"\n⚠️  KAGGLE: Lancer automatiquement {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
+        
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
         print(f"\n✅ Sweep créé ! ID: {sweep_id}")
