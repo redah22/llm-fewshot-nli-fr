@@ -207,9 +207,9 @@ def train_one_run():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
-        num_train_epochs=20, # Un peu plus bas vu qu'on teste vite
+        per_device_train_batch_size=16,  # 🚀 Permet au GPU de traiter plus de données d'un coup
+        per_device_eval_batch_size=16,
+        num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -217,6 +217,8 @@ def train_one_run():
         logging_steps=10,
         report_to="wandb",
         remove_unused_columns=False,
+        dataloader_num_workers=2,        # 🧵 Prépare le batch suivant pendant que le GPU calcule
+        dataloader_pin_memory=True
     )
 
     trainer = Trainer(

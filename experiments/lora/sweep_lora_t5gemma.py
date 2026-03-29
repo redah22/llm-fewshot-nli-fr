@@ -239,18 +239,19 @@ def train_t5_qlora():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=2,
-        per_device_eval_batch_size=2,
-        gradient_accumulation_steps=2,
+        per_device_train_batch_size=16,  # 🚀 Batch 8x plus grand (remplit le GPU, soulage le CPU)
+        per_device_eval_batch_size=16,
+        gradient_accumulation_steps=1,
         num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
         predict_with_generate=True,
         generation_max_length=4,
-        logging_steps=5,
+        logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
+        dataloader_num_workers=2,        # 🧵 Multithreading CPU pour préparer les données
         dataloader_pin_memory=True
     )
 
