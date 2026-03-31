@@ -164,6 +164,9 @@ def compute_metrics(eval_pred):
     dec_preds = [p.strip() for p in global_tokenizer.batch_decode(preds, skip_special_tokens=True)]
     dec_labels = [l.strip() for l in global_tokenizer.batch_decode(labels, skip_special_tokens=True)]
     
+    print(f"\n[DEBUG LORA] Extraits générés : {dec_preds[:5]}")
+    print(f"[DEBUG LORA] Extraits cibles  : {dec_labels[:5]}")
+    
     LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
     
     cleaned_preds = [p.lower() if p.lower() in LABEL_TO_INT else "neutre" for p in dec_preds]
