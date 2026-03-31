@@ -143,7 +143,10 @@ def normalize_label(label):
     return "neutre"
 
 def preprocess_fn(examples, p_key):
-    inputs = [f"nli: {p} </s> {h}" for p, h in zip(examples[p_key], examples["hypothesis"])]
+    inputs = [
+        f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse :"
+        for p, h in zip(examples[p_key], examples["hypothesis"])
+    ]
     model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
     targets = [normalize_label(l) for l in examples["label"]]
     labels = global_tokenizer(text_target=targets, max_length=8, truncation=True, padding=False)
@@ -169,7 +172,14 @@ def compute_metrics(eval_pred):
     
     LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
     
-    cleaned_preds = [p.lower() if p.lower() in LABEL_TO_INT else "neutre" for p in dec_preds]
+    import re
+    cleaned_preds = []
+    for p in dec_preds:
+        match = re.search(r'(vrai|faux|neutre)', p.lower())
+        if match:
+            cleaned_preds.append(match.group(1))
+        else:
+            cleaned_preds.append("neutre")
     int_preds = [LABEL_TO_INT[p] for p in cleaned_preds]
     int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
     
