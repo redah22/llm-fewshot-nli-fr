@@ -44,13 +44,17 @@ choice = input("\nVotre choix (1, 2 ou 3): ").strip()
 
 if choice == "1":
     train_size = 10000
+    suffix = "10k"
 elif choice == "2":
     train_size = 50000
+    suffix = "50k"
 elif choice == "3":
     train_size = len(dataset['train'])
+    suffix = "full"
 else:
     print("Choix invalide, par défaut Moyen (50k)")
     train_size = 50000
+    suffix = "50k"
 
 train_data = dataset['train'].shuffle(seed=42).select(range(train_size))
 eval_data = dataset['validation']  # 2490 examples
@@ -105,20 +109,22 @@ def compute_metrics(eval_pred):
     predictions = np.argmax(predictions, axis=1)
     return {'accuracy': accuracy_score(labels, predictions)}
 
-output_dir = "checkpoints/flaubert_xnli_fr"
+output_dir = f"checkpoints/flaubert_xnli_fr_{suffix}"
 
 training_args = TrainingArguments(
     output_dir=output_dir,
     eval_strategy='epoch', # Evaluate every epoch
     save_strategy='epoch', # Save every epoch
-    learning_rate=2e-5,
+    learning_rate=1e-5, # Taux plus faible pour FlauBERT
     per_device_train_batch_size=8,
     per_device_eval_batch_size=8,
+    gradient_accumulation_steps=4, # Simule un batch size de 32
+    warmup_ratio=0.1,    # VITAL pour FlauBERT : 10% de chauffe
     num_train_epochs=3, # 3 epochs are usually enough for large NLI datasets
     weight_decay=0.01,
     load_best_model_at_end=True, # Will load the best model based on validation acc
     metric_for_best_model='accuracy',
-    logging_dir="logs/flaubert_xnli_fr",
+    logging_dir=f"logs/flaubert_xnli_fr_{suffix}",
     logging_steps=100,
     report_to='none',
     remove_unused_columns=False,
@@ -138,7 +144,7 @@ print("\nDébut du fine-tuning sur XNLI...")
 trainer.train()
 
 # 5. Sauvegarde Finale
-final_model_dir = "models/flaubert_xnli_fr"
+final_model_dir = f"models/flaubert_xnli_fr_{suffix}"
 os.makedirs(final_model_dir, exist_ok=True)
 print(f"\nSauvegarde du meilleur modèle dans {final_model_dir}")
 trainer.save_model(final_model_dir)

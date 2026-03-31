@@ -40,6 +40,7 @@ else:
     mode = "train_eval"
     print("\n🔹 Mode: Train & Eval (cross-dataset)")
 
+custom_result_name = input("\nNom du fichier de résultats (laissez vide pour générer automatiquement) : ").strip()
 
 # ---------------------------------------------------------
 # SÉLECTION DES DATASETS
@@ -429,7 +430,14 @@ if final_eval_dataset:
 
     is_baseline_run = (mode == "eval_only" and model_name == "flaubert/flaubert_base_cased")
     baseline_suffix = "_baseline" if is_baseline_run else ""
-    result_filename = f'results/flaubert_{dataset_name}_{mode}{baseline_suffix}.json'
+    
+    if custom_result_name:
+        if not custom_result_name.endswith('.json'):
+            custom_result_name += '.json'
+        result_filename = f'results/{custom_result_name}'
+    else:
+        result_filename = f'results/flaubert_{dataset_name}_{mode}{baseline_suffix}.json'
+        
     status = "baseline" if is_baseline_run else "fine-tuned"
 
     data_to_save = {

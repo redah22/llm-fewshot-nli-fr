@@ -1,16 +1,16 @@
 {
-  "model": "flaubert/flaubert_base_cased",
+  "model": "models/flaubert_xnli_fr_full",
   "dataset": "gqnli_fr",
   "mode": "same_dataset",
   "training_status": "fine-tuned",
   "eval_split": "test (hold-out)",
   "eval_size": 45,
-  "accuracy": 0.5333333333333333,
+  "accuracy": 0.8888888888888888,
   "split_info": {
     "train": 210,
     "val": 45,
     "test": 45,
     "seed": 42
   },
-  "baseline_accuracy": 0.4
+  "baseline_accuracy": 0.2222222222222222
 }
