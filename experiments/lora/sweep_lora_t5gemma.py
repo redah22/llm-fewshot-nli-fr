@@ -4,7 +4,7 @@ Script de Sweep WandB pour T5Gemma (Architecture Encoder-Decoder).
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import json
 import numpy as np
@@ -90,19 +90,18 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [16, 32]},
-        "lora_alpha": {"values": [32, 64]},
-        "learning_rate": {"values": [5e-4]},
-        "lora_dropout": {"values": [0.05, 0.1]},
+        "lora_r": {"values": [16]},
+        "lora_alpha": {"values": [64]},
+        "learning_rate": {"values": [1e-3]},
+        "lora_dropout": {"values": [0.1]},
     }
-} # Total : 2 x 2 x 1 x 2 = 8 runs (valeurs sûres uniquement)
+}
 
 import sys
 
-# Si on passe un argument (ex: python script.py 2), on prend cet argument sans demander
 if len(sys.argv) > 1:
     exp_choice = sys.argv[1].strip()
-    print(f"\nVotre choix (1, 2 ou 3): {exp_choice} (via argument)")
+    print(f"\nChoix : {exp_choice}")
 else:
     print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
@@ -211,16 +210,16 @@ def train_t5_qlora():
     print(f"Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
 
     args = Seq2SeqTrainingArguments(
-        output_dir=f"/tmp/checkpoints_{EXP_NAME}_{run_label}", # Kaggle limite l'espace disque permanent
+        output_dir=f"/tmp/checkpoints_{EXP_NAME}_{run_label}",
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=8,   # Réduit pour + de mises à jour/epoch sur petit dataset
+        per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
-        num_train_epochs=50,             # 50 epochs pour laisser le Seq2Seq converger
+        num_train_epochs=80,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -229,7 +228,7 @@ def train_t5_qlora():
         logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
-        dataloader_num_workers=2,        # Multithreading CPU pour préparer les données
+        dataloader_num_workers=2,
         dataloader_pin_memory=True
     )
 
@@ -241,8 +240,7 @@ def train_t5_qlora():
         train_dataset=train_data,
         eval_dataset=val_data,
         data_collator=collator,
-        compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)],  # Patience augmentée
+        compute_metrics=compute_metrics
     )
 
     trainer.train()
@@ -268,9 +266,9 @@ if __name__ == "__main__":
         total_runs *= len(param["values"])
     
     if len(sys.argv) > 1:
-        confirm = "o" # Mode automatique sans confirmation
+        confirm = "o"
     else:
-        confirm = input(f"\nLancer automatiquement {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
+        confirm = input(f"\nLancer {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
         
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
