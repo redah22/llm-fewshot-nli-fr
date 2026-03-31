@@ -32,17 +32,17 @@ if choice == "1":
     
     print(f"Total: {len(data)} exemples")
     
-    # Shuffle
-    shuffled = data.shuffle(seed=42)
-    total = len(shuffled)
+    print(f"Total: {len(data)} exemples")
     
-    # Split 60/20/20
-    train_size = int(total * 0.6)
-    val_size = int(total * 0.2)
+    # Segmentation stricte demandée par l'utilisateur pour équilibrer les classes
+    train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))    # 180 ex
+    val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))   # 60 ex
+    test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))  # 60 ex
     
-    train = shuffled.select(range(0, train_size))
-    val = shuffled.select(range(train_size, train_size + val_size))
-    test = shuffled.select(range(train_size + val_size, total))
+    train = data.select(train_idx).shuffle(seed=42)
+    val   = data.select(val_idx).shuffle(seed=42)
+    test  = data.select(test_idx).shuffle(seed=42)
+    total = len(data)
     
     # Sauvegarder
     dataset_dict = DatasetDict({
