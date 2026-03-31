@@ -126,23 +126,27 @@ TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
-LABEL_MAP = {"yes": "0", "entailment": "0", "unknown": "1", "undef": "1", "neutral": "1", "no": "2", "contradiction": "2"}
+LABEL_MAP = {
+    "yes": "vrai", "entailment": "vrai", "0": "vrai",
+    "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
+    "no": "faux", "contradiction": "faux", "2": "faux"
+}
 
 def normalize_label(label):
-    if isinstance(label, int) and label in [0, 1, 2]: return str(label)
+    if isinstance(label, int):
+        if label == 0: return "vrai"
+        if label == 1: return "neutre"
+        if label == 2: return "faux"
+        return "neutre"
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    try:
-        val = int(s)
-        return str(val) if val in [0, 1, 2] else "1"
-    except:
-        return "1"
+    return "neutre"
 
 def preprocess_fn(examples, p_key):
     inputs = [f"nli: {p} </s> {h}" for p, h in zip(examples[p_key], examples["hypothesis"])]
     model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
     targets = [normalize_label(l) for l in examples["label"]]
-    labels = global_tokenizer(text_target=targets, max_length=4, truncation=True, padding=False)
+    labels = global_tokenizer(text_target=targets, max_length=8, truncation=True, padding=False)
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
@@ -160,9 +164,11 @@ def compute_metrics(eval_pred):
     dec_preds = [p.strip() for p in global_tokenizer.batch_decode(preds, skip_special_tokens=True)]
     dec_labels = [l.strip() for l in global_tokenizer.batch_decode(labels, skip_special_tokens=True)]
     
-    cleaned_preds = [p if p in ["0","1","2"] else "1" for p in dec_preds]
-    int_preds = [int(p) for p in cleaned_preds]
-    int_labels = [int(l) if l in ["0","1","2"] else 1 for l in dec_labels]
+    LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
+    
+    cleaned_preds = [p.lower() if p.lower() in LABEL_TO_INT else "neutre" for p in dec_preds]
+    int_preds = [LABEL_TO_INT[p] for p in cleaned_preds]
+    int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
     
     try:
         cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
@@ -221,10 +227,10 @@ def train_t5_qlora():
         gradient_accumulation_steps=1,
         num_train_epochs=30,
         weight_decay=0.01,
-        load_best_model_at_end=True,
+        load_best_model_at_end=False,
         metric_for_best_model="accuracy",
         predict_with_generate=True,
-        generation_max_length=4,
+        generation_max_length=8,
         logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
@@ -240,8 +246,7 @@ def train_t5_qlora():
         train_dataset=train_data,
         eval_dataset=val_data,
         data_collator=collator,
-        compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)]
+        compute_metrics=compute_metrics
     )
 
     trainer.train()
