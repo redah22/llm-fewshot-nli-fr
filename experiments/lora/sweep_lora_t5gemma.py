@@ -90,10 +90,10 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [16]},
-        "lora_alpha": {"values": [64]},
-        "learning_rate": {"values": [1e-3]},
-        "lora_dropout": {"values": [0.1]},
+        "lora_r": {"values": [16, 32]},
+        "lora_alpha": {"values": [32, 64]},
+        "learning_rate": {"values": [1e-4, 3e-4, 5e-4]},
+        "lora_dropout": {"values": [0.0, 0.05, 0.1]},
     }
 }
 
@@ -201,7 +201,7 @@ def train_t5_qlora():
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
         bias="none",
-        target_modules=["q_proj", "v_proj"]
+        target_modules="all-linear"
     )
     
     model = get_peft_model(base_model, lora_config)
@@ -219,7 +219,7 @@ def train_t5_qlora():
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
-        num_train_epochs=80,
+        num_train_epochs=30,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="accuracy",
@@ -240,7 +240,8 @@ def train_t5_qlora():
         train_dataset=train_data,
         eval_dataset=val_data,
         data_collator=collator,
-        compute_metrics=compute_metrics
+        compute_metrics=compute_metrics,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=10)]
     )
 
     trainer.train()

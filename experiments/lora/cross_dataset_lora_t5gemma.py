@@ -181,7 +181,7 @@ def get_lora_model_and_tokenizer():
         lora_alpha=LORA_ALPHA,
         lora_dropout=LORA_DROPOUT,
         bias="none",
-        target_modules=["q_proj", "v_proj"]
+        target_modules="all-linear"
     )
     
     model = get_peft_model(base_model, lora_config)
