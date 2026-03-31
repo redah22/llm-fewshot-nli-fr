@@ -90,10 +90,10 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [16, 32]},
-        "lora_alpha": {"values": [32, 64]},
-        "learning_rate": {"values": [1e-4, 3e-4, 5e-4]},
-        "lora_dropout": {"values": [0.0, 0.05, 0.1]},
+        "lora_r": {"values": [32]},
+        "lora_alpha": {"values": [64]},
+        "learning_rate": {"values": [3e-4, 5e-4]},
+        "lora_dropout": {"values": [0.05, 0.1]},
     }
 }
 
@@ -225,7 +225,7 @@ def train_t5_qlora():
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
         gradient_accumulation_steps=1,
-        num_train_epochs=30,
+        num_train_epochs=100,
         weight_decay=0.01,
         load_best_model_at_end=False,
         metric_for_best_model="accuracy",
