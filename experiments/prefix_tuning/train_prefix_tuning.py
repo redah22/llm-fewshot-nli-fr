@@ -103,54 +103,53 @@ def preprocess_causal(examples, p_key, tokenizer):
 
 class GenerationAccuracyCallback(TrainerCallback):
     """
-    Callback pour évaluer un modèle Causal LM par génération à la fin de chaque Epoch.
-    Utilise Expressions Régulières (Regex) pour éviter les hallucinations comme abordé dans le rapport M1.
+    Callback pour évaluer un modèle Causal LM par comparaison de probabilités.
+    Au lieu de générer du texte (qui peut halluciner), on compare directement
+    la probabilité que le modèle attribue à "vrai" vs "faux" vs "neutre".
     """
     def __init__(self, val_dataset, tokenizer):
         self.val_dataset = val_dataset
         self.tokenizer = tokenizer
+        # Pré-calculer les token IDs des 3 labels
+        self.label_tokens = {
+            "vrai": tokenizer.encode("vrai", add_special_tokens=False)[0],
+            "faux": tokenizer.encode("faux", add_special_tokens=False)[0],
+            "neutre": tokenizer.encode("neutre", add_special_tokens=False)[0],
+        }
+        print(f"📌 Token IDs des labels : {self.label_tokens}")
 
     def on_epoch_end(self, args, state, control, model=None, **kwargs):
-        print("\n[🎯 EVALUATION GENERATIVE PAR REGEX]")
+        print("\n[🎯 EVALUATION PAR PROBABILITÉS]")
         model.eval()
-        correct, total = 0, len(self.val_dataset)
-        
-        # On va tester sur un echantillon si le dataset est trop gros pour gagner du temps
-        sample_size = min(total, 50)
+
+        sample_size = min(len(self.val_dataset), 50)
         sample = self.val_dataset.select(range(sample_size))
-        
-        LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
-        all_preds, all_labels = [], []
-        
+
+        correct = 0
         for i in range(sample_size):
             ex = sample[i]
             prompt = ex["prompt_only"]
             true_label = ex["target_label"]
-            
+
             inputs = self.tokenizer(prompt, return_tensors="pt").to(model.device)
             with torch.no_grad():
-                out_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=5, # Seulement 5 tokens max pour couper un éventuel bégaiment ("fauxfauxfaux")
-                    pad_token_id=self.tokenizer.eos_token_id,
-                    do_sample=False
-                )
-            decoded = self.tokenizer.decode(out_ids[0][len(inputs.input_ids[0]):], skip_special_tokens=True)
-            
-            # Application de la REGEX du "Couteau Suisse" (Rapport M1)
-            match = re.search(r'(vrai|faux|neutre)', decoded.lower())
-            pred = match.group(1) if match else "neutre"
-            
-            all_preds.append(pred)
-            all_labels.append(true_label)
-            
-            if pred == true_label: correct += 1
-            if i < 2:
-                print(f"  → Généré brut : '{decoded}' | Regex a gardé : '{pred}' | Vrai : '{true_label}'")
-                
-        metrics = {"eval/accuracy": correct / sample_size}
-        wandb.log(metrics)
-        print(f"✅ Accuracy Générative (Epoch {state.epoch}): {metrics['eval/accuracy']:.2%}")
+                outputs = model(**inputs)
+
+            # Récupérer les logits du DERNIER token (= position de la réponse)
+            next_token_logits = outputs.logits[0, -1, :]
+
+            # Comparer les probabilités de "vrai", "faux", "neutre"
+            scores = {label: next_token_logits[tid].item() for label, tid in self.label_tokens.items()}
+            pred = max(scores, key=scores.get)
+
+            if pred == true_label:
+                correct += 1
+            if i < 3:
+                print(f"  → Scores: vrai={scores['vrai']:.2f} faux={scores['faux']:.2f} neutre={scores['neutre']:.2f} | Prédit: '{pred}' | Vrai: '{true_label}'")
+
+        acc = correct / sample_size
+        wandb.log({"eval/accuracy": acc})
+        print(f"✅ Accuracy (Epoch {state.epoch}): {acc:.2%}")
         model.train()
 
 def main():
