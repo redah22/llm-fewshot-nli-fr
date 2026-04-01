@@ -141,15 +141,15 @@ def main():
     parser.add_argument("--test_ds", type=str, default="gqnli_fr")
     args = parser.parse_args()
 
-    # Modèles
+    # Modèles — Versions INSTRUCT (comprennent les consignes, répondent par un mot)
     if args.model == "gpt2":
         model_id = "gpt2"
         use_4bit = False
-    elif args.model == "meta-llama/Llama-2-7b-hf" or args.model == "llama":
-        model_id = "meta-llama/Llama-2-7b-hf"
+    elif args.model == "llama":
+        model_id = "meta-llama/Llama-2-7b-chat-hf"
         use_4bit = True
     else:
-        model_id = "mistralai/Mistral-7B-v0.1"
+        model_id = "mistralai/Mistral-7B-Instruct-v0.1"
         use_4bit = True
 
     print(f"🚀 Lancement Prefix-Tuning sur {model_id} (4-bit: {use_4bit})")
