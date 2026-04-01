@@ -171,8 +171,8 @@ def main():
 
     # Préparation Données
     train_dict, t_key = get_dataset(args.train_ds)
-    train_ds = train_dict["train"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=False, remove_columns=train_dict["train"].column_names)
-    val_ds = train_dict["validation"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=False, remove_columns=train_dict["validation"].column_names)
+    train_ds = train_dict["train"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=True, remove_columns=train_dict["train"].column_names)
+    val_ds = train_dict["validation"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=True, remove_columns=train_dict["validation"].column_names)
 
     # Chargement Modèle (4-bit pour Mistral/Llama sur Kaggle)
     bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16) if use_4bit else None
