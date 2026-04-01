@@ -200,7 +200,7 @@ def main():
         save_strategy="epoch",
         logging_steps=5,
         report_to="wandb",
-        remove_unused_columns=False # Important pour garder "prompt_only" et "target_label" dispo dans le callback
+        remove_unused_columns=True # Fix du crash: le Trainer ignorera "prompt_only" et "target_label" pour la collate_fn, val_ds les conserve quand même pour le Callback !
     )
 
     trainer = Trainer(
