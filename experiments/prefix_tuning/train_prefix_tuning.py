@@ -17,7 +17,7 @@ from transformers import (
     AutoModelForCausalLM,
     TrainingArguments,
     Trainer,
-    DataCollatorForLanguageModeling,
+    DataCollatorForSeq2Seq,
     TrainerCallback,
     BitsAndBytesConfig
 )
@@ -71,22 +71,35 @@ def normalize_label(label):
     return LABEL_MAP.get(s, "neutre")
 
 def preprocess_causal(examples, p_key, tokenizer):
-    inputs = []
+    all_input_ids = []
+    all_labels = []
+    target_labels = []
+    prompt_only_texts = []
+
     for p, h, l in zip(examples[p_key], examples["hypothesis"], examples["label"]):
         prompt = f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse : "
         label_text = normalize_label(l)
-        inputs.append(prompt + label_text + tokenizer.eos_token)
-        
-    # On tokenise directement tout le texte (prompt + réponse + eos)
-    # L'objectif Causal LM va tenter de prédire chaque token suivant.
-    model_inputs = tokenizer(inputs, max_length=256, truncation=True, padding=False)
-    # On ajoute la cible en texte brut pour l'évaluer plus tard avec la Regex
-    model_inputs["target_label"] = [normalize_label(l) for l in examples["label"]]
-    model_inputs["prompt_only"] = [
-        f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse : "
-        for p, h in zip(examples[p_key], examples["hypothesis"])
-    ]
-    return model_inputs
+        full_text = prompt + label_text + tokenizer.eos_token
+
+        # Tokeniser séparément le prompt et le texte complet
+        prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
+        full_ids = tokenizer(full_text, max_length=256, truncation=True, add_special_tokens=False)["input_ids"]
+
+        # MASQUAGE : -100 sur le prompt (ignoré par la loss), vrais tokens seulement sur le label
+        # Cela force le modèle à concentrer 100% de son apprentissage sur le mot-réponse
+        labels = [-100] * len(prompt_ids) + full_ids[len(prompt_ids):]
+
+        all_input_ids.append(full_ids)
+        all_labels.append(labels)
+        target_labels.append(label_text)
+        prompt_only_texts.append(prompt)
+
+    return {
+        "input_ids": all_input_ids,
+        "labels": all_labels,
+        "target_label": target_labels,
+        "prompt_only": prompt_only_texts,
+    }
 
 class GenerationAccuracyCallback(TrainerCallback):
     """
@@ -213,7 +226,7 @@ def main():
         model=model,
         args=training_args,
         train_dataset=train_ds,
-        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
+        data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True, label_pad_token_id=-100),
         callbacks=[GenerationAccuracyCallback(val_ds, tokenizer)]
     )
 
