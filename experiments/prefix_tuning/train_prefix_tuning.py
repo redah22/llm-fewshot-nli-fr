@@ -40,8 +40,14 @@ def get_dataset(name):
         
     elif name == "fracas_75":
         fracas = load_dataset('maximoss/fracas')['train'].select(range(75))
+        # REGLE 1 : Enlever les "undef" (label inutile)
+        fracas = fracas.filter(lambda x: str(x['label']).lower().strip() not in ['undef', 'unknown'])
+        # REGLE 2 : Ne JAMAIS mettre les tests dans l'entraînement → split 80/20
+        fracas = fracas.shuffle(seed=42)
+        split_idx = int(len(fracas) * 0.8)
         ds = DatasetDict({
-            'train': fracas, 'validation': fracas, 'test': fracas
+            'train': fracas.select(range(0, split_idx)),
+            'validation': fracas.select(range(split_idx, len(fracas))),
         })
         return ds, "premises"
         
