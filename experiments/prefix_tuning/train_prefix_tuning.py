@@ -188,7 +188,7 @@ def main():
     # WANDB
     run = wandb.init(project="fewshot-nli-fr")
     config = wandb.config
-    lr = config.learning_rate if "learning_rate" in config else 5e-4
+    lr = config.learning_rate if "learning_rate" in config else 1e-4
     v_tokens = config.virtual_tokens if "virtual_tokens" in config else 30
     run.name = f"prefix_{args.model}_v{v_tokens}_lr{lr}"
 
@@ -222,7 +222,8 @@ def main():
 
     peft_config = PrefixTuningConfig(
         task_type=TaskType.CAUSAL_LM,
-        num_virtual_tokens=v_tokens
+        num_virtual_tokens=v_tokens,
+        prefix_projection=True,   # MLP de reparamétrisation → stabilise l'entraînement
     )
     model = get_peft_model(base_model, peft_config)
     model.print_trainable_parameters()
@@ -234,6 +235,7 @@ def main():
         per_device_train_batch_size=4,
         gradient_accumulation_steps=2,
         num_train_epochs=15,
+        weight_decay=0.01,         # Régularisation (identique aux scripts LoRA)
         save_strategy="epoch",
         save_total_limit=1,
         logging_steps=5,
