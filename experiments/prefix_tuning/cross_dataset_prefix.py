@@ -169,6 +169,9 @@ class ProbabilityEvalCallback(TrainerCallback):
         print(f"Vrai neutre: {cm[1][0]:<11} {cm[1][1]:<13} {cm[1][2]}")
         print(f"Vrai faux:   {cm[2][0]:<11} {cm[2][1]:<13} {cm[2][2]}\n")
         
+        self.last_accuracy = acc
+        self.last_cm = cm.tolist()
+        
         wandb.log({"eval/accuracy": acc})
         print(f"✅ Accuracy Validation (Epoch {state.epoch}): {acc:.2%}")
         model.train()
@@ -271,6 +274,26 @@ def main():
 
     print("\n🎬 Début de l'entraînement Prefix-Tuning CROSS DATASET...")
     trainer.train()
+    
+    # SAUVEGARDE DES RÉSULTATS DANS /results
+    import json
+    os.makedirs("results", exist_ok=True)
+    res_path = f"results/prefix_{args.model}_{args.train_ds}to{args.test_ds}_v{v_tokens}.json"
+    
+    eval_callback = [cb for cb in trainer.callback_handler.callbacks if isinstance(cb, ProbabilityEvalCallback)][0]
+    results_data = {
+        "model": args.model,
+        "train_dataset": args.train_ds,
+        "test_dataset": args.test_ds,
+        "virtual_tokens": v_tokens,
+        "final_accuracy": getattr(eval_callback, 'last_accuracy', 0.0),
+        "confusion_matrix": getattr(eval_callback, 'last_cm', []),
+        "labels_order": ["vrai", "neutre", "faux"]
+    }
+    
+    with open(res_path, "w", encoding="utf-8") as f:
+        json.dump(results_data, f, indent=4, ensure_ascii=False)
+    print(f"\n✅ RÉSULTATS OFFICIELS SAUVEGARDÉS DANS : {res_path}")
     
     # Nettoyage
     if os.path.exists(training_args.output_dir):
