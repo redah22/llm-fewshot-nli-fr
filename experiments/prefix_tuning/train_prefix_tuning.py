@@ -139,10 +139,14 @@ class ProbabilityEvalCallback(TrainerCallback):
         sample = self.val_dataset.select(range(sample_size))
 
         correct = 0
+        y_true = []
+        y_pred = []
+        
         for i in range(sample_size):
             ex = sample[i]
             prompt = ex["prompt_only"]
             true_label = ex["target_label"]
+            y_true.append(true_label)
 
             inputs = self.tokenizer(prompt, return_tensors="pt").to(model.device)
             with torch.no_grad():
@@ -151,6 +155,7 @@ class ProbabilityEvalCallback(TrainerCallback):
             next_token_logits = outputs.logits[0, -1, :]
             scores = {label: next_token_logits[tid].item() for label, tid in self.label_tokens.items()}
             pred = max(scores, key=scores.get)
+            y_pred.append(pred)
 
             if pred == true_label:
                 correct += 1
@@ -158,6 +163,17 @@ class ProbabilityEvalCallback(TrainerCallback):
                 print(f"  → Scores: vrai={scores['vrai']:.2f} faux={scores['faux']:.2f} neutre={scores['neutre']:.2f} | Prédit: '{pred}' | Vrai: '{true_label}'")
 
         acc = correct / sample_size
+        
+        # --- MATRICE DE CONFUSION ---
+        from sklearn.metrics import confusion_matrix
+        labels_order = ["vrai", "neutre", "faux"]
+        cm = confusion_matrix(y_true, y_pred, labels=labels_order)
+        print("\n📊 MATRICE DE CONFUSION:")
+        print(f"             Préd:vrai   Préd:neutre   Préd:faux")
+        print(f"Vrai vrai:   {cm[0][0]:<11} {cm[0][1]:<13} {cm[0][2]}")
+        print(f"Vrai neutre: {cm[1][0]:<11} {cm[1][1]:<13} {cm[1][2]}")
+        print(f"Vrai faux:   {cm[2][0]:<11} {cm[2][1]:<13} {cm[2][2]}\n")
+        
         wandb.log({"eval/accuracy": acc})
         print(f"✅ Accuracy Validation (Epoch {state.epoch}): {acc:.2%}")
         model.train()
