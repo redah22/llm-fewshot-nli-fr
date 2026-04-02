@@ -1,5 +1,11 @@
 """
 Script de Prefix-Tuning pour LLM Causaux (GPT-2, Mistral, LLaMA).
+Objectif : Vérifier que l'entraînement fonctionne correctement.
+
+Données GQNLI-FR (splits propres, aucune fuite) :
+  - Train : 180 exemples (60 par classe)
+  - Val   : 60 exemples  (20 par classe)
+  - Test  : 60 exemples  (20 par classe) — pas utilisé pour l'instant
 """
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
@@ -22,9 +28,13 @@ from transformers import (
     BitsAndBytesConfig
 )
 from peft import get_peft_model, PrefixTuningConfig, TaskType
-from sklearn.metrics import confusion_matrix
+
+# ============================================================
+# 1. CHARGEMENT DES DONNÉES (identique à sweep_lora.py)
+# ============================================================
 
 def get_dataset(name):
+    """Télécharge et segmente dynamiquement le jeu de données depuis Hub."""
     print(f"Téléchargement et structuration de {name}...")
     if name == "gqnli_fr":
         gqnli = load_dataset('maximoss/gqnli-fr')['test']
@@ -40,14 +50,8 @@ def get_dataset(name):
         
     elif name == "fracas_75":
         fracas = load_dataset('maximoss/fracas')['train'].select(range(75))
-        # REGLE 1 : Enlever les "undef" (label inutile)
-        fracas = fracas.filter(lambda x: str(x['label']).lower().strip() not in ['undef', 'unknown'])
-        # REGLE 2 : Ne JAMAIS mettre les tests dans l'entraînement → split 80/20
-        fracas = fracas.shuffle(seed=42)
-        split_idx = int(len(fracas) * 0.8)
         ds = DatasetDict({
-            'train': fracas.select(range(0, split_idx)),
-            'validation': fracas.select(range(split_idx, len(fracas))),
+            'train': fracas, 'validation': fracas, 'test': fracas
         })
         return ds, "premises"
         
@@ -61,14 +65,24 @@ def get_dataset(name):
             'test': data.select(range(train_size + val_size, total))
         }), "premise"
 
+    raise ValueError(f"Dataset {name} inconnu.")
+
+# ============================================================
+# 2. NORMALISATION DES LABELS (identique à sweep_lora_t5gemma.py)
+# ============================================================
+
 def normalize_label(label):
     LABEL_MAP = {
         "yes": "vrai", "entailment": "vrai", 0: "vrai", "0": "vrai",
-        "unknown": "neutre", "neutral": "neutre", 1: "neutre", "1": "neutre",
+        "unknown": "neutre", "undef": "neutre", "neutral": "neutre", 1: "neutre", "1": "neutre",
         "no": "faux", "contradiction": "faux", 2: "faux", "2": "faux"
     }
     s = str(label).lower().strip()
     return LABEL_MAP.get(s, "neutre")
+
+# ============================================================
+# 3. PRÉPARATION CAUSAL LM (prompt masqué dans les labels)
+# ============================================================
 
 def preprocess_causal(examples, p_key, tokenizer):
     all_input_ids = []
@@ -81,12 +95,10 @@ def preprocess_causal(examples, p_key, tokenizer):
         label_text = normalize_label(l)
         full_text = prompt + label_text + tokenizer.eos_token
 
-        # Tokeniser séparément le prompt et le texte complet
         prompt_ids = tokenizer(prompt, add_special_tokens=False)["input_ids"]
         full_ids = tokenizer(full_text, max_length=256, truncation=True, add_special_tokens=False)["input_ids"]
 
-        # MASQUAGE : -100 sur le prompt (ignoré par la loss), vrais tokens seulement sur le label
-        # Cela force le modèle à concentrer 100% de son apprentissage sur le mot-réponse
+        # MASQUAGE : -100 sur le prompt, vrais tokens seulement sur le label
         labels = [-100] * len(prompt_ids) + full_ids[len(prompt_ids):]
 
         all_input_ids.append(full_ids)
@@ -101,16 +113,17 @@ def preprocess_causal(examples, p_key, tokenizer):
         "prompt_only": prompt_only_texts,
     }
 
-class GenerationAccuracyCallback(TrainerCallback):
+# ============================================================
+# 4. CALLBACK D'ÉVALUATION PAR PROBABILITÉS
+# ============================================================
+
+class ProbabilityEvalCallback(TrainerCallback):
     """
-    Callback pour évaluer un modèle Causal LM par comparaison de probabilités.
-    Au lieu de générer du texte (qui peut halluciner), on compare directement
-    la probabilité que le modèle attribue à "vrai" vs "faux" vs "neutre".
+    Évalue par comparaison de logits sur les 3 tokens (vrai/faux/neutre).
     """
     def __init__(self, val_dataset, tokenizer):
         self.val_dataset = val_dataset
         self.tokenizer = tokenizer
-        # Pré-calculer les token IDs des 3 labels
         self.label_tokens = {
             "vrai": tokenizer.encode("vrai", add_special_tokens=False)[0],
             "faux": tokenizer.encode("faux", add_special_tokens=False)[0],
@@ -135,10 +148,7 @@ class GenerationAccuracyCallback(TrainerCallback):
             with torch.no_grad():
                 outputs = model(**inputs)
 
-            # Récupérer les logits du DERNIER token (= position de la réponse)
             next_token_logits = outputs.logits[0, -1, :]
-
-            # Comparer les probabilités de "vrai", "faux", "neutre"
             scores = {label: next_token_logits[tid].item() for label, tid in self.label_tokens.items()}
             pred = max(scores, key=scores.get)
 
@@ -149,17 +159,20 @@ class GenerationAccuracyCallback(TrainerCallback):
 
         acc = correct / sample_size
         wandb.log({"eval/accuracy": acc})
-        print(f"✅ Accuracy (Epoch {state.epoch}): {acc:.2%}")
+        print(f"✅ Accuracy Validation (Epoch {state.epoch}): {acc:.2%}")
         model.train()
+
+# ============================================================
+# 5. MAIN
+# ============================================================
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="gpt2", help="gpt2, mistral, ou llama")
-    parser.add_argument("--train_ds", type=str, default="fracas_75")
-    parser.add_argument("--test_ds", type=str, default="gqnli_fr")
+    parser.add_argument("--dataset", type=str, default="gqnli_fr", help="gqnli_fr, fracas_75, daccord")
     args = parser.parse_args()
 
-    # Modèles — Versions INSTRUCT (comprennent les consignes, répondent par un mot)
+    # Modèles
     if args.model == "gpt2":
         model_id = "gpt2"
         use_4bit = False
@@ -172,11 +185,9 @@ def main():
 
     print(f"🚀 Lancement Prefix-Tuning sur {model_id} (4-bit: {use_4bit})")
 
-    # WANDB INIT
+    # WANDB
     run = wandb.init(project="fewshot-nli-fr")
     config = wandb.config
-    
-    # Paramètres dynamiques du Sweep (ou par défaut)
     lr = config.learning_rate if "learning_rate" in config else 5e-4
     v_tokens = config.virtual_tokens if "virtual_tokens" in config else 30
     run.name = f"prefix_{args.model}_v{v_tokens}_lr{lr}"
@@ -185,23 +196,30 @@ def main():
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     if not tokenizer.pad_token:
         tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "left" # Left padding mieux pour la génération Causal LM
+    tokenizer.padding_side = "left"
 
-    # Préparation Données
-    train_dict, t_key = get_dataset(args.train_ds)
-    train_ds = train_dict["train"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=True, remove_columns=train_dict["train"].column_names)
-    val_ds = train_dict["validation"].map(lambda ex: preprocess_causal(ex, t_key, tokenizer), batched=True, remove_columns=train_dict["validation"].column_names)
-
-    # Chargement Modèle (4-bit pour Mistral/Llama sur Kaggle)
-    bnb_config = BitsAndBytesConfig(load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16) if use_4bit else None
-    
-    base_model = AutoModelForCausalLM.from_pretrained(
-        model_id, 
-        quantization_config=bnb_config, 
-        device_map="auto"
+    # Données
+    ds_dict, p_key = get_dataset(args.dataset)
+    train_ds = ds_dict["train"].map(
+        lambda ex: preprocess_causal(ex, p_key, tokenizer), 
+        batched=True, remove_columns=ds_dict["train"].column_names
+    )
+    val_ds = ds_dict["validation"].map(
+        lambda ex: preprocess_causal(ex, p_key, tokenizer), 
+        batched=True, remove_columns=ds_dict["validation"].column_names
     )
 
-    # CONFIGURATION PREFIX-TUNING
+    print(f"📊 Train: {len(train_ds)} | Val: {len(val_ds)}")
+
+    # Modèle
+    bnb_config = BitsAndBytesConfig(
+        load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=torch.float16
+    ) if use_4bit else None
+    
+    base_model = AutoModelForCausalLM.from_pretrained(
+        model_id, quantization_config=bnb_config, device_map="auto"
+    )
+
     peft_config = PrefixTuningConfig(
         task_type=TaskType.CAUSAL_LM,
         num_virtual_tokens=v_tokens
@@ -209,6 +227,7 @@ def main():
     model = get_peft_model(base_model, peft_config)
     model.print_trainable_parameters()
 
+    # Entraînement
     training_args = TrainingArguments(
         output_dir=f"/tmp/prefix_{args.model}",
         learning_rate=lr,
@@ -216,9 +235,10 @@ def main():
         gradient_accumulation_steps=2,
         num_train_epochs=15,
         save_strategy="epoch",
+        save_total_limit=1,
         logging_steps=5,
         report_to="wandb",
-        remove_unused_columns=True # Fix du crash: le Trainer ignorera "prompt_only" et "target_label" pour la collate_fn, val_ds les conserve quand même pour le Callback !
+        remove_unused_columns=True,
     )
 
     trainer = Trainer(
@@ -226,12 +246,13 @@ def main():
         args=training_args,
         train_dataset=train_ds,
         data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True, label_pad_token_id=-100),
-        callbacks=[GenerationAccuracyCallback(val_ds, tokenizer)]
+        callbacks=[ProbabilityEvalCallback(val_ds, tokenizer)]
     )
 
     print("\n🎬 Début de l'entraînement Prefix-Tuning...")
     trainer.train()
     
+    # Nettoyage
     if os.path.exists(training_args.output_dir):
         shutil.rmtree(training_args.output_dir)
 
