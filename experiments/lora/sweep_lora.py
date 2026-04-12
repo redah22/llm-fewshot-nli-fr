@@ -101,23 +101,29 @@ def get_dataset(name):
             
         data = data.map(convert_sick, remove_columns=data.column_names)
         
-        # --- BLOC: SÉLECTION BALANCÉE 2000 EXEMPLES --- #
+        # --- SÉLECTION BALANCÉE GLOBALE ---
         vrai_pool = data.filter(lambda x: x['label'] == 0)
         neutre_pool = data.filter(lambda x: x['label'] == 1)
         faux_pool = data.filter(lambda x: x['label'] == 2)
         
-        max_per_class = 2000 // 3
+        # Le nombre max correspond à la taille de la plus petite classe
+        max_per_class = min(len(vrai_pool), len(neutre_pool), len(faux_pool))
         
-        test_vrai = vrai_pool.select(range(min(max_per_class, len(vrai_pool))))
-        test_neutre = neutre_pool.select(range(min(max_per_class, len(neutre_pool))))
-        test_faux = faux_pool.select(range(min(max_per_class, len(faux_pool))))
+        test_vrai = vrai_pool.select(range(max_per_class))
+        test_neutre = neutre_pool.select(range(max_per_class))
+        test_faux = faux_pool.select(range(max_per_class))
         
-        test_data_balanced = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
+        from datasets import concatenate_datasets
+        balanced_data = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
+        
+        total = len(balanced_data)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
         
         ds = DatasetDict({
-            'train': data, 
-            'validation': data, 
-            'test': test_data_balanced
+            'train': balanced_data.select(range(0, train_size)),
+            'validation': balanced_data.select(range(train_size, train_size + val_size)),
+            'test': balanced_data.select(range(train_size + val_size, total))
         })
         return ds, "premise"
         
@@ -134,7 +140,8 @@ else:
     print("2. GQNLI-FR        →  test FraCaS (TOTAL)")
     print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
     print("4. FraCaS (TOTAL)  →  test SICK-FR")
-    exp_choice = input("\nVotre choix (1, 2, 3 ou 4): ").strip()
+    print("5. SICK-FR         →  test SICK-FR (Intra-dataset)")
+    exp_choice = input("\nVotre choix (1 à 5): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli"
@@ -148,6 +155,9 @@ elif exp_choice == "3":
 elif exp_choice == "4":
     EXP_NAME = "sweep_fracas_to_sick"
     train_ds_name, test_ds_name = "fracas_full", "sick_fr"
+elif exp_choice == "5":
+    EXP_NAME = "sweep_sick_to_sick"
+    train_ds_name, test_ds_name = "sick_fr", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
