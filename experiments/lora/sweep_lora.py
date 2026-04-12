@@ -77,6 +77,33 @@ def get_dataset(name):
         })
         return ds, "premise"
         
+    elif name == "sick_fr":
+        sick = load_dataset('maximoss/sick-fr')
+        if len(sick.keys()) > 1:
+            data = concatenate_datasets(list(sick.values()))
+        else:
+            data = list(sick.values())[0]
+            
+        def convert_sick(ex):
+            lbl = str(ex['entailment_label']).strip().upper()
+            if lbl == 'ENTAILMENT': label_id = 0
+            elif lbl == 'NEUTRAL': label_id = 1
+            elif lbl == 'CONTRADICTION': label_id = 2
+            else: label_id = 1
+            return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+            
+        data = data.map(convert_sick, remove_columns=data.column_names)
+        shuffled = data.shuffle(seed=42)
+        total = len(shuffled)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
+        ds = DatasetDict({
+            'train': shuffled.select(range(0, train_size)),
+            'validation': shuffled.select(range(train_size, train_size + val_size)),
+            'test': shuffled.select(range(train_size + val_size, total))
+        })
+        return ds, "premise"
+        
     raise ValueError(f"Dataset {name} inconnu.")
 
 # 2. CHOIX DE L'EXPERIENCE
@@ -89,7 +116,8 @@ else:
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
     print("2. GQNLI-FR       →  test FraCaS (0-74)")
     print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
-    exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
+    print("4. FraCaS (0-74)  →  test SICK-FR")
+    exp_choice = input("\nVotre choix (1, 2, 3 ou 4): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli"
@@ -100,6 +128,9 @@ elif exp_choice == "2":
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
+elif exp_choice == "4":
+    EXP_NAME = "sweep_fracas_to_sick"
+    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
@@ -110,8 +141,8 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [8, 16]},
-        "lora_alpha": {"values": [32, 64]},
+        "lora_r": {"values": [8, 16, 32, 64]},
+        "lora_alpha": {"values": [16, 32, 64]},
         "learning_rate": {"values": [5e-4, 1e-3]},
         "lora_dropout": {"values": [0.0, 0.05, 0.1, 0.2]},
     }

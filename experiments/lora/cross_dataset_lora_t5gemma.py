@@ -65,10 +65,11 @@ print("0. Baseline — Modèle vierge testé sur TOUS les datasets")
 print("1. LoRA FraCaS (0-74)  →  test GQNLI-FR (complet)")
 print("2. LoRA GQNLI-FR       →  test FraCaS (0-74)")
 print("3. LoRA RTE3-DEV       →  test DACCORD + RTE3-TEST")
-print("4. Toutes les expériences (1, 2 et 3) à la suite")
+print("4. LoRA FraCaS (0-74)  →  test SICK-FR")
+print("5. Toutes les expériences à la suite")
 
-exp_choice = input("\nVotre choix (0, 1, 2, 3 ou 4): ").strip()
-if exp_choice not in ["0", "1", "2", "3", "4"]:
+exp_choice = input("\nVotre choix (0, 1, 2, 3, 4 ou 5): ").strip()
+if exp_choice not in ["0", "1", "2", "3", "4", "5"]:
     print("❌ Choix invalide!")
     exit(1)
 
@@ -81,6 +82,7 @@ DATASETS = {
     "fracas_75": {"path": "data/processed/fracas_subset_75", "pkey": "premises", "label": "FraCaS (0-74)"},
     "daccord": {"path": "data/processed/daccord", "pkey": "premise", "label": "DACCORD"},
     "rte3_fr": {"path": "data/processed/rte3_fr", "pkey": "premise", "label": "RTE3-French"},
+    "sick_fr": {"path": "data/processed/sick_fr", "pkey": "premise", "label": "SICK-FR"},
 }
 
 def check_dataset(key):
@@ -89,23 +91,21 @@ def check_dataset(key):
         return False
     return True
 
-LABEL_MAP_STR = {
-    "yes": "0", "entailment": "0",
-    "unknown": "1", "undef": "1", "neutral": "1",
-    "no": "2", "contradiction": "2"
+LABEL_MAP = {
+    "yes": "vrai", "entailment": "vrai", "0": "vrai",
+    "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
+    "no": "faux", "contradiction": "faux", "2": "faux"
 }
 
 def normalize_label(label) -> str:
     if isinstance(label, int):
-        return str(label) if label in [0, 1, 2] else "1"
-    label_str = str(label).lower().strip()
-    if label_str in LABEL_MAP_STR:
-        return LABEL_MAP_STR[label_str]
-    try:
-        val = int(label_str)
-        return str(val) if val in [0, 1, 2] else "1"
-    except ValueError:
-        return "1"
+        if label == 0: return "vrai"
+        if label == 1: return "neutre"
+        if label == 2: return "faux"
+        return "neutre"
+    s = str(label).lower().strip()
+    if s in LABEL_MAP: return LABEL_MAP[s]
+    return "neutre"
 
 class T5GemmaMetricsCb(TrainerCallback):
     def __init__(self):
@@ -199,10 +199,13 @@ global_tokenizer = None
 
 def make_preprocess(premise_key):
     def preprocess(examples):
-        inputs = [f"nli: {p} </s> {h}" for p, h in zip(examples[premise_key], examples["hypothesis"])]
+        inputs = [
+            f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse :"
+            for p, h in zip(examples[premise_key], examples["hypothesis"])
+        ]
         model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
         targets = [normalize_label(l) for l in examples["label"]]
-        labels = global_tokenizer(text_target=targets, max_length=4, truncation=True, padding=False)
+        labels = global_tokenizer(text_target=targets, max_length=8, truncation=True, padding=False)
         model_inputs["labels"] = labels["input_ids"]
         return model_inputs
     return preprocess
@@ -220,9 +223,18 @@ def compute_metrics(eval_pred):
     dec_preds = [p.strip() for p in global_tokenizer.batch_decode(preds, skip_special_tokens=True)]
     dec_labels = [l.strip() for l in global_tokenizer.batch_decode(labels, skip_special_tokens=True)]
     
-    cleaned_preds = [p if p in ["0","1","2"] else "1" for p in dec_preds]
-    int_preds = [int(p) for p in cleaned_preds]
-    int_labels = [int(l) if l in ["0","1","2"] else 1 for l in dec_labels]
+    LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
+    import re
+    cleaned_preds = []
+    for p in dec_preds:
+        match = re.search(r'(vrai|faux|neutre)', p.lower())
+        if match:
+            cleaned_preds.append(match.group(1))
+        else:
+            cleaned_preds.append("neutre")
+            
+    int_preds = [LABEL_TO_INT.get(p, 1) for p in cleaned_preds]
+    int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
     
     try:
         cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
@@ -345,11 +357,33 @@ def run_exp3():
         "baseline_val": base_acc, "test_daccord": dacc_acc, "test_rte3": rte3t_acc
     }, f"{MODEL_SHORT}_lora_exp3_rte3_to_daccord", trainer)
 
+def run_exp4():
+    print("\n=== EXP 4 LoRA : FraCaS(0-74) -> SICK-FR ===")
+    global global_tokenizer
+    global_tokenizer, model = get_lora_model_and_tokenizer()
+    train_tok, train_raw = load_and_prep("fracas_75", "train")
+    val_tok, _ = load_and_prep("fracas_75", "validation")
+    
+    trainer = make_trainer(model, global_tokenizer, train_tok, val_tok, "exp4_fracas_to_sick", epochs=30)
+    base_acc = trainer.evaluate()["eval_accuracy"]
+    trainer.train()
+    model.save_pretrained(f"models/{MODEL_SHORT}_lora_exp4_sick")
+    
+    sick_tok, _ = load_and_prep("sick_fr", "test")
+    trainer.eval_dataset = sick_tok
+    test_acc = trainer.evaluate()["eval_accuracy"]
+    
+    save_results({
+        "model": BASE_MODEL, "exp": "exp4_lora", 
+        "baseline_val": base_acc, "final_test": test_acc
+    }, f"{MODEL_SHORT}_lora_exp4_fracas_to_sick", trainer)
+
 if exp_choice == "0": run_exp0()
 elif exp_choice == "1": run_exp1()
 elif exp_choice == "2": run_exp2()
 elif exp_choice == "3": run_exp3()
-elif exp_choice == "4":
-    run_exp1(); run_exp2(); run_exp3()
+elif exp_choice == "4": run_exp4()
+elif exp_choice == "5":
+    run_exp1(); run_exp2(); run_exp3(); run_exp4()
 
 print("\n✅ Terminé !")

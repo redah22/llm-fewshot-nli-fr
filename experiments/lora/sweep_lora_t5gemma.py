@@ -82,6 +82,33 @@ def get_dataset(name):
         })
         return ds, "premise"
         
+    elif name == "sick_fr":
+        sick = load_dataset('maximoss/sick-fr')
+        if len(sick.keys()) > 1:
+            data = concatenate_datasets(list(sick.values()))
+        else:
+            data = list(sick.values())[0]
+            
+        def convert_sick(ex):
+            lbl = str(ex['entailment_label']).strip().upper()
+            if lbl == 'ENTAILMENT': label_id = 0
+            elif lbl == 'NEUTRAL': label_id = 1
+            elif lbl == 'CONTRADICTION': label_id = 2
+            else: label_id = 1
+            return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+            
+        data = data.map(convert_sick, remove_columns=data.column_names)
+        shuffled = data.shuffle(seed=42)
+        total = len(shuffled)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
+        ds = DatasetDict({
+            'train': shuffled.select(range(0, train_size)),
+            'validation': shuffled.select(range(train_size, train_size + val_size)),
+            'test': shuffled.select(range(train_size + val_size, total))
+        })
+        return ds, "premise"
+        
     raise ValueError(f"Dataset {name} inconnu.")
 
 # 2. CONFIGURATION DU SWEEP (RÉDUIT)
@@ -107,7 +134,8 @@ else:
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
     print("2. GQNLI-FR       →  test FraCaS (0-74)")
     print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
-    exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
+    print("4. FraCaS (0-74)  →  test SICK-FR")
+    exp_choice = input("\nVotre choix (1, 2, 3 ou 4): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
@@ -118,6 +146,9 @@ elif exp_choice == "2":
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_t5gemma"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
+elif exp_choice == "4":
+    EXP_NAME = "sweep_fracas_to_sick_t5gemma"
+    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
@@ -240,7 +271,7 @@ def train_t5_qlora():
         gradient_accumulation_steps=1,
         num_train_epochs=100,
         weight_decay=0.01,
-        load_best_model_at_end=False,
+        load_best_model_at_end=True,
         metric_for_best_model="accuracy",
         predict_with_generate=True,
         generation_max_length=8,

@@ -75,7 +75,7 @@ logs/
 wandb/
 runs/
 *.md
-!README.md
+!README.  
 !RAPPORT_RESULTATS.md
 
 # macOS
