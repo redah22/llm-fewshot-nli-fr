@@ -113,7 +113,6 @@ def get_dataset(name):
         test_neutre = neutre_pool.select(range(max_per_class))
         test_faux = faux_pool.select(range(max_per_class))
         
-        from datasets import concatenate_datasets
         balanced_data = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
         
         total = len(balanced_data)

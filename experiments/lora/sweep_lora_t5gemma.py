@@ -118,7 +118,6 @@ def get_dataset(name):
         test_neutre = neutre_pool.select(range(max_per_class))
         test_faux = faux_pool.select(range(max_per_class))
         
-        from datasets import concatenate_datasets
         balanced_data = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
         
         total = len(balanced_data)
@@ -293,8 +292,8 @@ def train_t5_qlora():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=32,
         gradient_accumulation_steps=1,
         num_train_epochs=50,
         weight_decay=0.01,
