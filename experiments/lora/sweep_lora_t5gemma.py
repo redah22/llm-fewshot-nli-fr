@@ -113,7 +113,6 @@ def get_dataset(name):
         
         max_per_class = 2000 // 3
         
-        from datasets import concatenate_datasets
         test_vrai = vrai_pool.select(range(min(max_per_class, len(vrai_pool))))
         test_neutre = neutre_pool.select(range(min(max_per_class, len(neutre_pool))))
         test_faux = faux_pool.select(range(min(max_per_class, len(faux_pool))))
