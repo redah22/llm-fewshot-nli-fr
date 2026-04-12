@@ -54,8 +54,13 @@ def get_dataset(name):
         fracas = load_dataset('maximoss/fracas')['train']
         # On retire tous les 'undef'
         fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
+        shuffled = fracas.shuffle(seed=42)
+        total = len(shuffled)
+        train_size = int(total * 0.8)
         ds = DatasetDict({
-            'train': fracas, 'validation': fracas, 'test': fracas
+            'train': shuffled.select(range(0, train_size)),
+            'validation': shuffled.select(range(train_size, total)),
+            'test': shuffled.select(range(train_size, total))
         })
         return ds, "premises"
         
