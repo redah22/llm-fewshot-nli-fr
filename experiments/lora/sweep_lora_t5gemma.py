@@ -105,14 +105,25 @@ def get_dataset(name):
             return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
             
         data = data.map(convert_sick, remove_columns=data.column_names)
-        shuffled = data.shuffle(seed=42)
-        total = len(shuffled)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
+        
+        # --- BLOC: SÉLECTION BALANCÉE 2000 EXEMPLES --- #
+        vrai_pool = data.filter(lambda x: x['label'] == 0)
+        neutre_pool = data.filter(lambda x: x['label'] == 1)
+        faux_pool = data.filter(lambda x: x['label'] == 2)
+        
+        max_per_class = 2000 // 3
+        
+        from datasets import concatenate_datasets
+        test_vrai = vrai_pool.select(range(min(max_per_class, len(vrai_pool))))
+        test_neutre = neutre_pool.select(range(min(max_per_class, len(neutre_pool))))
+        test_faux = faux_pool.select(range(min(max_per_class, len(faux_pool))))
+        
+        test_data_balanced = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
+        
         ds = DatasetDict({
-            'train': shuffled.select(range(0, train_size)),
-            'validation': shuffled.select(range(train_size, train_size + val_size)),
-            'test': shuffled.select(range(train_size + val_size, total))
+            'train': data, 
+            'validation': data, 
+            'test': test_data_balanced
         })
         return ds, "premise"
         
@@ -195,8 +206,8 @@ def preprocess_fn(examples, p_key):
 train_data = TRAIN_DICT['train'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
 val_data = TRAIN_DICT['validation'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)
 
-# Le test est la concaténation de tous les splits cibles
-test_untokenized = concatenate_datasets(list(TEST_DICT.values()))
+# Le test se fait uniquement sur le split officiel (pour éviter d'attendre 2h sur 10 000 exemples)
+test_untokenized = TEST_DICT['test']
 test_data = test_untokenized.map(lambda ex: preprocess_fn(ex, TEST_PKEY), batched=True, remove_columns=test_untokenized.column_names)
 
 def compute_metrics(eval_pred):
@@ -285,8 +296,8 @@ def train_t5_qlora():
         logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
-        dataloader_num_workers=2,
-        dataloader_pin_memory=True
+        dataloader_num_workers=0,
+        dataloader_pin_memory=False
     )
 
     collator = DataCollatorForSeq2Seq(tokenizer=global_tokenizer, model=None, padding=True, pad_to_multiple_of=8)
@@ -303,8 +314,10 @@ def train_t5_qlora():
     trainer.train()
 
     # Evaluation Finale sur Test Cross-Dataset
-    print("\nÉvaluation Cross-Dataset Finale...")
+    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples (SICK-FR Equilibré)...")
+    import sys; sys.stdout.flush()
     test_results = trainer.evaluate(test_data)
+    print(f"✅ EVALUATION TERMINÉE !")
     test_acc = test_results["eval_accuracy"]
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
 
