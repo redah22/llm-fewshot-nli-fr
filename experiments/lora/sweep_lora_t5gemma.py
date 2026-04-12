@@ -50,8 +50,10 @@ def get_dataset(name):
         })
         return ds, "premise"
         
-    elif name == "fracas_75":
-        fracas = load_dataset('maximoss/fracas')['train'].select(range(75))
+    elif name == "fracas_full":
+        fracas = load_dataset('maximoss/fracas')['train']
+        # On retire tous les 'undef'
+        fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
         ds = DatasetDict({
             'train': fracas, 'validation': fracas, 'test': fracas
         })
@@ -131,24 +133,24 @@ if len(sys.argv) > 1:
     print(f"\nChoix : {exp_choice}")
 else:
     print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
-    print("1. FraCaS (0-74)  →  test GQNLI-FR")
-    print("2. GQNLI-FR       →  test FraCaS (0-74)")
-    print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
-    print("4. FraCaS (0-74)  →  test SICK-FR")
+    print("1. FraCaS (TOTAL)  →  test GQNLI-FR")
+    print("2. GQNLI-FR        →  test FraCaS (TOTAL)")
+    print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
+    print("4. FraCaS (TOTAL)  →  test SICK-FR")
     exp_choice = input("\nVotre choix (1, 2, 3 ou 4): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
-    train_ds_name, test_ds_name = "fracas_75", "gqnli_fr"
+    train_ds_name, test_ds_name = "fracas_full", "gqnli_fr"
 elif exp_choice == "2":
     EXP_NAME = "sweep_gqnli_to_fracas_t5gemma"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas_75"
+    train_ds_name, test_ds_name = "gqnli_fr", "fracas_full"
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_t5gemma"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 elif exp_choice == "4":
     EXP_NAME = "sweep_fracas_to_sick_t5gemma"
-    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
+    train_ds_name, test_ds_name = "fracas_full", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
