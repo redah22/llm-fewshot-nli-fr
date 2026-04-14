@@ -56,6 +56,12 @@ data/processed/*
 *.pt
 *.pth
 *.safetensors
+
+# EXCEPTIONS : Conserver les petits poids LoRA / PEFT (Ex: CamemBERT adapter ~3Mo)
+!saved_models/**/adapter_model.safetensors
+!saved_models/**/adapter_model.bin
+!saved_models/**/adapter_config.json
+
 checkpoints/
 models/
 !models/.gitkeep
