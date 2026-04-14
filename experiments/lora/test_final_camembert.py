@@ -11,7 +11,7 @@ BASE_MODEL = "almanach/camembert-base"
 LORA_PATH = "/kaggle/working/camembert_lora_final"
 
 if not os.path.exists(LORA_PATH):
-    LORA_PATH = "../../models/camembert_lora_final"
+    LORA_PATH = "./saved_models/LoraCamembert/camembert_lora_final"
     if not os.path.exists(LORA_PATH):
         LORA_PATH = "./camembert_lora_final"
 
