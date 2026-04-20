@@ -72,7 +72,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
+            'test': data  # 100% du dataset DACCORD pour le test
         })
         return ds, "premise"
         
@@ -212,25 +212,43 @@ TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
-LABEL_MAP = {
-    "yes": "vrai", "entailment": "vrai", "0": "vrai",
-    "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
-    "no": "faux", "contradiction": "faux", "2": "faux"
-}
+
+is_binary = (exp_choice == "3")
+
+if is_binary:
+    LABEL_MAP = {
+        "yes": "accord", "entailment": "accord", "0": "accord",
+        "unknown": "accord", "undef": "accord", "neutral": "accord", "1": "accord",
+        "no": "contradiction", "contradiction": "contradiction", "2": "contradiction"
+    }
+else:
+    LABEL_MAP = {
+        "yes": "vrai", "entailment": "vrai", "0": "vrai",
+        "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
+        "no": "faux", "contradiction": "faux", "2": "faux"
+    }
 
 def normalize_label(label):
     if isinstance(label, int):
-        if label == 0: return "vrai"
-        if label == 1: return "neutre"
-        if label == 2: return "faux"
-        return "neutre"
+        if is_binary:
+            return "contradiction" if label == 2 else "accord"
+        else:
+            if label == 0: return "vrai"
+            if label == 1: return "neutre"
+            if label == 2: return "faux"
+            return "neutre"
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    return "neutre"
+    return "accord" if is_binary else "neutre"
 
 def preprocess_fn(examples, p_key):
+    if is_binary:
+        consigne = "Consigne : Prédire si l'hypothèse est en accord ou en contradiction d'après la prémisse.\n"
+    else:
+        consigne = "Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\n"
+        
     inputs = [
-        f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse :"
+        f"{consigne}Prémisse : {p}\nHypothèse : {h}\nRéponse :"
         for p, h in zip(examples[p_key], examples["hypothesis"])
     ]
     model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
@@ -256,21 +274,29 @@ def compute_metrics(eval_pred):
     print(f"\n[DEBUG LORA] Extraits générés : {dec_preds[:5]}")
     print(f"[DEBUG LORA] Extraits cibles  : {dec_labels[:5]}")
     
-    LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
+    LABEL_TO_INT = {"accord": 0, "contradiction": 1} if is_binary else {"vrai": 0, "neutre": 1, "faux": 2}
     
     import re
     cleaned_preds = []
     for p in dec_preds:
-        match = re.search(r'(vrai|faux|neutre)', p.lower())
+        if is_binary:
+            match = re.search(r'(accord|contradiction)', p.lower())
+            val_default = "accord"
+        else:
+            match = re.search(r'(vrai|faux|neutre)', p.lower())
+            val_default = "neutre"
+            
         if match:
             cleaned_preds.append(match.group(1))
         else:
-            cleaned_preds.append("neutre")
+            cleaned_preds.append(val_default)
+            
     int_preds = [LABEL_TO_INT[p] for p in cleaned_preds]
-    int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
+    int_labels = [LABEL_TO_INT.get(l.lower(), 0 if is_binary else 1) for l in dec_labels]
     
     try:
-        cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
+        cm_labels = [0, 1] if is_binary else [0, 1, 2]
+        cm = confusion_matrix(int_labels, int_preds, labels=cm_labels)
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
     

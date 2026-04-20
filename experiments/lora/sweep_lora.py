@@ -67,7 +67,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
+            'test': data  # 100% du dataset DACCORD pour le test
         })
         return ds, "premise"
         
@@ -204,16 +204,30 @@ SWEEP_CONFIG = {
 }
 
 global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+
+is_binary = (exp_choice == "3")
+
+if is_binary:
+    # 0 = Accord/Neutre, 1 = Contradiction
+    LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
+else:
+    # 0 = Vrai, 1 = Neutre, 2 = Faux
+    LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
 
 def map_label(label):
-    if isinstance(label, int) and label in [0, 1, 2]: return label
+    if isinstance(label, int):
+        if is_binary:
+            return 1 if label == 2 else 0
+        return label if label in [0, 1, 2] else 1
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
     try:
-        return int(s)
+        val = int(s)
+        if is_binary:
+            return 1 if val == 2 else 0
+        return val if val in [0, 1, 2] else 1
     except:
-        return 1
+        return 0 if is_binary else 1
 
 def tokenize_fn(examples, p_key):
     res = global_tokenizer(examples[p_key], examples["hypothesis"], truncation=True, padding="max_length", max_length=128)
@@ -235,7 +249,8 @@ def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
     try:
-        cm = confusion_matrix(labels, predictions, labels=[0, 1, 2])
+        cm_labels = [0, 1] if is_binary else [0, 1, 2]
+        cm = confusion_matrix(labels, predictions, labels=cm_labels)
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
     return {"accuracy": accuracy_score(labels, predictions)}
@@ -249,7 +264,8 @@ def train_one_run():
     run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
     print(f"\n{'='*60}\nSWEEP CAMEMBERT RUN: {run_label}\n{'='*60}")
 
-    base_model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=3)
+    num_labels = 2 if is_binary else 3
+    base_model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=num_labels)
     
     lora_config = LoraConfig(
         task_type=TaskType.SEQ_CLS,
