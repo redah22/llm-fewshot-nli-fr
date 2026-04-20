@@ -131,6 +131,31 @@ def get_dataset(name):
         })
         return ds, "premise"
         
+    elif name == "fracas_sick_mix":
+        ds_fracas, _ = get_dataset("fracas_full")
+        ds_sick, _ = get_dataset("sick_fr")
+        
+        LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+        def align_fracas(ex):
+            s = str(ex["label"]).lower().strip()
+            l_id = LABEL_MAP_LOCAL.get(s, 1)
+            if s not in LABEL_MAP_LOCAL:
+                try: l_id = int(s)
+                except: pass
+            return {"premise": ex["premises"], "hypothesis": ex["hypothesis"], "label": l_id}
+            
+        ds_fracas = ds_fracas.map(align_fracas, remove_columns=ds_fracas['train'].column_names)
+        
+        mix_train = concatenate_datasets([ds_fracas['train'], ds_sick['train']]).shuffle(seed=42)
+        mix_val = concatenate_datasets([ds_fracas['validation'], ds_sick['validation']]).shuffle(seed=42)
+        
+        ds = DatasetDict({
+            'train': mix_train,
+            'validation': mix_val,
+            'test': ds_sick['test']
+        })
+        return ds, "premise"
+
     raise ValueError(f"Dataset {name} inconnu.")
 
 # 2. CONFIGURATION DU SWEEP (RÉDUIT)
@@ -142,7 +167,7 @@ SWEEP_CONFIG = {
         "lora_r": {"values": [32]},
         "lora_alpha": {"values": [64]},
         "learning_rate": {"values": [3e-4, 5e-4]},
-        "lora_dropout": {"values": [0.05, 0.1]},
+        "lora_dropout": {"values": [0.1]},
     }
 }
 
@@ -158,7 +183,8 @@ else:
     print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
     print("4. FraCaS (TOTAL)  →  test SICK-FR")
     print("5. SICK-FR         →  test SICK-FR (Intra-dataset)")
-    exp_choice = input("\nVotre choix (1 à 5): ").strip()
+    print("6. Mix (FraCaS + SICK-FR) →  test SICK-FR")
+    exp_choice = input("\nVotre choix (1 à 6): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
@@ -175,6 +201,9 @@ elif exp_choice == "4":
 elif exp_choice == "5":
     EXP_NAME = "sweep_sick_to_sick_t5gemma"
     train_ds_name, test_ds_name = "sick_fr", "sick_fr"
+elif exp_choice == "6":
+    EXP_NAME = "sweep_mix_to_sick_t5gemma"
+    train_ds_name, test_ds_name = "fracas_sick_mix", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
