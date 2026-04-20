@@ -257,6 +257,24 @@ def preprocess_fn(examples, p_key):
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
+# --- OVERSAMPLING MANUEL POUR T5 (Simulation du class_weight) ---
+if is_binary:
+    print("\n[OVERSAMPLING] Equilibrage des classes pour compenser la rareté de 'Contradiction'...")
+    def is_contra(x): return normalize_label(x["label"]) == "contradiction"
+    def is_acc(x): return normalize_label(x["label"]) == "accord"
+    
+    train_contra = TRAIN_DICT['train'].filter(is_contra)
+    train_accord = TRAIN_DICT['train'].filter(is_acc)
+    
+    n_c = len(train_contra)
+    n_a = len(train_accord)
+    
+    if 0 < n_c < n_a:
+        multiplier = n_a // n_c
+        print(f"--> Multiplication de la classe minoritaire par {multiplier} (de {n_c} à {n_c * multiplier}).")
+        upsampled_contra = concatenate_datasets([train_contra] * multiplier)
+        TRAIN_DICT['train'] = concatenate_datasets([train_accord, upsampled_contra]).shuffle(seed=42)
+
 # On tokenise directement
 train_data = TRAIN_DICT['train'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
 val_data = TRAIN_DICT['validation'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)

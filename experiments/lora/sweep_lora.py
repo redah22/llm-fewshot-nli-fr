@@ -303,7 +303,26 @@ def train_one_run():
         dataloader_pin_memory=False
     )
 
-    trainer = Trainer(
+    from torch import nn
+    class WeightedTrainer(Trainer):
+        def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+            labels = inputs.get("labels")
+            outputs = model(**inputs)
+            logits = outputs.logits
+            
+            if is_binary:
+                # Option 2 : Pénalité 10x plus forte si le modèle se trompe sur la Contradiction (1)
+                class_weights = torch.tensor([1.0, 10.0], dtype=torch.float, device=model.device)
+                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
+                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+            else:
+                # Logique par défaut pour les autres
+                loss_fct = nn.CrossEntropyLoss()
+                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+                
+            return (loss, outputs) if return_outputs else loss
+
+    trainer = WeightedTrainer(
         model=model,
         args=args,
         train_dataset=train_data,
