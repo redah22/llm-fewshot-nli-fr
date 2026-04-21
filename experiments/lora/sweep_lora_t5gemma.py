@@ -66,6 +66,15 @@ def get_dataset(name):
         
     elif name == "daccord":
         data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
+        
+        def fix_daccord_label(ex):
+            if ex["label"] == 1:
+                # Contradiction in Daccord is 1, change to NLI standard 2
+                ex["label"] = 2
+            return ex
+            
+        data = data.map(fix_daccord_label)
+        
         total = len(data)
         train_size = int(total * 0.6)
         val_size = int(total * 0.2)
