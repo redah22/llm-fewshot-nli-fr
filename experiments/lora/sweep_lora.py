@@ -329,12 +329,11 @@ def train_one_run():
         eval_dataset=val_data,
         data_collator=DataCollatorWithPadding(tokenizer=global_tokenizer),
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=5)],
     )
 
     trainer.train()
 
-    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples (SICK-FR Equilibré)...")
+    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
     import sys; sys.stdout.flush()
     test_results = trainer.evaluate(test_data)
     print(f"✅ EVALUATION TERMINÉE !")

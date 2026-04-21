@@ -395,7 +395,7 @@ def train_t5_qlora():
     trainer.train()
 
     # Evaluation Finale sur Test Cross-Dataset
-    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples (SICK-FR Equilibré)...")
+    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
     import sys; sys.stdout.flush()
     test_results = trainer.evaluate(test_data)
     print(f"✅ EVALUATION TERMINÉE !")
