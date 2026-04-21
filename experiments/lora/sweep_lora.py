@@ -312,7 +312,7 @@ def train_one_run():
             
             if is_binary:
                 # Option 2 : Pénalité 10x plus forte si le modèle se trompe sur la Contradiction (1)
-                class_weights = torch.tensor([1.0, 10.0], dtype=torch.float, device=model.device)
+                class_weights = torch.tensor([1.0, 10.0], dtype=torch.float, device=labels.device)
                 loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             else:
