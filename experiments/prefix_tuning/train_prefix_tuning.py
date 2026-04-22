@@ -30,7 +30,7 @@ from transformers import (
 from peft import get_peft_model, PrefixTuningConfig, TaskType
 
 # ============================================================
-# 1. CHARGEMENT DES DONNÉES (identique à sweep_lora.py)
+# 1. CHARGEMENT DES DONNÉES 
 # ============================================================
 
 def get_dataset(name):
@@ -68,7 +68,7 @@ def get_dataset(name):
     raise ValueError(f"Dataset {name} inconnu.")
 
 # ============================================================
-# 2. NORMALISATION DES LABELS (identique à sweep_lora_t5gemma.py)
+# 2. NORMALISATION DES LABELS 
 # ============================================================
 
 def normalize_label(label):
