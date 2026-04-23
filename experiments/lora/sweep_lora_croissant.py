@@ -97,7 +97,7 @@ SWEEP_CONFIG = {
         "lora_r": {"values": [8, 16]},
         "lora_alpha": {"values": [32, 64]},
         "learning_rate": {"values": [5e-4, 1e-3]},
-        "lora_dropout": {"values": [0.05, 0.1]},
+        "lora_dropout": {"values": [0.1]},
     }
 }
 
