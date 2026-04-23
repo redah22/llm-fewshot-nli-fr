@@ -205,9 +205,9 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [8, 16]},
-        "lora_alpha": {"values": [16, 32]},
-        "learning_rate": {"values": [3e-4, 5e-4]},
+        "lora_r": {"values": [16]},
+        "lora_alpha": {"values": [32]},
+        "learning_rate": {"values": [3e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -217,7 +217,7 @@ global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 is_binary = (exp_choice == "3")
 
 if is_binary:
-    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [10.0, 15.0, 20.0, 30.0]}
 
 if is_binary:
     # 0 = Accord/Neutre, 1 = Contradiction

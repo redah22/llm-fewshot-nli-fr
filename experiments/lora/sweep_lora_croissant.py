@@ -129,7 +129,7 @@ TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 is_binary = (exp_choice == "3")
 
 if is_binary:
-    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [15.0, 25.0, 40.0]}
     
 if is_binary:
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
