@@ -355,18 +355,16 @@ def train_one_run():
 
     print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
     import sys; sys.stdout.flush()
-    test_results = trainer.evaluate(test_data)
+    test_results = trainer.evaluate(test_data, metric_key_prefix="test")
     print(f"✅ EVALUATION TERMINÉE !")
-    test_acc = test_results["eval_accuracy"]
+    test_acc = test_results["test_accuracy"]
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
-    if "eval_f1_score" in test_results:
-        test_f1 = test_results["eval_f1_score"]
+    if "test_f1_score" in test_results:
+        test_f1 = test_results["test_f1_score"]
         print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
-        wandb.log({"test/cross_dataset_f1_score": test_f1})
-        wandb.summary["test_cross_dataset_f1_score"] = test_f1
+        wandb.summary["final_test_f1_score"] = test_f1
 
-    wandb.log({"test/cross_dataset_accuracy": test_acc})
-    wandb.summary["test_cross_dataset_accuracy"] = test_acc
+    wandb.summary["final_test_accuracy"] = test_acc
 
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)

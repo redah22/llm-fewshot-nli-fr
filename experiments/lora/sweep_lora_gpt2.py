@@ -94,8 +94,8 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [8, 16]},
-        "lora_alpha": {"values": [16, 32]},
+        "lora_r": {"values": [16]},
+        "lora_alpha": {"values": [32]},
         "learning_rate": {"values": [3e-4, 5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
@@ -155,7 +155,7 @@ def map_label(label):
 
 def tokenize_fn(examples, p_key):
     prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples[p_key], examples["hypothesis"])]
-    res = global_tokenizer(prompts, truncation=True, padding="max_length", max_length=256)
+    res = global_tokenizer(prompts, truncation=True, max_length=256)
     res["labels"] = [map_label(l) for l in examples["label"]]
     return res
 
@@ -269,16 +269,16 @@ def train_gpt2_lora():
     trainer.train()
 
     print("\nÉvaluation Cross-Dataset Finale...")
-    test_results = trainer.evaluate(test_data)
-    test_acc = test_results["eval_accuracy"]
-    test_f1 = test_results["eval_f1_score"]
+    test_results = trainer.evaluate(test_data, metric_key_prefix="test")
+    test_acc = test_results["test_accuracy"]
+    test_f1 = test_results["test_f1_score"]
     
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
     print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
 
-    wandb.log({"test/cross_dataset_accuracy": test_acc, "test/cross_dataset_f1_score": test_f1})
-    wandb.summary["test_cross_dataset_accuracy"] = test_acc
-    wandb.summary["test_cross_dataset_f1_score"] = test_f1
+    # Le Trainer avec son WandbCallback vient d'envoyer automatiquement les resultats "test_accuracy" a WandB !
+    wandb.summary["final_test_accuracy"] = test_acc
+    wandb.summary["final_test_f1_score"] = test_f1
 
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)
