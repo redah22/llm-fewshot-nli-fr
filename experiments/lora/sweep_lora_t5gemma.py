@@ -328,9 +328,10 @@ def compute_metrics(eval_pred):
     except Exception: pass
     
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
-    metrics = {"accuracy": acc}
-    if is_binary:
-        metrics["f1_score"] = f1_score(int_labels, int_preds, average="macro")
+    metrics = {
+        "accuracy": acc,
+        "f1_score": f1_score(int_labels, int_preds, average="macro")
+    }
     return metrics
 
 # 4. FONCTION D'ENTRAÎNEMENT (POUR WANDB SWEEP)
@@ -383,7 +384,7 @@ def train_t5_qlora():
         num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="f1_score",
         predict_with_generate=True,
         generation_max_length=8,
         logging_steps=10,

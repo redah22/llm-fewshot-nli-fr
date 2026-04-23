@@ -207,7 +207,7 @@ SWEEP_CONFIG = {
     "parameters": {
         "lora_r": {"values": [8, 16]},
         "lora_alpha": {"values": [16, 32]},
-        "learning_rate": {"values": [3e-4, 5e-4, 1e-3]},
+        "learning_rate": {"values": [3e-4, 5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -215,6 +215,9 @@ SWEEP_CONFIG = {
 global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 
 is_binary = (exp_choice == "3")
+
+if is_binary:
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
 
 if is_binary:
     # 0 = Accord/Neutre, 1 = Contradiction
@@ -263,9 +266,10 @@ def compute_metrics(eval_pred):
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
     
-    metrics = {"accuracy": accuracy_score(labels, predictions)}
-    if is_binary:
-        metrics["f1_score"] = f1_score(labels, predictions, average="macro")
+    metrics = {
+        "accuracy": accuracy_score(labels, predictions),
+        "f1_score": f1_score(labels, predictions, average="macro")
+    }
     return metrics
 
 # 5. FONCTION D'ENTRAÎNEMENT (WANDB SWEEP)
@@ -275,6 +279,9 @@ def train_one_run():
     config = wandb.config
 
     run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
+    if is_binary:
+        run_label += f"_p{config.loss_penalty}"
+        
     print(f"\n{'='*60}\nSWEEP CAMEMBERT RUN: {run_label}\n{'='*60}")
 
     num_labels = 2 if is_binary else 3
@@ -307,7 +314,7 @@ def train_one_run():
         num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="f1_score",
         greater_is_better=True,
         logging_steps=10,
         report_to="wandb",
@@ -324,8 +331,8 @@ def train_one_run():
             logits = outputs.logits
             
             if is_binary:
-                # Option 2 : Pénalité 3x plus forte (au lieu de 10x) pour adoucir la chute d'accuracy
-                class_weights = torch.tensor([1.0, 3.0], dtype=torch.float, device=labels.device)
+                penalty = float(config.loss_penalty)
+                class_weights = torch.tensor([1.0, penalty], dtype=torch.float, device=labels.device)
                 loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             else:
