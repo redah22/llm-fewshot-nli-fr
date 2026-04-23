@@ -1,5 +1,5 @@
 """
-Script de Sweep WandB pour CroissantLLM (Architecture Decoder-only).
+Script de Sweep WandB pour CroissantLLM (Architecture Decoder-only as Classifier).
 """
 
 import os
@@ -9,6 +9,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU
 import sys
 import numpy as np
 import torch
+import torch.nn as nn
 import wandb
 import shutil
 
@@ -19,11 +20,10 @@ from transformers import (
     TrainingArguments,
     Trainer,
     DataCollatorWithPadding,
-    EarlyStoppingCallback,
     BitsAndBytesConfig
 )
 from peft import get_peft_model, LoraConfig, TaskType
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
 BASE_MODEL = "croissantllm/CroissantLLMBase"
 
@@ -49,12 +49,23 @@ def get_dataset(name):
         return ds, "premise"
         
     elif name == "fracas_75":
-        fracas = load_dataset('maximoss/fracas')['train'].select(range(75))
-        ds = DatasetDict({'train': fracas, 'validation': fracas, 'test': fracas})
+        fracas = load_dataset('maximoss/fracas')['train']
+        ds = DatasetDict({
+            'train': fracas.select(range(75)), 
+            'validation': fracas.select(range(75, 100)), 
+            'test': fracas.select(range(100, 150))
+        })
         return ds, "premises"
         
     elif name == "daccord":
-        data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
+        data = load_dataset('maximoss/daccord-contradictions')['train']
+        # DACCORD contient des labels (0, 1). 1 = Contradiction. On ramène à 2 pour standardiser multi-classes.
+        def fix_daccord_label(ex):
+            if ex["label"] == 1:
+                ex["label"] = 2
+            return ex
+        data = data.map(fix_daccord_label)
+        data = data.shuffle(seed=42)
         total = len(data)
         train_size, val_size = int(total * 0.6), int(total * 0.2)
         ds = DatasetDict({
@@ -78,10 +89,10 @@ def get_dataset(name):
         
     raise ValueError(f"Dataset {name} inconnu.")
 
-# Grille ciblée: 16 runs. On a éliminé lr=1e-4 et lora_dropout=0.0
+# Grille ciblée: 16 runs.
 SWEEP_CONFIG = {
     "method": "grid",
-    "metric": {"name": "eval/accuracy", "goal": "maximize"},
+    "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
         "lora_r": {"values": [8, 16]},
         "lora_alpha": {"values": [32, 64]},
@@ -92,12 +103,12 @@ SWEEP_CONFIG = {
 
 if len(sys.argv) > 1:
     exp_choice = sys.argv[1].strip()
-    print(f"\nVotre choix (1, 2 ou 3): {exp_choice} (via argument)")
+    print(f"\nVotre choix: {exp_choice} (via argument)")
 else:
     print("\nQuelle expérience QLoRA CroissantLLM utiliser ?")
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
     print("2. GQNLI-FR       →  test FraCaS (0-74)")
-    print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
+    print("3. RTE3-DEV       →  test DACCORD (Binaire)")
     exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
 
 if exp_choice == "1":
@@ -115,37 +126,44 @@ else:
 TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
+is_binary = (exp_choice == "3")
+
+if is_binary:
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
+    
+if is_binary:
+    LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
+else:
+    LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+
 global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-# Causal LMs n'ont généralement pas de token de padding par défaut
 if global_tokenizer.pad_token is None:
     global_tokenizer.pad_token = global_tokenizer.eos_token
 
-LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
-
 def map_label(label):
-    if isinstance(label, int) and label in [0, 1, 2]: return label
+    if isinstance(label, int):
+        if is_binary:
+            return 1 if label == 2 else 0
+        return label if label in [0, 1, 2] else 1
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    try:
-        val = int(s)
-        return val if val in [0, 1, 2] else 1
-    except:
-        return 1
+    return 1 if not is_binary else 0
 
 def tokenize_fn(examples, p_key):
-    # Pour un modèle causal (Decoder-Only), on lui donne la structure complete de gauche à droite
+    # Causal LM lit tout de gauche à droite
     prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples[p_key], examples["hypothesis"])]
     res = global_tokenizer(prompts, truncation=True, padding="max_length", max_length=256)
     res["labels"] = [map_label(l) for l in examples["label"]]
     return res
 
+print("\nTokenisation des datasets...")
 train_data = TRAIN_DICT['train'].map(lambda ex: tokenize_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
 train_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
 val_data = TRAIN_DICT['validation'].map(lambda ex: tokenize_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)
 val_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-test_untokenized = concatenate_datasets(list(TEST_DICT.values()))
+test_untokenized = TEST_DICT['test']
 test_data = test_untokenized.map(lambda ex: tokenize_fn(ex, TEST_PKEY), batched=True, remove_columns=test_untokenized.column_names)
 test_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
@@ -153,18 +171,47 @@ def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
     try:
-        cm = confusion_matrix(labels, predictions, labels=[0, 1, 2])
+        cm_labels = [0, 1] if is_binary else [0, 1, 2]
+        cm = confusion_matrix(labels, predictions, labels=cm_labels)
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
-    return {"accuracy": accuracy_score(labels, predictions)}
+    
+    metrics = {
+        "accuracy": accuracy_score(labels, predictions),
+        "f1_score": f1_score(labels, predictions, average="macro")
+    }
+    return metrics
+
+# CLASSE TRAINER CUSTOM POUR PENALITE DE LOSS
+class WeightedTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs.logits
+        
+        # On lit la penalty depuis wandb.config. Si elle n'existe pas, defaut=1.0
+        penalty = float(getattr(wandb.config, "loss_penalty", 1.0))
+        
+        if is_binary:
+            weight = torch.tensor([1.0, penalty], device=labels.device, dtype=torch.float)
+        else:
+            weight = None # On ne gère pas de poids custom manuel ici, ou alors [1, 1, penalty] etc.
+            
+        loss_fct = nn.CrossEntropyLoss(weight=weight)
+        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        
+        return (loss, outputs) if return_outputs else loss
 
 # 4. FONCTION D'ENTRAÎNEMENT WANDB
-
 def train_croissant_qlora():
     run = wandb.init()
     config = wandb.config
 
-    run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
+    if is_binary:
+        run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}_p{config.loss_penalty}"
+    else:
+        run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
+        
     print(f"\n{'='*60}\nSWEEP CROISSANT-LLM RUN: {run_label}\n{'='*60}")
 
     print("Chargement en QLoRA 4-bit...")
@@ -175,11 +222,10 @@ def train_croissant_qlora():
         bnb_4bit_compute_dtype=torch.float16
     )
     
-    # Nous utilisons AutoModelForSequenceClassification sur un CausalLM. 
-    # C'est la méthode de l'état de l'art pour extraire de l'accuracy pure d'un LLM sans générer de texte.
+    num_labels = 2 if is_binary else 3
     base_model = AutoModelForSequenceClassification.from_pretrained(
         BASE_MODEL,
-        num_labels=3,
+        num_labels=num_labels,
         device_map="auto",
         quantization_config=bnb_config
     )
@@ -191,14 +237,10 @@ def train_croissant_qlora():
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
-        target_modules=["q_proj", "v_proj"], # Projections classiques ciblées pour les LLM
+        target_modules=["q_proj", "v_proj"], 
         bias="none",
     )
     model = get_peft_model(base_model, lora_config)
-    
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total = sum(p.numel() for p in model.parameters())
-    print(f"Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
 
     args = TrainingArguments(
         output_dir=f"/tmp/ckpt_{EXP_NAME}_{run_label}", 
@@ -212,7 +254,7 @@ def train_croissant_qlora():
         num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
-        metric_for_best_model="accuracy",
+        metric_for_best_model="f1_score",
         greater_is_better=True,
         logging_steps=10,
         report_to="wandb",
@@ -221,14 +263,13 @@ def train_croissant_qlora():
         dataloader_pin_memory=True
     )
 
-    trainer = Trainer(
+    trainer = WeightedTrainer(
         model=model,
         args=args,
         train_dataset=train_data,
         eval_dataset=val_data,
         data_collator=DataCollatorWithPadding(tokenizer=global_tokenizer),
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=6)],
     )
 
     trainer.train()
@@ -236,10 +277,14 @@ def train_croissant_qlora():
     print("\nÉvaluation Cross-Dataset Finale...")
     test_results = trainer.evaluate(test_data)
     test_acc = test_results["eval_accuracy"]
+    test_f1 = test_results["eval_f1_score"]
+    
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
+    print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
 
-    wandb.log({"test/cross_dataset_accuracy": test_acc})
+    wandb.log({"test/cross_dataset_accuracy": test_acc, "test/cross_dataset_f1_score": test_f1})
     wandb.summary["test_cross_dataset_accuracy"] = test_acc
+    wandb.summary["test_cross_dataset_f1_score"] = test_f1
 
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)
@@ -248,8 +293,9 @@ def train_croissant_qlora():
 
 if __name__ == "__main__":
     total_runs = 1
-    for param in SWEEP_CONFIG["parameters"].values():
-        total_runs *= len(param["values"])
+    for param_name, param in SWEEP_CONFIG["parameters"].items():
+        if "values" in param:
+            total_runs *= len(param["values"])
     
     if len(sys.argv) > 1:
         confirm = "o" 
