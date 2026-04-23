@@ -1,42 +1,13 @@
+# TER M1 : Inférence en Langue Naturelle (NLI) en contexte Cross-Domain
 
-# TER M1 : Inférence en Langue Naturelle (NLI)
+Ce projet, réalisé dans le cadre d'un Master 1 (TER), a pour objectif d'étudier la capacité de généralisation des modèles de langage sur la tâche de **Natural Language Inference (NLI)** en français. L'inférence linguistique consiste à déterminer si une *hypothèse* est vraie (Entailment), fausse (Contradiction) ou neutre en se basant uniquement sur une *prémisse*.
 
-Projet de comparaison entre Fine-Tuning (CamemBERT) et Few-Shot Learning (Gemini) sur des tâches d'inférence en français.
+Le cœur de notre travail explore comment différents types d'architectures s'adaptent lorsqu'ils sont confrontés à de nouvelles données inconnues de leur domaine d'entraînement initial (Cross-Domain) et à des distributions de classes imparfaitement équilibrées.
 
-## 📁 Structure
-- `data/` : Données (GQNLI-FR et FraCaS)
-- `experiments/` : Scripts Python
-- `models/` : Modèles entraînés
-- `results/` : Scores et logs
-
-## 🚀 Utilisation Rapide
-
-### 1. Installation
-
-**Prérequis :**
-- Python 3.9+
-- Clé API Google (pour Gemini) : Créez un fichier `.env` à la racine contenant `GOOGLE_API_KEY=votre_clé`.
-
-```bash
-source venv/bin/activate
-pip install -r requirements.txt
-```
-
-### 2. Fine-Tuning CamemBERT (Recommandé)
-Entraîne le modèle sur vos données (10 epochs).
-```bash
-python3 experiments/data_utils/setup_data.py   # Étape 1 : Préparer les données
-python3 experiments/fine_tuning/eval_camembert.py   # Étape 2 : Entraîner
-```
-*Choisissez "GQNLI-FR" (1) pour les meilleurs résultats.*
-
-### 3. Few-Shot Gemini
-Test avec l'API Google (attention aux quotas).
-```bash
-python3 experiments/few_shot/eval_gemini_few_shot.py
-```
-
-## 📊 Résultats Clés
-Voir `RAPPORT_RESULTATS.md` pour le détail.
-- **CamemBERT (GQNLI)** : 78% ✅
-- **Gemini (0-shot)** : 90%
+### Axes de recherche du projet :
+1. **Généralisation Cross-Domain :** Entraînement sur des corpus formels/logiques (tels que *FraCaS* ou *RTE3*) et évaluation sur des corpus sémantiques ou du monde réel (*SICK-FR*, *GQNLI-FR*, *DACCORD*) pour observer la complaisance et le sur-apprentissage du modèle.
+2. **Comparaison d'Architectures :** Alignement et comparaison des capacités de raisonnement entre trois grands paradigmes du Deep Learning :
+   - Les **Encodeurs** (CamemBERT), réputés pour leur compréhension fine et chirurgicale.
+   - Les **Encodeurs-Décodeurs** (T5 / Gemma Seq2Seq) avec l'intégration du Few-Shot Prompting (In-Context Learning).
+   - Les **Décodeurs purs** (CroissantLLM), massifs en paramètres et dotés de fort bon sens interne, reconvertis exceptionnellement en classifieurs terminaux.
+3. **Résilience Mathématique (Class Weighting) :** Recherche de la pénalité de perte optimale (`loss_penalty`) à attribuer aux réseaux de neurones pour compenser artificiellement un déséquilibre sévère des classes réelles lors d'évaluations très déséquilibrées (ex: accorder artificiellement plus de poids à la classe rare *Contradiction*).
