@@ -1,5 +1,6 @@
 """
-Script de Sweep WandB pour CroissantLLM (Architecture Decoder-only as Classifier).
+Script de Sweep WandB pour GPT-2 French (Architecture Decoder-only 117M as Classifier).
+Même taille de réseau que CamemBERT pour une comparaison parfaitement équitable !
 """
 
 import os
@@ -19,17 +20,16 @@ from transformers import (
     AutoModelForSequenceClassification,
     TrainingArguments,
     Trainer,
-    DataCollatorWithPadding,
-    BitsAndBytesConfig
+    DataCollatorWithPadding
 )
 from peft import get_peft_model, LoraConfig, TaskType
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
-BASE_MODEL = "croissantllm/CroissantLLMBase"
+# Modele de 117M parametres entraine 100% en Francais
+BASE_MODEL = "ClassCat/gpt2-base-french"
 
 if not torch.cuda.is_available():
-    print("ERREUR CRITIQUE : Ce script nécessite un GPU CUDA pour QLoRA.")
-    print("Veuillez activer le GPU T4 x2 (ou P100) dans les paramètres de votre Notebook Kaggle.")
+    print("ERREUR CRITIQUE : Ce script nécessite un GPU CUDA.")
     exit(1)
 
 # 1. TÉLÉCHARGEMENT & PRÉPARATION
@@ -89,14 +89,14 @@ def get_dataset(name):
         
     raise ValueError(f"Dataset {name} inconnu.")
 
-# Grille ciblée: 16 runs.
+# Balayage strictement identique a celui de CamemBERT
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [16]},
-        "lora_alpha": {"values": [32]},
-        "learning_rate": {"values": [5e-4]},
+        "lora_r": {"values": [8, 16]},
+        "lora_alpha": {"values": [16, 32]},
+        "learning_rate": {"values": [3e-4, 5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -105,20 +105,20 @@ if len(sys.argv) > 1:
     exp_choice = sys.argv[1].strip()
     print(f"\nVotre choix: {exp_choice} (via argument)")
 else:
-    print("\nQuelle expérience QLoRA CroissantLLM utiliser ?")
+    print("\nQuelle expérience LoRA GPT-2 utiliser ?")
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
     print("2. GQNLI-FR       →  test FraCaS (0-74)")
     print("3. RTE3-DEV       →  test DACCORD (Binaire)")
     exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
 
 if exp_choice == "1":
-    EXP_NAME = "sweep_fracas_to_gqnli_croissant"
+    EXP_NAME = "sweep_fracas_to_gqnli_gpt2"
     train_ds_name, test_ds_name = "fracas_75", "gqnli_fr"
 elif exp_choice == "2":
-    EXP_NAME = "sweep_gqnli_to_fracas_croissant"
+    EXP_NAME = "sweep_gqnli_to_fracas_gpt2"
     train_ds_name, test_ds_name = "gqnli_fr", "fracas_75"
 elif exp_choice == "3":
-    EXP_NAME = "sweep_rte3_to_daccord_croissant"
+    EXP_NAME = "sweep_rte3_to_daccord_gpt2"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 else:
     print("Choix invalide!"); exit(1)
@@ -129,7 +129,8 @@ TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 is_binary = (exp_choice == "3")
 
 if is_binary:
-    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [10.0, 30.0, 60.0, 100.0]}
+    # Retour aux valeurs normales et stables comme CamemBERT
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
     
 if is_binary:
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
@@ -137,8 +138,11 @@ else:
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
 
 global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+# Important pour decoder: Fixer le pad token sur l'eos
 if global_tokenizer.pad_token is None:
     global_tokenizer.pad_token = global_tokenizer.eos_token
+# Pour un Classifier, on met generalement la padding side a la fin (right) sur les Decodeurs
+global_tokenizer.padding_side = "right"
 
 def map_label(label):
     if isinstance(label, int):
@@ -150,7 +154,6 @@ def map_label(label):
     return 1 if not is_binary else 0
 
 def tokenize_fn(examples, p_key):
-    # Causal LM lit tout de gauche à droite
     prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples[p_key], examples["hypothesis"])]
     res = global_tokenizer(prompts, truncation=True, padding="max_length", max_length=256)
     res["labels"] = [map_label(l) for l in examples["label"]]
@@ -182,20 +185,18 @@ def compute_metrics(eval_pred):
     }
     return metrics
 
-# CLASSE TRAINER CUSTOM POUR PENALITE DE LOSS
 class WeightedTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
         
-        # On lit la penalty depuis wandb.config. Si elle n'existe pas, defaut=1.0
         penalty = float(getattr(wandb.config, "loss_penalty", 1.0))
         
         if is_binary:
             weight = torch.tensor([1.0, penalty], device=labels.device, dtype=torch.float)
         else:
-            weight = None # On ne gère pas de poids custom manuel ici, ou alors [1, 1, penalty] etc.
+            weight = None
             
         loss_fct = nn.CrossEntropyLoss(weight=weight)
         loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
@@ -203,7 +204,7 @@ class WeightedTrainer(Trainer):
         return (loss, outputs) if return_outputs else loss
 
 # 4. FONCTION D'ENTRAÎNEMENT WANDB
-def train_croissant_qlora():
+def train_gpt2_lora():
     run = wandb.init()
     config = wandb.config
 
@@ -212,22 +213,15 @@ def train_croissant_qlora():
     else:
         run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
         
-    print(f"\n{'='*60}\nSWEEP CROISSANT-LLM RUN: {run_label}\n{'='*60}")
+    print(f"\n{'='*60}\nSWEEP GPT-2 RUN: {run_label}\n{'='*60}")
 
-    print("Chargement en QLoRA 4-bit...")
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-    
+    print("Chargement du modèle Décodeur pur...")
     num_labels = 2 if is_binary else 3
     base_model = AutoModelForSequenceClassification.from_pretrained(
         BASE_MODEL,
         num_labels=num_labels,
-        device_map="auto",
-        quantization_config=bnb_config
+        device_map="auto"
+        # PAS DE BitsAndBytesConfig (Pas de QLoRA) car le modele fait exactement la meme taille (110M) que Camembert !
     )
     base_model.config.use_cache = False
     base_model.config.pad_token_id = global_tokenizer.pad_token_id
@@ -237,7 +231,7 @@ def train_croissant_qlora():
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
-        target_modules=["q_proj", "v_proj"], 
+        target_modules=["c_attn"], # Dans GPT-2 la couche d'attention principale s'appelle c_attn
         bias="none",
     )
     model = get_peft_model(base_model, lora_config)
@@ -251,7 +245,7 @@ def train_croissant_qlora():
         learning_rate=config.learning_rate,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
-        num_train_epochs=10,
+        num_train_epochs=20, # On re-augmente a 20 car le modele de 117M s'entraine extremement vite (comme CamemBERT)
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="f1_score",
@@ -300,12 +294,12 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         confirm = "o" 
     else:
-        confirm = input(f"\nLancer {total_runs} sweeps CroissantLLM QLoRA ? (o/n): ").strip().lower()
+        confirm = input(f"\nLancer {total_runs} sweeps GPT-2 LoRA ? (o/n): ").strip().lower()
         
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
         print(f"\nSweep créé ! ID: {sweep_id}")
-        wandb.agent(sweep_id, function=train_croissant_qlora, count=total_runs)
+        wandb.agent(sweep_id, function=train_gpt2_lora, count=total_runs)
         print("\nTerminé ! Consultez les résultats sur WandB.")
     else:
         print("Annulé.")
