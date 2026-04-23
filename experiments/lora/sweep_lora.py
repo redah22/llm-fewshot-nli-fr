@@ -23,7 +23,7 @@ from transformers import (
     EarlyStoppingCallback,
 )
 from peft import get_peft_model, LoraConfig, TaskType
-from sklearn.metrics import accuracy_score, confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
 BASE_MODEL = "camembert-base"
 MODEL_SHORT = "camembert"
@@ -262,7 +262,11 @@ def compute_metrics(eval_pred):
         cm = confusion_matrix(labels, predictions, labels=cm_labels)
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
-    return {"accuracy": accuracy_score(labels, predictions)}
+    
+    metrics = {"accuracy": accuracy_score(labels, predictions)}
+    if is_binary:
+        metrics["f1_score"] = f1_score(labels, predictions, average="macro")
+    return metrics
 
 # 5. FONCTION D'ENTRAÎNEMENT (WANDB SWEEP)
 
@@ -320,8 +324,8 @@ def train_one_run():
             logits = outputs.logits
             
             if is_binary:
-                # Option 2 : Pénalité 10x plus forte si le modèle se trompe sur la Contradiction (1)
-                class_weights = torch.tensor([1.0, 10.0], dtype=torch.float, device=labels.device)
+                # Option 2 : Pénalité 3x plus forte (au lieu de 10x) pour adoucir la chute d'accuracy
+                class_weights = torch.tensor([1.0, 3.0], dtype=torch.float, device=labels.device)
                 loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             else:

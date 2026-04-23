@@ -23,7 +23,7 @@ from transformers import (
     BitsAndBytesConfig
 )
 from peft import get_peft_model, LoraConfig, TaskType
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 
 BASE_MODEL = "google/t5gemma-2-270m-270m"
 MODEL_SHORT = "t5gemma"
@@ -175,7 +175,7 @@ SWEEP_CONFIG = {
     "parameters": {
         "lora_r": {"values": [32]},
         "lora_alpha": {"values": [64]},
-        "learning_rate": {"values": [3e-4, 5e-4]},
+        "learning_rate": {"values": [5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -279,7 +279,7 @@ if is_binary:
     n_a = len(train_accord)
     
     if 0 < n_c < n_a:
-        multiplier = n_a // n_c
+        multiplier = min(3, n_a // n_c)  # Limité à x3 max au lieu de x10
         print(f"--> Multiplication de la classe minoritaire par {multiplier} (de {n_c} à {n_c * multiplier}).")
         upsampled_contra = concatenate_datasets([train_contra] * multiplier)
         TRAIN_DICT['train'] = concatenate_datasets([train_accord, upsampled_contra]).shuffle(seed=42)
@@ -328,7 +328,10 @@ def compute_metrics(eval_pred):
     except Exception: pass
     
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
-    return {"accuracy": acc}
+    metrics = {"accuracy": acc}
+    if is_binary:
+        metrics["f1_score"] = f1_score(int_labels, int_preds, average="macro")
+    return metrics
 
 # 4. FONCTION D'ENTRAÎNEMENT (POUR WANDB SWEEP)
 
