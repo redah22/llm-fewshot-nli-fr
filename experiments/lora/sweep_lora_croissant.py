@@ -94,9 +94,9 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [8, 16]},
-        "lora_alpha": {"values": [32, 64]},
-        "learning_rate": {"values": [5e-4, 1e-3]},
+        "lora_r": {"values": [16]},
+        "lora_alpha": {"values": [32]},
+        "learning_rate": {"values": [5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -251,7 +251,7 @@ def train_croissant_qlora():
         learning_rate=config.learning_rate,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
-        num_train_epochs=20,
+        num_train_epochs=10,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="f1_score",
