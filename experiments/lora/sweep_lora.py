@@ -352,6 +352,11 @@ def train_one_run():
     print(f"✅ EVALUATION TERMINÉE !")
     test_acc = test_results["eval_accuracy"]
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
+    if "eval_f1_score" in test_results:
+        test_f1 = test_results["eval_f1_score"]
+        print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
+        wandb.log({"test/cross_dataset_f1_score": test_f1})
+        wandb.summary["test_cross_dataset_f1_score"] = test_f1
 
     wandb.log({"test/cross_dataset_accuracy": test_acc})
     wandb.summary["test_cross_dataset_accuracy"] = test_acc
