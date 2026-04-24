@@ -110,28 +110,14 @@ def get_dataset(name):
             
         data = data.map(convert_sick, remove_columns=data.column_names)
         
-        # --- SÉLECTION BALANCÉE GLOBALE ---
-        vrai_pool = data.filter(lambda x: x['label'] == 0)
-        neutre_pool = data.filter(lambda x: x['label'] == 1)
-        faux_pool = data.filter(lambda x: x['label'] == 2)
-        
-        # Le nombre max correspond à la taille de la plus petite classe
-        max_per_class = min(len(vrai_pool), len(neutre_pool), len(faux_pool))
-        
-        test_vrai = vrai_pool.select(range(max_per_class))
-        test_neutre = neutre_pool.select(range(max_per_class))
-        test_faux = faux_pool.select(range(max_per_class))
-        
-        balanced_data = concatenate_datasets([test_vrai, test_neutre, test_faux]).shuffle(seed=42)
-        
-        total = len(balanced_data)
+        total = len(data)
         train_size = int(total * 0.6)
         val_size = int(total * 0.2)
         
         ds = DatasetDict({
-            'train': balanced_data.select(range(0, train_size)),
-            'validation': balanced_data.select(range(train_size, train_size + val_size)),
-            'test': balanced_data.select(range(train_size + val_size, total))
+            'train': data.select(range(0, train_size)),
+            'validation': data.select(range(train_size, train_size + val_size)),
+            'test': data.select(range(train_size + val_size, total))
         })
         return ds, "premise"
         
@@ -215,9 +201,10 @@ SWEEP_CONFIG = {
 global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
 
 is_binary = (exp_choice == "3")
+is_option_6 = (exp_choice == "6")
 
-if is_binary:
-    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [10.0, 15.0, 20.0, 30.0]}
+if is_binary or is_option_6:
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
 
 if is_binary:
     # 0 = Accord/Neutre, 1 = Contradiction
@@ -333,6 +320,11 @@ def train_one_run():
             if is_binary:
                 penalty = float(config.loss_penalty)
                 class_weights = torch.tensor([1.0, penalty], dtype=torch.float, device=labels.device)
+                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
+                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+            elif is_option_6:
+                penalty = float(config.loss_penalty)
+                class_weights = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], dtype=torch.float, device=labels.device)
                 loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             else:

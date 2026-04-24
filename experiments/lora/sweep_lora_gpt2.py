@@ -87,6 +87,59 @@ def get_dataset(name):
         })
         return ds, "premise"
         
+    elif name == "sick_fr":
+        sick = load_dataset('maximoss/sick-fr')
+        if len(sick.keys()) > 1:
+            data = concatenate_datasets(list(sick.values()))
+        else:
+            data = list(sick.values())[0]
+            
+        def convert_sick(ex):
+            lbl = str(ex['entailment_label']).strip().upper()
+            if lbl == 'ENTAILMENT': label_id = 0
+            elif lbl == 'NEUTRAL': label_id = 1
+            elif lbl == 'CONTRADICTION': label_id = 2
+            else: label_id = 1
+            return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+            
+        data = data.map(convert_sick, remove_columns=data.column_names)
+        
+        total = len(data)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
+        
+        ds = DatasetDict({
+            'train': data.select(range(0, train_size)),
+            'validation': data.select(range(train_size, train_size + val_size)),
+            'test': data.select(range(train_size + val_size, total))
+        })
+        return ds, "premise"
+        
+    elif name == "fracas_sick_mix":
+        ds_fracas, _ = get_dataset("fracas_75")
+        ds_sick, _ = get_dataset("sick_fr")
+        
+        LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+        def align_fracas(ex):
+            s = str(ex["label"]).lower().strip()
+            l_id = LABEL_MAP_LOCAL.get(s, 1)
+            if s not in LABEL_MAP_LOCAL:
+                try: l_id = int(s)
+                except: pass
+            return {"premise": ex["premises"], "hypothesis": ex["hypothesis"], "label": l_id}
+            
+        ds_fracas = ds_fracas.map(align_fracas, remove_columns=ds_fracas['train'].column_names)
+        
+        mix_train = concatenate_datasets([ds_fracas['train'], ds_sick['train']]).shuffle(seed=42)
+        mix_val = concatenate_datasets([ds_fracas['validation'], ds_sick['validation']]).shuffle(seed=42)
+        
+        ds = DatasetDict({
+            'train': mix_train,
+            'validation': mix_val,
+            'test': ds_sick['test']
+        })
+        return ds, "premise"
+
     raise ValueError(f"Dataset {name} inconnu.")
 
 # Balayage strictement identique a celui de CamemBERT
@@ -109,7 +162,10 @@ else:
     print("1. FraCaS (0-74)  →  test GQNLI-FR")
     print("2. GQNLI-FR       →  test FraCaS (0-74)")
     print("3. RTE3-DEV       →  test DACCORD (Binaire)")
-    exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
+    print("4. FraCaS (TOTAL) →  test SICK-FR")
+    print("5. SICK-FR        →  test SICK-FR")
+    print("6. Mix (FraCaS + SICK-FR) → test SICK-FR")
+    exp_choice = input("\nVotre choix (1 à 6): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_gpt2"
@@ -120,6 +176,15 @@ elif exp_choice == "2":
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_gpt2"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
+elif exp_choice == "4":
+    EXP_NAME = "sweep_fracas_to_sick_gpt2"
+    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
+elif exp_choice == "5":
+    EXP_NAME = "sweep_sick_to_sick_gpt2"
+    train_ds_name, test_ds_name = "sick_fr", "sick_fr"
+elif exp_choice == "6":
+    EXP_NAME = "sweep_mix_to_sick_gpt2"
+    train_ds_name, test_ds_name = "fracas_sick_mix", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
@@ -127,8 +192,9 @@ TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
 is_binary = (exp_choice == "3")
+is_option_6 = (exp_choice == "6")
 
-if is_binary:
+if is_binary or is_option_6:
     # Retour aux valeurs normales et stables comme CamemBERT
     SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
     
@@ -195,12 +261,16 @@ class WeightedTrainer(Trainer):
         
         if is_binary:
             weight = torch.tensor([1.0, penalty], device=labels.device, dtype=torch.float)
+            loss_fct = nn.CrossEntropyLoss(weight=weight)
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        elif is_option_6:
+            weight = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], device=labels.device, dtype=torch.float)
+            loss_fct = nn.CrossEntropyLoss(weight=weight)
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
         else:
-            weight = None
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             
-        loss_fct = nn.CrossEntropyLoss(weight=weight)
-        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
-        
         return (loss, outputs) if return_outputs else loss
 
 # 4. FONCTION D'ENTRAÎNEMENT WANDB
