@@ -1,17 +1,19 @@
 """
 Script de Prefix-Tuning OPTIMISÉ pour la soutenance.
-Teste 3 configurations pour trouver celle qui évite le collapse :
+Teste 4 configurations pour trouver celle qui évite le collapse :
   - Config A : Sans projection, 10 tokens virtuels (~600K params)
   - Config B : Sans projection, 30 tokens virtuels (~2M params)  
   - Config C : Avec projection, 10 tokens virtuels (~23M params)
+  - Config D : Sans projection, 10 tokens + Loss Penalty sur neutre (comme Colin/LoRA)
 
-Chaque config est entraînée 5 epochs max (early stopping si collapse détecté).
+Chaque config est entraînée 5 epochs max.
 Les résultats sont sauvegardés dans /results.
 """
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
 
 import torch
+import torch.nn as nn
 import wandb
 import json
 import shutil
@@ -181,10 +183,52 @@ class ProbabilityEvalCallback(TrainerCallback):
 # ============================================================
 
 CONFIGS = {
-    "A": {"num_virtual_tokens": 10, "prefix_projection": False, "lr": 5e-5, "epochs": 5, "desc": "Sans projection, 10 tokens, lr=5e-5"},
-    "B": {"num_virtual_tokens": 30, "prefix_projection": False, "lr": 5e-5, "epochs": 5, "desc": "Sans projection, 30 tokens, lr=5e-5"},
-    "C": {"num_virtual_tokens": 10, "prefix_projection": True,  "lr": 5e-5, "epochs": 5, "desc": "Avec projection, 10 tokens, lr=5e-5"},
+    "A": {"num_virtual_tokens": 10, "prefix_projection": False, "lr": 5e-5, "epochs": 5, "loss_penalty": 1.0, "desc": "Sans projection, 10 tokens, lr=5e-5"},
+    "B": {"num_virtual_tokens": 30, "prefix_projection": False, "lr": 5e-5, "epochs": 5, "loss_penalty": 1.0, "desc": "Sans projection, 30 tokens, lr=5e-5"},
+    "C": {"num_virtual_tokens": 10, "prefix_projection": True,  "lr": 5e-5, "epochs": 5, "loss_penalty": 1.0, "desc": "Avec projection, 10 tokens, lr=5e-5"},
+    "D": {"num_virtual_tokens": 10, "prefix_projection": False, "lr": 5e-5, "epochs": 5, "loss_penalty": 5.0, "desc": "Sans projection, 10 tokens + Loss Penalty neutre=5.0"},
 }
+
+# ============================================================
+# 5b. WEIGHTED TRAINER (méthode de Colin adaptée pour CausalLM)
+# ============================================================
+
+class WeightedCausalTrainer(Trainer):
+    """
+    Trainer personnalisé qui applique une pénalité (loss_penalty) sur le token 'neutre'.
+    Technique identique à celle de Colin (WeightedTrainer dans sweep_lora_gpt2.py),
+    adaptée pour un modèle CausalLM (génératif) au lieu de SequenceClassification.
+    """
+    def __init__(self, *args, neutre_token_id=None, loss_penalty=1.0, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.neutre_token_id = neutre_token_id
+        self.loss_penalty = loss_penalty
+        print(f"⚖️  Loss Penalty activée : poids={loss_penalty} sur token neutre (ID={neutre_token_id})")
+    
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs.get("labels")
+        outputs = model(**inputs)
+        logits = outputs.logits
+        
+        # Décaler les logits et labels comme pour un CausalLM standard
+        shift_logits = logits[..., :-1, :].contiguous()
+        shift_labels = labels[..., 1:].contiguous()
+        
+        vocab_size = shift_logits.size(-1)
+        
+        if self.loss_penalty > 1.0 and self.neutre_token_id is not None:
+            # Créer un vecteur de poids pour TOUT le vocabulaire
+            # Poids = 1.0 pour tous les tokens, sauf neutre qui a un poids plus élevé
+            weight = torch.ones(vocab_size, device=shift_logits.device, dtype=shift_logits.dtype)
+            weight[self.neutre_token_id] = self.loss_penalty
+            loss_fct = nn.CrossEntropyLoss(weight=weight, ignore_index=-100)
+        else:
+            loss_fct = nn.CrossEntropyLoss(ignore_index=-100)
+        
+        loss = loss_fct(shift_logits.view(-1, vocab_size), shift_labels.view(-1))
+        
+        return (loss, outputs) if return_outputs else loss
+
 
 def run_config(config_name, config, model_id, use_4bit, train_ds, val_ds, tokenizer, dataset_name):
     print(f"\n{'='*70}")
@@ -212,6 +256,10 @@ def run_config(config_name, config, model_id, use_4bit, train_ds, val_ds, tokeni
     model.print_trainable_parameters()
 
     eval_callback = ProbabilityEvalCallback(val_ds, tokenizer)
+    
+    # Récupérer l'ID du token neutre pour la pénalité
+    neutre_token_id = tokenizer.encode("neutre", add_special_tokens=False)[0]
+    penalty = config.get("loss_penalty", 1.0)
 
     training_args = TrainingArguments(
         output_dir=f"/tmp/prefix_opt_{config_name}",
@@ -227,12 +275,15 @@ def run_config(config_name, config, model_id, use_4bit, train_ds, val_ds, tokeni
         remove_unused_columns=True,
     )
 
-    trainer = Trainer(
+    # Utiliser le WeightedCausalTrainer (comme le WeightedTrainer de Colin)
+    trainer = WeightedCausalTrainer(
         model=model,
         args=training_args,
         train_dataset=train_ds,
         data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, padding=True, label_pad_token_id=-100),
-        callbacks=[eval_callback]
+        callbacks=[eval_callback],
+        neutre_token_id=neutre_token_id,
+        loss_penalty=penalty,
     )
 
     trainer.train()
@@ -262,7 +313,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model", type=str, default="mistral", help="gpt2, mistral, ou llama")
     parser.add_argument("--dataset", type=str, default="gqnli_fr", help="gqnli_fr, fracas_75")
-    parser.add_argument("--config", type=str, default="all", help="A, B, C, ou all")
+    parser.add_argument("--config", type=str, default="all", help="A, B, C, D, ou all")
     args = parser.parse_args()
 
     # Modèles
