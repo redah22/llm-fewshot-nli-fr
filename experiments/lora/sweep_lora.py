@@ -47,15 +47,15 @@ def get_dataset(name):
         
     elif name == "fracas_full":
         fracas = load_dataset('maximoss/fracas')['train']
-        # On retire tous les 'undef'
         fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
         shuffled = fracas.shuffle(seed=42)
         total = len(shuffled)
-        train_size = int(total * 0.8)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
         ds = DatasetDict({
             'train': shuffled.select(range(0, train_size)),
-            'validation': shuffled.select(range(train_size, total)),
-            'test': shuffled.select(range(train_size, total))
+            'validation': shuffled.select(range(train_size, train_size + val_size)),
+            'test': shuffled.select(range(train_size + val_size, total))
         })
         return ds, "premises"
         
@@ -76,7 +76,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data  # 100% du dataset DACCORD pour le test
+            'test': data.select(range(train_size + val_size, total))  # 20% strictement hors train/val
         })
         return ds, "premise"
         

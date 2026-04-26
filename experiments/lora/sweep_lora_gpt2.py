@@ -71,7 +71,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
+            'test': data.select(range(train_size + val_size, total))  # 20% strictement hors train/val
         })
         return ds, "premise"
         
@@ -315,7 +315,7 @@ def train_gpt2_lora():
         learning_rate=config.learning_rate,
         per_device_train_batch_size=8,
         per_device_eval_batch_size=8,
-        num_train_epochs=20, # On re-augmente a 20 car le modele de 117M s'entraine extremement vite (comme CamemBERT)
+        num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
         metric_for_best_model="f1_score",
