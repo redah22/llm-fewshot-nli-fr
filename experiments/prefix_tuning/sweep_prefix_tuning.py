@@ -40,18 +40,9 @@ def get_dataset(name):
     print(f"Téléchargement et structuration de {name}...")
     if name == "gqnli_fr":
         gqnli = load_dataset('maximoss/gqnli-fr')['test']
-        # Split STRATIFIÉ : on regroupe par label d'abord pour équilibrer
-        by_label = {0: [], 1: [], 2: []}
-        for i, ex in enumerate(gqnli):
-            by_label[int(ex['label'])].append(i)
-        train_idx, val_idx, test_idx = [], [], []
-        for label, indices in by_label.items():
-            n = len(indices)
-            t1 = int(n * 0.6)
-            t2 = int(n * 0.8)
-            train_idx.extend(indices[:t1])
-            val_idx.extend(indices[t1:t2])
-            test_idx.extend(indices[t2:])
+        train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
+        val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
+        test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
         ds = DatasetDict({
             'train': gqnli.select(train_idx).shuffle(seed=42),
             'validation': gqnli.select(val_idx).shuffle(seed=42),
