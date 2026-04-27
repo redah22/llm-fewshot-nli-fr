@@ -199,10 +199,17 @@ TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
 is_binary = (exp_choice == "3")
 is_option_6 = (exp_choice == "6")
+is_option_2 = (exp_choice == "2")
 
 if is_binary or is_option_6:
-    # Retour aux valeurs normales et stables comme CamemBERT
     SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
+
+if is_option_2:
+    # Sweep généreux et unique pour GPT-2 sur GQNLI-FR -> FraCaS
+    SWEEP_CONFIG["parameters"]["learning_rate"] = {"values": [1e-4, 3e-4, 5e-4]}
+    SWEEP_CONFIG["parameters"]["lora_r"] = {"values": [8, 16, 32]}
+    SWEEP_CONFIG["parameters"]["lora_alpha"] = {"values": [16, 32, 64]}
+    SWEEP_CONFIG["parameters"]["lora_dropout"] = {"values": [0.05, 0.1, 0.15]}
     
 if is_binary:
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
