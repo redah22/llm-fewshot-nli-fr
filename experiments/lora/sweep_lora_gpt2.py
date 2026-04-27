@@ -1,17 +1,18 @@
 """
-Script de Sweep WandB pour CamemBERT (Architecture Encoder-only).
+Script de Sweep WandB pour GPT-2 French (Architecture Decoder-only 117M as Classifier).
+Même taille de réseau que CamemBERT pour une comparaison parfaitement équitable !
 """
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
-# os.environ["CUDA_VISIBLE_DEVICES"] = "0" # Optionnel pour CamemBERT, décommentez si Kaggle Dual-GPU plante.
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # Force 1 seul GPU
 
-import json
+import sys
 import numpy as np
 import torch
+import torch.nn as nn
 import wandb
 import shutil
-import sys
 
 from datasets import load_dataset, DatasetDict, concatenate_datasets
 from transformers import (
@@ -19,20 +20,22 @@ from transformers import (
     AutoModelForSequenceClassification,
     TrainingArguments,
     Trainer,
-    DataCollatorWithPadding,
-    EarlyStoppingCallback,
+    DataCollatorWithPadding
 )
 from peft import get_peft_model, LoraConfig, TaskType
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score
 
-BASE_MODEL = "camembert-base"
-MODEL_SHORT = "camembert"
+# Modele de 117M parametres entraine 100% en Francais
+BASE_MODEL = "ClassCat/gpt2-base-french"
 
-# 1. TÉLÉCHARGEMENT & PRÉPARATION DE DONNÉES À LA VOLÉE
+if not torch.cuda.is_available():
+    print("ERREUR CRITIQUE : Ce script nécessite un GPU CUDA.")
+    exit(1)
+
+# 1. TÉLÉCHARGEMENT & PRÉPARATION
 
 def get_dataset(name):
-    """Télécharge et segmente dynamiquement le jeu de données depuis Hub."""
-    print(f"Téléchargement et structuration de {name}...")
+    print(f"Téléchargement de {name}...")
     if name == "gqnli_fr":
         gqnli = load_dataset('maximoss/gqnli-fr')['test']
         train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
@@ -45,34 +48,26 @@ def get_dataset(name):
         })
         return ds, "premise"
         
-    elif name == "fracas_full":
+    elif name == "fracas_75":
         fracas = load_dataset('maximoss/fracas')['train']
-        fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
-        shuffled = fracas.shuffle(seed=42)
-        total = len(shuffled)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
         ds = DatasetDict({
-            'train': shuffled.select(range(0, train_size)),
-            'validation': shuffled.select(range(train_size, train_size + val_size)),
-            'test': shuffled.select(range(train_size + val_size, total))
+            'train': fracas.select(range(75)), 
+            'validation': fracas.select(range(75, 100)), 
+            'test': fracas.select(range(100, 150))
         })
         return ds, "premises"
         
     elif name == "daccord":
-        data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
-        
+        data = load_dataset('maximoss/daccord-contradictions')['train']
+        # DACCORD contient des labels (0, 1). 1 = Contradiction. On ramène à 2 pour standardiser multi-classes.
         def fix_daccord_label(ex):
             if ex["label"] == 1:
-                # Contradiction in Daccord is 1, change to NLI standard 2
                 ex["label"] = 2
             return ex
-            
         data = data.map(fix_daccord_label)
-        
+        data = data.shuffle(seed=42)
         total = len(data)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
+        train_size, val_size = int(total * 0.6), int(total * 0.2)
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
@@ -84,8 +79,7 @@ def get_dataset(name):
         splits = list(load_dataset('maximoss/rte3-french').values())
         data = concatenate_datasets(splits).shuffle(seed=42)
         total = len(data)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
+        train_size, val_size = int(total * 0.6), int(total * 0.2)
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
@@ -122,7 +116,7 @@ def get_dataset(name):
         return ds, "premise"
         
     elif name == "fracas_sick_mix":
-        ds_fracas, _ = get_dataset("fracas_full")
+        ds_fracas, _ = get_dataset("fracas_75")
         ds_sick, _ = get_dataset("sick_fr")
         
         LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
@@ -148,38 +142,48 @@ def get_dataset(name):
 
     raise ValueError(f"Dataset {name} inconnu.")
 
-# 2. CHOIX DE L'EXPERIENCE
+# Balayage strictement identique a celui de CamemBERT
+SWEEP_CONFIG = {
+    "method": "grid",
+    "metric": {"name": "eval/f1_score", "goal": "maximize"},
+    "parameters": {
+        "lora_r": {"values": [16]},
+        "lora_alpha": {"values": [32]},
+        "learning_rate": {"values": [3e-4, 5e-4]},
+        "lora_dropout": {"values": [0.1]},
+    }
+}
 
 if len(sys.argv) > 1:
     exp_choice = sys.argv[1].strip()
-    print(f"\nVotre choix (1, 2 ou 3): {exp_choice} (via argument)")
+    print(f"\nVotre choix: {exp_choice} (via argument)")
 else:
-    print("\nQuelle expérience LoRA utiliser pour le sweep ?")
-    print("1. FraCaS (TOTAL)  →  test GQNLI-FR")
-    print("2. GQNLI-FR        →  test FraCaS (TOTAL)")
-    print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
-    print("4. FraCaS (TOTAL)  →  test SICK-FR")
-    print("5. SICK-FR         →  test SICK-FR (Intra-dataset)")
-    print("6. Mix (FraCaS + SICK-FR) →  test SICK-FR")
+    print("\nQuelle expérience LoRA GPT-2 utiliser ?")
+    print("1. FraCaS (0-74)  →  test GQNLI-FR")
+    print("2. GQNLI-FR       →  test FraCaS (0-74)")
+    print("3. RTE3-DEV       →  test DACCORD (Binaire)")
+    print("4. FraCaS (TOTAL) →  test SICK-FR")
+    print("5. SICK-FR        →  test SICK-FR")
+    print("6. Mix (FraCaS + SICK-FR) → test SICK-FR")
     exp_choice = input("\nVotre choix (1 à 6): ").strip()
 
 if exp_choice == "1":
-    EXP_NAME = "sweep_fracas_to_gqnli"
-    train_ds_name, test_ds_name = "fracas_full", "gqnli_fr"
+    EXP_NAME = "sweep_fracas_to_gqnli_gpt2"
+    train_ds_name, test_ds_name = "fracas_75", "gqnli_fr"
 elif exp_choice == "2":
-    EXP_NAME = "sweep_gqnli_to_fracas"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas_full"
+    EXP_NAME = "sweep_gqnli_to_fracas_gpt2"
+    train_ds_name, test_ds_name = "gqnli_fr", "fracas_75"
 elif exp_choice == "3":
-    EXP_NAME = "sweep_rte3_to_daccord"
+    EXP_NAME = "sweep_rte3_to_daccord_gpt2"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 elif exp_choice == "4":
-    EXP_NAME = "sweep_fracas_to_sick"
-    train_ds_name, test_ds_name = "fracas_full", "sick_fr"
+    EXP_NAME = "sweep_fracas_to_sick_gpt2"
+    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
 elif exp_choice == "5":
-    EXP_NAME = "sweep_sick_to_sick"
+    EXP_NAME = "sweep_sick_to_sick_gpt2"
     train_ds_name, test_ds_name = "sick_fr", "sick_fr"
 elif exp_choice == "6":
-    EXP_NAME = "sweep_mix_to_sick"
+    EXP_NAME = "sweep_mix_to_sick_gpt2"
     train_ds_name, test_ds_name = "fracas_sick_mix", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
@@ -187,31 +191,24 @@ else:
 TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
-SWEEP_CONFIG = {
-    "method": "grid",
-    "metric": {"name": "eval/accuracy", "goal": "maximize"},
-    "parameters": {
-        "lora_r": {"values": [16]},
-        "lora_alpha": {"values": [32]},
-        "learning_rate": {"values": [3e-4]},
-        "lora_dropout": {"values": [0.1]},
-    }
-}
-
-global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
-
 is_binary = (exp_choice == "3")
 is_option_6 = (exp_choice == "6")
 
 if is_binary or is_option_6:
+    # Retour aux valeurs normales et stables comme CamemBERT
     SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
-
+    
 if is_binary:
-    # 0 = Accord/Neutre, 1 = Contradiction
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 0, "undef": 0, "neutral": 0, "no": 1, "contradiction": 1}
 else:
-    # 0 = Vrai, 1 = Neutre, 2 = Faux
     LABEL_MAP = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+
+global_tokenizer = AutoTokenizer.from_pretrained(BASE_MODEL)
+# Important pour decoder: Fixer le pad token sur l'eos
+if global_tokenizer.pad_token is None:
+    global_tokenizer.pad_token = global_tokenizer.eos_token
+# Pour un Classifier, on met generalement la padding side a la fin (right) sur les Decodeurs
+global_tokenizer.padding_side = "right"
 
 def map_label(label):
     if isinstance(label, int):
@@ -220,26 +217,21 @@ def map_label(label):
         return label if label in [0, 1, 2] else 1
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    try:
-        val = int(s)
-        if is_binary:
-            return 1 if val == 2 else 0
-        return val if val in [0, 1, 2] else 1
-    except:
-        return 0 if is_binary else 1
+    return 1 if not is_binary else 0
 
 def tokenize_fn(examples, p_key):
-    res = global_tokenizer(examples[p_key], examples["hypothesis"], truncation=True, padding="max_length", max_length=128)
+    prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples[p_key], examples["hypothesis"])]
+    res = global_tokenizer(prompts, truncation=True, max_length=256)
     res["labels"] = [map_label(l) for l in examples["label"]]
     return res
 
+print("\nTokenisation des datasets...")
 train_data = TRAIN_DICT['train'].map(lambda ex: tokenize_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
 train_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
 val_data = TRAIN_DICT['validation'].map(lambda ex: tokenize_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)
 val_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-# Le test se fait uniquement sur le split officiel (pour éviter d'attendre des heures sur les 10 000 exemples)
 test_untokenized = TEST_DICT['test']
 test_data = test_untokenized.map(lambda ex: tokenize_fn(ex, TEST_PKEY), batched=True, remove_columns=test_untokenized.column_names)
 test_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
@@ -259,45 +251,70 @@ def compute_metrics(eval_pred):
     }
     return metrics
 
-# 5. FONCTION D'ENTRAÎNEMENT (WANDB SWEEP)
+class WeightedTrainer(Trainer):
+    def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        labels = inputs.pop("labels")
+        outputs = model(**inputs)
+        logits = outputs.logits
+        
+        penalty = float(getattr(wandb.config, "loss_penalty", 1.0))
+        
+        if is_binary:
+            weight = torch.tensor([1.0, penalty], device=labels.device, dtype=torch.float)
+            loss_fct = nn.CrossEntropyLoss(weight=weight)
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        elif is_option_6:
+            weight = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], device=labels.device, dtype=torch.float)
+            loss_fct = nn.CrossEntropyLoss(weight=weight)
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        else:
+            loss_fct = nn.CrossEntropyLoss()
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+            
+        return (loss, outputs) if return_outputs else loss
 
-def train_one_run():
+# 4. FONCTION D'ENTRAÎNEMENT WANDB
+def train_gpt2_lora():
     run = wandb.init()
     config = wandb.config
 
-    run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
     if is_binary:
-        run_label += f"_p{config.loss_penalty}"
+        run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}_p{config.loss_penalty}"
+    else:
+        run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
         
-    print(f"\n{'='*60}\nSWEEP CAMEMBERT RUN: {run_label}\n{'='*60}")
+    print(f"\n{'='*60}\nSWEEP GPT-2 RUN: {run_label}\n{'='*60}")
 
+    print("Chargement du modèle Décodeur pur...")
     num_labels = 2 if is_binary else 3
-    base_model = AutoModelForSequenceClassification.from_pretrained(BASE_MODEL, num_labels=num_labels)
+    base_model = AutoModelForSequenceClassification.from_pretrained(
+        BASE_MODEL,
+        num_labels=num_labels,
+        device_map="auto"
+        # PAS DE BitsAndBytesConfig (Pas de QLoRA) car le modele fait exactement la meme taille (110M) que Camembert !
+    )
+    base_model.config.use_cache = False
+    base_model.config.pad_token_id = global_tokenizer.pad_token_id
     
     lora_config = LoraConfig(
         task_type=TaskType.SEQ_CLS,
         r=config.lora_r,
         lora_alpha=config.lora_alpha,
         lora_dropout=config.lora_dropout,
-        target_modules=["query", "value"],
-        modules_to_save=["classifier"],
+        target_modules=["c_attn"], # Dans GPT-2 la couche d'attention principale s'appelle c_attn
         bias="none",
     )
     model = get_peft_model(base_model, lora_config)
-    
-    trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
-    total = sum(p.numel() for p in model.parameters())
-    print(f"Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
 
     args = TrainingArguments(
-        output_dir=f"/tmp/checkpoints_{EXP_NAME}_{run_label}", 
+        output_dir=f"/tmp/ckpt_{EXP_NAME}_{run_label}", 
         eval_strategy="epoch",
         save_strategy="epoch",
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=16,  # Permet au GPU de traiter plus de données d'un coup
-        per_device_eval_batch_size=16,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
         num_train_epochs=20,
         weight_decay=0.01,
         load_best_model_at_end=True,
@@ -306,33 +323,9 @@ def train_one_run():
         logging_steps=10,
         report_to="wandb",
         remove_unused_columns=False,
-        dataloader_num_workers=0,
-        dataloader_pin_memory=False
+        dataloader_num_workers=2,
+        dataloader_pin_memory=True
     )
-
-    from torch import nn
-    class WeightedTrainer(Trainer):
-        def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
-            labels = inputs.get("labels")
-            outputs = model(**inputs)
-            logits = outputs.logits
-            
-            if is_binary:
-                penalty = float(config.loss_penalty)
-                class_weights = torch.tensor([1.0, penalty], dtype=torch.float, device=labels.device)
-                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
-                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
-            elif is_option_6:
-                penalty = float(config.loss_penalty)
-                class_weights = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], dtype=torch.float, device=labels.device)
-                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
-                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
-            else:
-                # Logique par défaut pour les autres
-                loss_fct = nn.CrossEntropyLoss()
-                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
-                
-            return (loss, outputs) if return_outputs else loss
 
     trainer = WeightedTrainer(
         model=model,
@@ -345,18 +338,17 @@ def train_one_run():
 
     trainer.train()
 
-    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
-    import sys; sys.stdout.flush()
+    print("\nÉvaluation Cross-Dataset Finale...")
     test_results = trainer.evaluate(test_data, metric_key_prefix="test")
-    print(f"✅ EVALUATION TERMINÉE !")
     test_acc = test_results["test_accuracy"]
+    test_f1 = test_results["test_f1_score"]
+    
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
-    if "test_f1_score" in test_results:
-        test_f1 = test_results["test_f1_score"]
-        print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
-        wandb.summary["final_test_f1_score"] = test_f1
+    print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
 
+    # Le Trainer avec son WandbCallback vient d'envoyer automatiquement les resultats "test_accuracy" a WandB !
     wandb.summary["final_test_accuracy"] = test_acc
+    wandb.summary["final_test_f1_score"] = test_f1
 
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)
@@ -365,18 +357,19 @@ def train_one_run():
 
 if __name__ == "__main__":
     total_runs = 1
-    for param_name, param_dict in SWEEP_CONFIG["parameters"].items():
-        total_runs *= len(param_dict["values"])
+    for param_name, param in SWEEP_CONFIG["parameters"].items():
+        if "values" in param:
+            total_runs *= len(param["values"])
     
     if len(sys.argv) > 1:
-        confirm = "o"
+        confirm = "o" 
     else:
-        confirm = input(f"\nLancer automatiquement {total_runs} sweeps ? (o/n): ").strip().lower()
+        confirm = input(f"\nLancer {total_runs} sweeps GPT-2 LoRA ? (o/n): ").strip().lower()
         
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
         print(f"\nSweep créé ! ID: {sweep_id}")
-        wandb.agent(sweep_id, function=train_one_run, count=total_runs)
-        print("\nSweep terminé ! Consultez WandB.")
+        wandb.agent(sweep_id, function=train_gpt2_lora, count=total_runs)
+        print("\nTerminé ! Consultez les résultats sur WandB.")
     else:
         print("Annulé.")

@@ -23,7 +23,7 @@ from transformers import (
     BitsAndBytesConfig
 )
 from peft import get_peft_model, LoraConfig, TaskType
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 
 BASE_MODEL = "google/t5gemma-2-270m-270m"
 MODEL_SHORT = "t5gemma"
@@ -50,22 +50,39 @@ def get_dataset(name):
         })
         return ds, "premise"
         
-    elif name == "fracas_75":
-        fracas = load_dataset('maximoss/fracas')['train'].select(range(75))
+    elif name == "fracas_full":
+        fracas = load_dataset('maximoss/fracas')['train']
+        # On retire tous les 'undef'
+        fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
+        shuffled = fracas.shuffle(seed=42)
+        total = len(shuffled)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
         ds = DatasetDict({
-            'train': fracas, 'validation': fracas, 'test': fracas
+            'train': shuffled.select(range(0, train_size)),
+            'validation': shuffled.select(range(train_size, train_size + val_size)),
+            'test': shuffled.select(range(train_size + val_size, total))
         })
         return ds, "premises"
         
     elif name == "daccord":
         data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
+        
+        def fix_daccord_label(ex):
+            if ex["label"] == 1:
+                # Contradiction in Daccord is 1, change to NLI standard 2
+                ex["label"] = 2
+            return ex
+            
+        data = data.map(fix_daccord_label)
+        
         total = len(data)
         train_size = int(total * 0.6)
         val_size = int(total * 0.2)
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
+            'test': data.select(range(train_size + val_size, total))  # 20% strictement hors train/val
         })
         return ds, "premise"
         
@@ -82,6 +99,59 @@ def get_dataset(name):
         })
         return ds, "premise"
         
+    elif name == "sick_fr":
+        sick = load_dataset('maximoss/sick-fr')
+        if len(sick.keys()) > 1:
+            data = concatenate_datasets(list(sick.values()))
+        else:
+            data = list(sick.values())[0]
+            
+        def convert_sick(ex):
+            lbl = str(ex['entailment_label']).strip().upper()
+            if lbl == 'ENTAILMENT': label_id = 0
+            elif lbl == 'NEUTRAL': label_id = 1
+            elif lbl == 'CONTRADICTION': label_id = 2
+            else: label_id = 1
+            return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+            
+        data = data.map(convert_sick, remove_columns=data.column_names)
+        
+        total = len(data)
+        train_size = int(total * 0.6)
+        val_size = int(total * 0.2)
+        
+        ds = DatasetDict({
+            'train': data.select(range(0, train_size)),
+            'validation': data.select(range(train_size, train_size + val_size)),
+            'test': data.select(range(train_size + val_size, total))
+        })
+        return ds, "premise"
+        
+    elif name == "fracas_sick_mix":
+        ds_fracas, _ = get_dataset("fracas_full")
+        ds_sick, _ = get_dataset("sick_fr")
+        
+        LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
+        def align_fracas(ex):
+            s = str(ex["label"]).lower().strip()
+            l_id = LABEL_MAP_LOCAL.get(s, 1)
+            if s not in LABEL_MAP_LOCAL:
+                try: l_id = int(s)
+                except: pass
+            return {"premise": ex["premises"], "hypothesis": ex["hypothesis"], "label": l_id}
+            
+        ds_fracas = ds_fracas.map(align_fracas, remove_columns=ds_fracas['train'].column_names)
+        
+        mix_train = concatenate_datasets([ds_fracas['train'], ds_sick['train']]).shuffle(seed=42)
+        mix_val = concatenate_datasets([ds_fracas['validation'], ds_sick['validation']]).shuffle(seed=42)
+        
+        ds = DatasetDict({
+            'train': mix_train,
+            'validation': mix_val,
+            'test': ds_sick['test']
+        })
+        return ds, "premise"
+
     raise ValueError(f"Dataset {name} inconnu.")
 
 # 2. CONFIGURATION DU SWEEP (RÉDUIT)
@@ -92,8 +162,8 @@ SWEEP_CONFIG = {
     "parameters": {
         "lora_r": {"values": [32]},
         "lora_alpha": {"values": [64]},
-        "learning_rate": {"values": [3e-4, 5e-4]},
-        "lora_dropout": {"values": [0.05, 0.1]},
+        "learning_rate": {"values": [5e-4]},
+        "lora_dropout": {"values": [0.1]},
     }
 }
 
@@ -104,20 +174,32 @@ if len(sys.argv) > 1:
     print(f"\nChoix : {exp_choice}")
 else:
     print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
-    print("1. FraCaS (0-74)  →  test GQNLI-FR")
-    print("2. GQNLI-FR       →  test FraCaS (0-74)")
-    print("3. RTE3-DEV       →  test DACCORD + RTE3-TEST")
-    exp_choice = input("\nVotre choix (1, 2 ou 3): ").strip()
+    print("1. FraCaS (TOTAL)  →  test GQNLI-FR")
+    print("2. GQNLI-FR        →  test FraCaS (TOTAL)")
+    print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
+    print("4. FraCaS (TOTAL)  →  test SICK-FR")
+    print("5. SICK-FR         →  test SICK-FR (Intra-dataset)")
+    print("6. Mix (FraCaS + SICK-FR) →  test SICK-FR")
+    exp_choice = input("\nVotre choix (1 à 6): ").strip()
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
-    train_ds_name, test_ds_name = "fracas_75", "gqnli_fr"
+    train_ds_name, test_ds_name = "fracas_full", "gqnli_fr"
 elif exp_choice == "2":
     EXP_NAME = "sweep_gqnli_to_fracas_t5gemma"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas_75"
+    train_ds_name, test_ds_name = "gqnli_fr", "fracas_full"
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_t5gemma"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
+elif exp_choice == "4":
+    EXP_NAME = "sweep_fracas_to_sick_t5gemma"
+    train_ds_name, test_ds_name = "fracas_full", "sick_fr"
+elif exp_choice == "5":
+    EXP_NAME = "sweep_sick_to_sick_t5gemma"
+    train_ds_name, test_ds_name = "sick_fr", "sick_fr"
+elif exp_choice == "6":
+    EXP_NAME = "sweep_mix_to_sick_t5gemma"
+    train_ds_name, test_ds_name = "fracas_sick_mix", "sick_fr"
 else:
     print("Choix invalide!"); exit(1)
 
@@ -126,25 +208,43 @@ TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
 TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
 
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
-LABEL_MAP = {
-    "yes": "vrai", "entailment": "vrai", "0": "vrai",
-    "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
-    "no": "faux", "contradiction": "faux", "2": "faux"
-}
+
+is_binary = (exp_choice == "3")
+
+if is_binary:
+    LABEL_MAP = {
+        "yes": "accord", "entailment": "accord", "0": "accord",
+        "unknown": "accord", "undef": "accord", "neutral": "accord", "1": "accord",
+        "no": "contradiction", "contradiction": "contradiction", "2": "contradiction"
+    }
+else:
+    LABEL_MAP = {
+        "yes": "vrai", "entailment": "vrai", "0": "vrai",
+        "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
+        "no": "faux", "contradiction": "faux", "2": "faux"
+    }
 
 def normalize_label(label):
     if isinstance(label, int):
-        if label == 0: return "vrai"
-        if label == 1: return "neutre"
-        if label == 2: return "faux"
-        return "neutre"
+        if is_binary:
+            return "contradiction" if label == 2 else "accord"
+        else:
+            if label == 0: return "vrai"
+            if label == 1: return "neutre"
+            if label == 2: return "faux"
+            return "neutre"
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    return "neutre"
+    return "accord" if is_binary else "neutre"
 
 def preprocess_fn(examples, p_key):
+    if is_binary:
+        consigne = "Consigne : Prédire si l'hypothèse est en accord ou en contradiction d'après la prémisse.\n"
+    else:
+        consigne = "Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\n"
+        
     inputs = [
-        f"Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\nPrémisse : {p}\nHypothèse : {h}\nRéponse :"
+        f"{consigne}Prémisse : {p}\nHypothèse : {h}\nRéponse :"
         for p, h in zip(examples[p_key], examples["hypothesis"])
     ]
     model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
@@ -153,12 +253,30 @@ def preprocess_fn(examples, p_key):
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
+# --- OVERSAMPLING MANUEL POUR T5 (Simulation du class_weight) ---
+if is_binary:
+    print("\n[OVERSAMPLING] Equilibrage des classes pour compenser la rareté de 'Contradiction'...")
+    def is_contra(x): return normalize_label(x["label"]) == "contradiction"
+    def is_acc(x): return normalize_label(x["label"]) == "accord"
+    
+    train_contra = TRAIN_DICT['train'].filter(is_contra)
+    train_accord = TRAIN_DICT['train'].filter(is_acc)
+    
+    n_c = len(train_contra)
+    n_a = len(train_accord)
+    
+    if 0 < n_c < n_a:
+        multiplier = min(3, n_a // n_c)  # Limité à x3 max au lieu de x10
+        print(f"--> Multiplication de la classe minoritaire par {multiplier} (de {n_c} à {n_c * multiplier}).")
+        upsampled_contra = concatenate_datasets([train_contra] * multiplier)
+        TRAIN_DICT['train'] = concatenate_datasets([train_accord, upsampled_contra]).shuffle(seed=42)
+
 # On tokenise directement
 train_data = TRAIN_DICT['train'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
 val_data = TRAIN_DICT['validation'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)
 
-# Le test est la concaténation de tous les splits cibles
-test_untokenized = concatenate_datasets(list(TEST_DICT.values()))
+# Le test se fait uniquement sur le split officiel (pour éviter d'attendre 2h sur 10 000 exemples)
+test_untokenized = TEST_DICT['test']
 test_data = test_untokenized.map(lambda ex: preprocess_fn(ex, TEST_PKEY), batched=True, remove_columns=test_untokenized.column_names)
 
 def compute_metrics(eval_pred):
@@ -170,26 +288,38 @@ def compute_metrics(eval_pred):
     print(f"\n[DEBUG LORA] Extraits générés : {dec_preds[:5]}")
     print(f"[DEBUG LORA] Extraits cibles  : {dec_labels[:5]}")
     
-    LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
+    LABEL_TO_INT = {"accord": 0, "contradiction": 1} if is_binary else {"vrai": 0, "neutre": 1, "faux": 2}
     
     import re
     cleaned_preds = []
     for p in dec_preds:
-        match = re.search(r'(vrai|faux|neutre)', p.lower())
+        if is_binary:
+            match = re.search(r'(accord|contradiction)', p.lower())
+            val_default = "accord"
+        else:
+            match = re.search(r'(vrai|faux|neutre)', p.lower())
+            val_default = "neutre"
+            
         if match:
             cleaned_preds.append(match.group(1))
         else:
-            cleaned_preds.append("neutre")
+            cleaned_preds.append(val_default)
+            
     int_preds = [LABEL_TO_INT[p] for p in cleaned_preds]
-    int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
+    int_labels = [LABEL_TO_INT.get(l.lower(), 0 if is_binary else 1) for l in dec_labels]
     
     try:
-        cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
+        cm_labels = [0, 1] if is_binary else [0, 1, 2]
+        cm = confusion_matrix(int_labels, int_preds, labels=cm_labels)
         print(f"\nMatrice de confusion:\n{cm}")
     except Exception: pass
     
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
-    return {"accuracy": acc}
+    metrics = {
+        "accuracy": acc,
+        "f1_score": f1_score(int_labels, int_preds, average="macro")
+    }
+    return metrics
 
 # 4. FONCTION D'ENTRAÎNEMENT (POUR WANDB SWEEP)
 
@@ -235,20 +365,20 @@ def train_t5_qlora():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=32,
         gradient_accumulation_steps=1,
-        num_train_epochs=100,
+        num_train_epochs=20,
         weight_decay=0.01,
-        load_best_model_at_end=False,
-        metric_for_best_model="accuracy",
+        load_best_model_at_end=True,
+        metric_for_best_model="f1_score",
         predict_with_generate=True,
         generation_max_length=8,
         logging_steps=10,
         report_to="wandb",
         gradient_checkpointing=True,
-        dataloader_num_workers=2,
-        dataloader_pin_memory=True
+        dataloader_num_workers=0,
+        dataloader_pin_memory=False
     )
 
     collator = DataCollatorForSeq2Seq(tokenizer=global_tokenizer, model=None, padding=True, pad_to_multiple_of=8)
@@ -265,13 +395,18 @@ def train_t5_qlora():
     trainer.train()
 
     # Evaluation Finale sur Test Cross-Dataset
-    print("\nÉvaluation Cross-Dataset Finale...")
-    test_results = trainer.evaluate(test_data)
-    test_acc = test_results["eval_accuracy"]
+    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
+    import sys; sys.stdout.flush()
+    test_results = trainer.evaluate(test_data, metric_key_prefix="test")
+    print(f"✅ EVALUATION TERMINÉE !")
+    test_acc = test_results["test_accuracy"]
     print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
+    if "test_f1_score" in test_results:
+        test_f1 = test_results["test_f1_score"]
+        print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
+        wandb.summary["final_test_f1_score"] = test_f1
 
-    wandb.log({"test/cross_dataset_accuracy": test_acc})
-    wandb.summary["test_cross_dataset_accuracy"] = test_acc
+    wandb.summary["final_test_accuracy"] = test_acc
 
     # Nettoyage des checkpoints locaux de ce run (Kaggle n'a que 20 Go par défaut)
     if os.path.exists(args.output_dir):

@@ -19,8 +19,9 @@ print("2. FraCaS (346 exemples, topic GENERALIZED QUANTIFIERS)")
 print("3. FraCaS (Lignes 0-74, pour tests)")
 print("4. DACCORD (1034 exemples, contradiction vs compatibles)")
 print("5. RTE3-French (800 exemples, 3-way NLI)")
+print("6. SICK-FR (~9800 exemples, 3-way NLI)")
 
-choice = input("\nVotre choix (1, 2, 3, 4 ou 5): ").strip()
+choice = input("\nVotre choix (1, 2, 3, 4, 5 ou 6): ").strip()
 
 if choice == "1":
     print("\n📊 Dataset choisi: GQNLI-FR")
@@ -222,6 +223,58 @@ elif choice == "5":
     print(f"Test: {len(test)} ({len(test)/total*100:.1f}%)")
     print(f"\n✅ Sauvegardé: data/processed/rte3_fr")
     
+elif choice == "6":
+    print("\n📊 Dataset choisi: SICK-FR")
+    print("Chargement de SICK-FR...")
+    sick = load_dataset('maximoss/sick-fr')
+    
+    if len(sick.keys()) > 1:
+        from datasets import concatenate_datasets
+        data = concatenate_datasets(list(sick.values()))
+    else:
+        data = list(sick.values())[0]
+        
+    print(f"Total: {len(data)} exemples")
+    
+    # Conversion des noms de colonnes et des labels (SICK-FR a des noms différents)
+    def convert_sick(ex):
+        lbl = str(ex['entailment_label']).strip().upper()
+        if lbl == 'ENTAILMENT': label_id = 0
+        elif lbl == 'NEUTRAL': label_id = 1
+        elif lbl == 'CONTRADICTION': label_id = 2
+        else: label_id = 1
+        
+        return {
+            'premise': ex['sentence_A'],
+            'hypothesis': ex['sentence_B'],
+            'label': label_id
+        }
+        
+    data = data.map(convert_sick, remove_columns=data.column_names)
+    
+    shuffled = data.shuffle(seed=42)
+    total = len(shuffled)
+    
+    train_size = int(total * 0.6)
+    val_size = int(total * 0.2)
+    
+    train = shuffled.select(range(0, train_size))
+    val = shuffled.select(range(train_size, train_size + val_size))
+    test = shuffled.select(range(train_size + val_size, total))
+    
+    dataset_dict = DatasetDict({
+        'train': train,
+        'validation': val,
+        'test': test,
+    })
+    
+    dataset_dict.save_to_disk('data/processed/sick_fr')
+    
+    print(f"\nTrain: {len(train)} ({len(train)/total*100:.1f}%)")
+    print(f"Val: {len(val)} ({len(val)/total*100:.1f}%)")
+    print(f"Test: {len(test)} ({len(test)/total*100:.1f}%)")
+    print(f"\n✅ Sauvegardé: data/processed/sick_fr")
+
 else:
     print("❌ Choix invalide!")
     sys.exit(1)
