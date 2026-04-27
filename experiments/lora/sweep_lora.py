@@ -45,17 +45,18 @@ def get_dataset(name):
         })
         return ds, "premise"
         
-    elif name == "fracas_full":
+    elif name == "fracas":
         fracas = load_dataset('maximoss/fracas')['train']
         fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
-        shuffled = fracas.shuffle(seed=42)
-        total = len(shuffled)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
+        
+        train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
+        val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
+        test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
+        
         ds = DatasetDict({
-            'train': shuffled.select(range(0, train_size)),
-            'validation': shuffled.select(range(train_size, train_size + val_size)),
-            'test': shuffled.select(range(train_size + val_size, total))
+            'train': fracas.select(train_idx).shuffle(seed=42),
+            'validation': fracas.select(val_idx).shuffle(seed=42),
+            'test': fracas.select(test_idx).shuffle(seed=42)
         })
         return ds, "premises"
         
@@ -76,7 +77,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))  # 20% strictement hors train/val
+            'test': data  # 100% du dataset DACCORD — pas de fuite (train sur RTE3)
         })
         return ds, "premise"
         
@@ -122,7 +123,7 @@ def get_dataset(name):
         return ds, "premise"
         
     elif name == "fracas_sick_mix":
-        ds_fracas, _ = get_dataset("fracas_full")
+        ds_fracas, _ = get_dataset("fracas")
         ds_sick, _ = get_dataset("sick_fr")
         
         LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
@@ -165,16 +166,16 @@ else:
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli"
-    train_ds_name, test_ds_name = "fracas_full", "gqnli_fr"
+    train_ds_name, test_ds_name = "fracas", "gqnli_fr"
 elif exp_choice == "2":
     EXP_NAME = "sweep_gqnli_to_fracas"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas_full"
+    train_ds_name, test_ds_name = "gqnli_fr", "fracas"
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 elif exp_choice == "4":
     EXP_NAME = "sweep_fracas_to_sick"
-    train_ds_name, test_ds_name = "fracas_full", "sick_fr"
+    train_ds_name, test_ds_name = "fracas", "sick_fr"
 elif exp_choice == "5":
     EXP_NAME = "sweep_sick_to_sick"
     train_ds_name, test_ds_name = "sick_fr", "sick_fr"

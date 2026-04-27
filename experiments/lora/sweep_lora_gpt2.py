@@ -48,12 +48,18 @@ def get_dataset(name):
         })
         return ds, "premise"
         
-    elif name == "fracas_75":
+    elif name == "fracas":
         fracas = load_dataset('maximoss/fracas')['train']
+        fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
+        
+        train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
+        val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
+        test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
+        
         ds = DatasetDict({
-            'train': fracas.select(range(75)), 
-            'validation': fracas.select(range(75, 100)), 
-            'test': fracas.select(range(100, 150))
+            'train': fracas.select(train_idx).shuffle(seed=42),
+            'validation': fracas.select(val_idx).shuffle(seed=42),
+            'test': fracas.select(test_idx).shuffle(seed=42)
         })
         return ds, "premises"
         
@@ -71,7 +77,7 @@ def get_dataset(name):
         ds = DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))  # 20% strictement hors train/val
+            'test': data  # 100% du dataset DACCORD — pas de fuite (train sur RTE3)
         })
         return ds, "premise"
         
@@ -116,7 +122,7 @@ def get_dataset(name):
         return ds, "premise"
         
     elif name == "fracas_sick_mix":
-        ds_fracas, _ = get_dataset("fracas_75")
+        ds_fracas, _ = get_dataset("fracas")
         ds_sick, _ = get_dataset("sick_fr")
         
         LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
@@ -169,16 +175,16 @@ else:
 
 if exp_choice == "1":
     EXP_NAME = "sweep_fracas_to_gqnli_gpt2"
-    train_ds_name, test_ds_name = "fracas_75", "gqnli_fr"
+    train_ds_name, test_ds_name = "fracas", "gqnli_fr"
 elif exp_choice == "2":
     EXP_NAME = "sweep_gqnli_to_fracas_gpt2"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas_75"
+    train_ds_name, test_ds_name = "gqnli_fr", "fracas"
 elif exp_choice == "3":
     EXP_NAME = "sweep_rte3_to_daccord_gpt2"
     train_ds_name, test_ds_name = "rte3_fr", "daccord"
 elif exp_choice == "4":
     EXP_NAME = "sweep_fracas_to_sick_gpt2"
-    train_ds_name, test_ds_name = "fracas_75", "sick_fr"
+    train_ds_name, test_ds_name = "fracas", "sick_fr"
 elif exp_choice == "5":
     EXP_NAME = "sweep_sick_to_sick_gpt2"
     train_ds_name, test_ds_name = "sick_fr", "sick_fr"
