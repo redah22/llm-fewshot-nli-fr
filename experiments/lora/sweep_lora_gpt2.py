@@ -57,9 +57,9 @@ def get_dataset(name):
         test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
         
         ds = DatasetDict({
-            'train': fracas.select(train_idx).shuffle(seed=42),
-            'validation': fracas.select(val_idx).shuffle(seed=42),
-            'test': fracas.select(test_idx).shuffle(seed=42)
+            'train': fracas.select(train_idx),
+            'validation': fracas.select(val_idx),
+            'test': fracas.select(test_idx)
         })
         return ds, "premises"
         
