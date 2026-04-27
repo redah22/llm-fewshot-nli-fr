@@ -57,6 +57,12 @@ def get_dataset(name):
             'test': fracas.select(range(100, 150))
         })
         return ds, "premises"
+        
+    elif name == "xnli_fr":
+        xnli = load_dataset('xnli', 'fr')
+        # On va créer des splits factices "train", "validation", "test" respectant l'API DatasetDict car XNLI n'a pas forcément ces splits natifs avec la même casse, ou pour simplifier le retour.
+        # XNLI a naturellement 'train', 'validation', 'test'.
+        return xnli, "premise"
 
     raise ValueError(f"Dataset {name} inconnu.")
 
