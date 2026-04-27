@@ -279,6 +279,11 @@ class WeightedTrainer(Trainer):
             weight = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], device=labels.device, dtype=torch.float)
             loss_fct = nn.CrossEntropyLoss(weight=weight)
             loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        elif exp_choice == "1":
+            # Demande utilisateur : "classe neutre ajoute 1 [=2.0], contradiction met 2 [=3.0]"
+            weight = torch.tensor([1.0, 2.0, 3.0], device=labels.device, dtype=torch.float)
+            loss_fct = nn.CrossEntropyLoss(weight=weight)
+            loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
         else:
             loss_fct = nn.CrossEntropyLoss()
             loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))

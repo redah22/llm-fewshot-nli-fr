@@ -328,6 +328,11 @@ def train_one_run():
                 class_weights = torch.tensor([1.0, max(1.0, penalty/2.0), penalty], dtype=torch.float, device=labels.device)
                 loss_fct = nn.CrossEntropyLoss(weight=class_weights)
                 loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+            elif exp_choice == "1":
+                # Demande utilisateur : "classe neutre ajoute 1 [=2.0], contradiction met 2 [=3.0]"
+                class_weights = torch.tensor([1.0, 2.0, 3.0], dtype=torch.float, device=labels.device)
+                loss_fct = nn.CrossEntropyLoss(weight=class_weights)
+                loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
             else:
                 # Logique par défaut pour les autres
                 loss_fct = nn.CrossEntropyLoss()
