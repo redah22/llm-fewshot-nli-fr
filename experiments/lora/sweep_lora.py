@@ -192,9 +192,9 @@ SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/accuracy", "goal": "maximize"},
     "parameters": {
-        "lora_r": {"values": [16]},
-        "lora_alpha": {"values": [32]},
-        "learning_rate": {"values": [3e-4]},
+        "lora_r": {"values": [8, 16]},
+        "lora_alpha": {"values": [16, 32]},
+        "learning_rate": {"values": [2e-4, 5e-4]},
         "lora_dropout": {"values": [0.1]},
     }
 }
@@ -205,7 +205,8 @@ is_binary = (exp_choice == "3")
 is_option_6 = (exp_choice == "6")
 
 if is_binary or is_option_6:
-    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 3.0, 5.0, 10.0]}
+    # On limite à 2 valeurs pour ne pas exploser le plafond de 20 runs (8 * 2 = 16)
+    SWEEP_CONFIG["parameters"]["loss_penalty"] = {"values": [1.0, 5.0]}
 
 if is_binary:
     # 0 = Accord/Neutre, 1 = Contradiction
