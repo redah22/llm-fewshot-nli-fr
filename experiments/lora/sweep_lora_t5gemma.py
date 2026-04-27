@@ -235,7 +235,16 @@ def normalize_label(label):
             return "neutre"
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    return "accord" if is_binary else "neutre"
+    try:
+        val = int(s)
+        if is_binary:
+            return "contradiction" if val == 2 else "accord"
+        if val == 0: return "vrai"
+        if val == 1: return "neutre"
+        if val == 2: return "faux"
+        return "neutre"
+    except:
+        return "accord" if is_binary else "neutre"
 
 def preprocess_fn(examples, p_key):
     if is_binary:

@@ -223,7 +223,13 @@ def map_label(label):
         return label if label in [0, 1, 2] else 1
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
-    return 1 if not is_binary else 0
+    try:
+        val = int(s)
+        if is_binary:
+            return 1 if val == 2 else 0
+        return val if val in [0, 1, 2] else 1
+    except:
+        return 1 if not is_binary else 0
 
 def tokenize_fn(examples, p_key):
     prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples[p_key], examples["hypothesis"])]
