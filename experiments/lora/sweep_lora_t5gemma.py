@@ -1,11 +1,18 @@
 """
 Script de Sweep WandB pour T5Gemma (Architecture Encoder-Decoder).
+Configuration unifiée multi-dataset selon la distribution CLAUDE.md.
+
+Distribution :
+  TRAIN : RTE3-DEV (90%) + SICK Train + DACCORD (1ère moitié) + GQNLI (80-100, 180-200, 280-300)
+  VAL   : SICK-VAL + RTE3-DEV (10%) + GQNLI (60-80, 160-180, 260-280)
+  TEST  : RTE3-test + SICK-Test + DACCORD (2ème moitié) + GQNLI (0-60, 100-160, 200-260)
 """
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
+import sys
 import json
 import numpy as np
 import torch
@@ -19,7 +26,6 @@ from transformers import (
     Seq2SeqTrainingArguments,
     Seq2SeqTrainer,
     DataCollatorForSeq2Seq,
-    EarlyStoppingCallback,
     BitsAndBytesConfig
 )
 from peft import get_peft_model, LoraConfig, TaskType
@@ -27,134 +33,91 @@ from sklearn.metrics import confusion_matrix, f1_score
 
 BASE_MODEL = "google/t5gemma-2-270m-270m"
 MODEL_SHORT = "t5gemma"
+EXP_NAME = "sweep_unified_t5gemma"
 
 if not torch.cuda.is_available():
     print("ERREUR CRITIQUE : Ce script nécessite un GPU CUDA pour QLoRA.")
-    print("Veuillez activer le GPU T4 x2 (ou P100) dans les paramètres de votre Notebook Kaggle.")
     exit(1)
 
-# 1. TÉLÉCHARGEMENT & PRÉPARATION DE DONNÉES À LA VOLÉE
+# 1. CHARGEMENT UNIFIÉ DES DONNÉES
 
-def get_dataset(name):
-    """Télécharge et segmente dynamiquement le jeu de données depuis Hub."""
-    print(f"Téléchargement et structuration de {name}...")
-    if name == "gqnli_fr":
-        gqnli = load_dataset('maximoss/gqnli-fr')['test']
-        train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
-        val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
-        test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
-        ds = DatasetDict({
-            'train': gqnli.select(train_idx).shuffle(seed=42),
-            'validation': gqnli.select(val_idx).shuffle(seed=42),
-            'test': gqnli.select(test_idx).shuffle(seed=42)
-        })
-        return ds, "premise"
-        
-    elif name == "fracas":
-        fracas = load_dataset('maximoss/fracas')['train']
-        fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
-        
-        train_idx = list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))
-        val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
-        test_idx  = list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))
-        
-        ds = DatasetDict({
-            'train': fracas.select(train_idx),
-            'validation': fracas.select(val_idx),
-            'test': fracas.select(test_idx)
-        })
-        return ds, "premises"
-        
-    elif name == "daccord":
-        data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
-        
-        def fix_daccord_label(ex):
-            if ex["label"] == 1:
-                # Contradiction in Daccord is 1, change to NLI standard 2
-                ex["label"] = 2
-            return ex
-            
-        data = data.map(fix_daccord_label)
-        
-        total = len(data)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
-        ds = DatasetDict({
-            'train': data.select(range(0, train_size)),
-            'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data  # 100% du dataset DACCORD — pas de fuite (train sur RTE3)
-        })
-        return ds, "premise"
-        
-    elif name == "rte3_fr":
-        splits = list(load_dataset('maximoss/rte3-french').values())
-        data = concatenate_datasets(splits).shuffle(seed=42)
-        total = len(data)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
-        ds = DatasetDict({
-            'train': data.select(range(0, train_size)),
-            'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
-        })
-        return ds, "premise"
-        
-    elif name == "sick_fr":
-        sick = load_dataset('maximoss/sick-fr')
-        if len(sick.keys()) > 1:
-            data = concatenate_datasets(list(sick.values()))
-        else:
-            data = list(sick.values())[0]
-            
-        def convert_sick(ex):
-            lbl = str(ex['entailment_label']).strip().upper()
-            if lbl == 'ENTAILMENT': label_id = 0
-            elif lbl == 'NEUTRAL': label_id = 1
-            elif lbl == 'CONTRADICTION': label_id = 2
-            else: label_id = 1
-            return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
-            
-        data = data.map(convert_sick, remove_columns=data.column_names)
-        
-        total = len(data)
-        train_size = int(total * 0.6)
-        val_size = int(total * 0.2)
-        
-        ds = DatasetDict({
-            'train': data.select(range(0, train_size)),
-            'validation': data.select(range(train_size, train_size + val_size)),
-            'test': data.select(range(train_size + val_size, total))
-        })
-        return ds, "premise"
-        
-    elif name == "fracas_sick_mix":
-        ds_fracas, _ = get_dataset("fracas")
-        ds_sick, _ = get_dataset("sick_fr")
-        
-        LABEL_MAP_LOCAL = {"yes": 0, "entailment": 0, "unknown": 1, "undef": 1, "neutral": 1, "no": 2, "contradiction": 2}
-        def align_fracas(ex):
-            s = str(ex["label"]).lower().strip()
-            l_id = LABEL_MAP_LOCAL.get(s, 1)
-            if s not in LABEL_MAP_LOCAL:
-                try: l_id = int(s)
-                except: pass
-            return {"premise": ex["premises"], "hypothesis": ex["hypothesis"], "label": l_id}
-            
-        ds_fracas = ds_fracas.map(align_fracas, remove_columns=ds_fracas['train'].column_names)
-        
-        mix_train = concatenate_datasets([ds_fracas['train'], ds_sick['train']]).shuffle(seed=42)
-        mix_val = concatenate_datasets([ds_fracas['validation'], ds_sick['validation']]).shuffle(seed=42)
-        
-        ds = DatasetDict({
-            'train': mix_train,
-            'validation': mix_val,
-            'test': ds_sick['test']
-        })
-        return ds, "premise"
 
-    raise ValueError(f"Dataset {name} inconnu.")
+def _normalize_columns(ds, premise_key="premise"):
+    """Normalise un dataset pour avoir uniquement premise, hypothesis, label."""
+    cols_to_remove = [c for c in ds.column_names if c not in {premise_key, "hypothesis", "label"}]
+    ds = ds.remove_columns(cols_to_remove)
+    if premise_key != "premise":
+        ds = ds.rename_column(premise_key, "premise")
+    return ds
 
-# 2. CONFIGURATION DU SWEEP (RÉDUIT)
+
+def load_unified_dataset():
+    """Charge et combine les datasets selon la distribution unifiée."""
+    print("Chargement unifié des datasets...")
+    all_train, all_val, all_test = [], [], []
+
+    # --- GQNLI-FR (ranges sans chevauchement) ---
+    print("  → GQNLI-FR...")
+    gqnli = load_dataset('maximoss/gqnli-fr')['test']
+    gqnli_train = gqnli.select(list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300)))
+    gqnli_val = gqnli.select(list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280)))
+    gqnli_test = gqnli.select(list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260)))
+    all_train.append(_normalize_columns(gqnli_train))
+    all_val.append(_normalize_columns(gqnli_val))
+    all_test.append(_normalize_columns(gqnli_test))
+
+    # --- RTE3-FR (DEV 90% train / 10% val, test séparé) ---
+    print("  → RTE3-FR...")
+    rte3 = load_dataset('maximoss/rte3-french')
+    dev_keys = [k for k in rte3.keys() if k != 'test']
+    rte3_dev = concatenate_datasets([rte3[k] for k in dev_keys]).shuffle(seed=42)
+    split_90 = int(len(rte3_dev) * 0.9)
+    all_train.append(_normalize_columns(rte3_dev.select(range(0, split_90))))
+    all_val.append(_normalize_columns(rte3_dev.select(range(split_90, len(rte3_dev)))))
+    if 'test' in rte3:
+        all_test.append(_normalize_columns(rte3['test']))
+
+    # --- SICK-FR (splits originaux) ---
+    print("  → SICK-FR...")
+    sick = load_dataset('maximoss/sick-fr')
+
+    def convert_sick(ex):
+        lbl = str(ex['entailment_label']).strip().upper()
+        if lbl == 'ENTAILMENT': label_id = 0
+        elif lbl == 'NEUTRAL': label_id = 1
+        elif lbl == 'CONTRADICTION': label_id = 2
+        else: label_id = 1
+        return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+
+    for split_name, target in [('train', all_train), ('validation', all_val), ('test', all_test)]:
+        if split_name in sick:
+            converted = sick[split_name].map(convert_sick, remove_columns=sick[split_name].column_names)
+            target.append(converted)
+
+    # --- DACCORD (1ère moitié = train, 2ème moitié = test) ---
+    print("  → DACCORD...")
+    daccord = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
+
+    def fix_daccord_label(ex):
+        if ex["label"] == 1:
+            ex["label"] = 2  # Contradiction: 1 → 2 (standard NLI)
+        return ex
+
+    daccord = daccord.map(fix_daccord_label)
+    half = len(daccord) // 2
+    all_train.append(_normalize_columns(daccord.select(range(0, half))))
+    all_test.append(_normalize_columns(daccord.select(range(half, len(daccord)))))
+
+    # Combinaison finale
+    train_ds = concatenate_datasets(all_train).shuffle(seed=42)
+    val_ds = concatenate_datasets(all_val).shuffle(seed=42)
+    test_ds = concatenate_datasets(all_test).shuffle(seed=42)
+
+    print(f"  Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
+    return DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds})
+
+
+# 2. CONFIGURATION DU SWEEP
 
 SWEEP_CONFIG = {
     "method": "grid",
@@ -167,94 +130,41 @@ SWEEP_CONFIG = {
     }
 }
 
-import sys
+# 3. CHARGEMENT & TOKENISATION
 
-if len(sys.argv) > 1:
-    exp_choice = sys.argv[1].strip()
-    print(f"\nChoix : {exp_choice}")
-else:
-    print("\nQuelle expérience (Q)LoRA T5Gemma utiliser pour le sweep ?")
-    print("1. FraCaS (TOTAL)  →  test GQNLI-FR")
-    print("2. GQNLI-FR        →  test FraCaS (TOTAL)")
-    print("3. RTE3-DEV        →  test DACCORD + RTE3-TEST")
-    print("4. FraCaS (TOTAL)  →  test SICK-FR")
-    print("5. SICK-FR         →  test SICK-FR (Intra-dataset)")
-    print("6. Mix (FraCaS + SICK-FR) →  test SICK-FR")
-    exp_choice = input("\nVotre choix (1 à 6): ").strip()
-
-if exp_choice == "1":
-    EXP_NAME = "sweep_fracas_to_gqnli_t5gemma"
-    train_ds_name, test_ds_name = "fracas", "gqnli_fr"
-elif exp_choice == "2":
-    EXP_NAME = "sweep_gqnli_to_fracas_t5gemma"
-    train_ds_name, test_ds_name = "gqnli_fr", "fracas"
-elif exp_choice == "3":
-    EXP_NAME = "sweep_rte3_to_daccord_t5gemma"
-    train_ds_name, test_ds_name = "rte3_fr", "daccord"
-elif exp_choice == "4":
-    EXP_NAME = "sweep_fracas_to_sick_t5gemma"
-    train_ds_name, test_ds_name = "fracas", "sick_fr"
-elif exp_choice == "5":
-    EXP_NAME = "sweep_sick_to_sick_t5gemma"
-    train_ds_name, test_ds_name = "sick_fr", "sick_fr"
-elif exp_choice == "6":
-    EXP_NAME = "sweep_mix_to_sick_t5gemma"
-    train_ds_name, test_ds_name = "fracas_sick_mix", "sick_fr"
-else:
-    print("Choix invalide!"); exit(1)
-
-# On télécharge les datasets cibles
-TRAIN_DICT, TRAIN_PKEY = get_dataset(train_ds_name)
-TEST_DICT, TEST_PKEY = get_dataset(test_ds_name)
-
+UNIFIED = load_unified_dataset()
 global_tokenizer = AutoProcessor.from_pretrained(BASE_MODEL).tokenizer
 
-is_binary = (exp_choice == "3")
+LABEL_MAP = {
+    "yes": "vrai", "entailment": "vrai", "0": "vrai",
+    "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
+    "no": "faux", "contradiction": "faux", "2": "faux"
+}
 
-if is_binary:
-    LABEL_MAP = {
-        "yes": "accord", "entailment": "accord", "0": "accord",
-        "unknown": "accord", "undef": "accord", "neutral": "accord", "1": "accord",
-        "no": "contradiction", "contradiction": "contradiction", "2": "contradiction"
-    }
-else:
-    LABEL_MAP = {
-        "yes": "vrai", "entailment": "vrai", "0": "vrai",
-        "unknown": "neutre", "undef": "neutre", "neutral": "neutre", "1": "neutre",
-        "no": "faux", "contradiction": "faux", "2": "faux"
-    }
 
 def normalize_label(label):
     if isinstance(label, int):
-        if is_binary:
-            return "contradiction" if label == 2 else "accord"
-        else:
-            if label == 0: return "vrai"
-            if label == 1: return "neutre"
-            if label == 2: return "faux"
-            return "neutre"
+        if label == 0: return "vrai"
+        if label == 1: return "neutre"
+        if label == 2: return "faux"
+        return "neutre"
     s = str(label).lower().strip()
     if s in LABEL_MAP: return LABEL_MAP[s]
     try:
         val = int(s)
-        if is_binary:
-            return "contradiction" if val == 2 else "accord"
         if val == 0: return "vrai"
         if val == 1: return "neutre"
         if val == 2: return "faux"
         return "neutre"
-    except:
-        return "accord" if is_binary else "neutre"
+    except Exception:
+        return "neutre"
 
-def preprocess_fn(examples, p_key):
-    if is_binary:
-        consigne = "Consigne : Prédire si l'hypothèse est en accord ou en contradiction d'après la prémisse.\n"
-    else:
-        consigne = "Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\n"
-        
+
+def preprocess_fn(examples):
+    consigne = "Consigne : Prédire si l'hypothèse est vraie, fausse ou neutre d'après la prémisse.\n"
     inputs = [
         f"{consigne}Prémisse : {p}\nHypothèse : {h}\nRéponse :"
-        for p, h in zip(examples[p_key], examples["hypothesis"])
+        for p, h in zip(examples["premise"], examples["hypothesis"])
     ]
     model_inputs = global_tokenizer(inputs, max_length=256, truncation=True, padding=False)
     targets = [normalize_label(l) for l in examples["label"]]
@@ -262,82 +172,53 @@ def preprocess_fn(examples, p_key):
     model_inputs["labels"] = labels["input_ids"]
     return model_inputs
 
-# --- OVERSAMPLING MANUEL POUR T5 (Simulation du class_weight) ---
-if is_binary:
-    print("\n[OVERSAMPLING] Equilibrage des classes pour compenser la rareté de 'Contradiction'...")
-    def is_contra(x): return normalize_label(x["label"]) == "contradiction"
-    def is_acc(x): return normalize_label(x["label"]) == "accord"
-    
-    train_contra = TRAIN_DICT['train'].filter(is_contra)
-    train_accord = TRAIN_DICT['train'].filter(is_acc)
-    
-    n_c = len(train_contra)
-    n_a = len(train_accord)
-    
-    if 0 < n_c < n_a:
-        multiplier = min(3, n_a // n_c)  # Limité à x3 max au lieu de x10
-        print(f"--> Multiplication de la classe minoritaire par {multiplier} (de {n_c} à {n_c * multiplier}).")
-        upsampled_contra = concatenate_datasets([train_contra] * multiplier)
-        TRAIN_DICT['train'] = concatenate_datasets([train_accord, upsampled_contra]).shuffle(seed=42)
 
-# On tokenise directement
-train_data = TRAIN_DICT['train'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['train'].column_names)
-val_data = TRAIN_DICT['validation'].map(lambda ex: preprocess_fn(ex, TRAIN_PKEY), batched=True, remove_columns=TRAIN_DICT['validation'].column_names)
+train_data = UNIFIED['train'].map(preprocess_fn, batched=True, remove_columns=UNIFIED['train'].column_names)
+val_data = UNIFIED['validation'].map(preprocess_fn, batched=True, remove_columns=UNIFIED['validation'].column_names)
+test_data = UNIFIED['test'].map(preprocess_fn, batched=True, remove_columns=UNIFIED['test'].column_names)
 
-# Le test se fait uniquement sur le split officiel (pour éviter d'attendre 2h sur 10 000 exemples)
-test_untokenized = TEST_DICT['test']
-test_data = test_untokenized.map(lambda ex: preprocess_fn(ex, TEST_PKEY), batched=True, remove_columns=test_untokenized.column_names)
 
 def compute_metrics(eval_pred):
     preds, labels = eval_pred
     labels = np.where(labels != -100, labels, global_tokenizer.pad_token_id)
     dec_preds = [p.strip() for p in global_tokenizer.batch_decode(preds, skip_special_tokens=True)]
     dec_labels = [l.strip() for l in global_tokenizer.batch_decode(labels, skip_special_tokens=True)]
-    
-    print(f"\n[DEBUG LORA] Extraits générés : {dec_preds[:5]}")
-    print(f"[DEBUG LORA] Extraits cibles  : {dec_labels[:5]}")
-    
-    LABEL_TO_INT = {"accord": 0, "contradiction": 1} if is_binary else {"vrai": 0, "neutre": 1, "faux": 2}
-    
+
+    print(f"\n[DEBUG] Extraits générés : {dec_preds[:5]}")
+    print(f"[DEBUG] Extraits cibles  : {dec_labels[:5]}")
+
+    LABEL_TO_INT = {"vrai": 0, "neutre": 1, "faux": 2}
+
     import re
     cleaned_preds = []
     for p in dec_preds:
-        if is_binary:
-            match = re.search(r'(accord|contradiction)', p.lower())
-            val_default = "accord"
-        else:
-            match = re.search(r'(vrai|faux|neutre)', p.lower())
-            val_default = "neutre"
-            
-        if match:
-            cleaned_preds.append(match.group(1))
-        else:
-            cleaned_preds.append(val_default)
-            
+        match = re.search(r'(vrai|faux|neutre)', p.lower())
+        cleaned_preds.append(match.group(1) if match else "neutre")
+
     int_preds = [LABEL_TO_INT[p] for p in cleaned_preds]
-    int_labels = [LABEL_TO_INT.get(l.lower(), 0 if is_binary else 1) for l in dec_labels]
-    
+    int_labels = [LABEL_TO_INT.get(l.lower(), 1) for l in dec_labels]
+
     try:
-        cm_labels = [0, 1] if is_binary else [0, 1, 2]
-        cm = confusion_matrix(int_labels, int_preds, labels=cm_labels)
+        cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
         print(f"\nMatrice de confusion:\n{cm}")
-    except Exception: pass
-    
+    except Exception:
+        pass
+
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
-    metrics = {
+    return {
         "accuracy": acc,
         "f1_score": f1_score(int_labels, int_preds, average="macro")
     }
-    return metrics
 
-# 4. FONCTION D'ENTRAÎNEMENT (POUR WANDB SWEEP)
+
+# 4. FONCTION D'ENTRAÎNEMENT (SWEEP WANDB)
 
 def train_t5_qlora():
     run = wandb.init()
     config = wandb.config
 
     run_label = f"r{config.lora_r}_a{config.lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}"
-    print(f"\n{'='*60}\nSWEEP T5GEMMA RUN: {run_label}\n{'='*60}")
+    print(f"\n{'='*60}\nSWEEP T5GEMMA UNIFIÉ: {run_label}\n{'='*60}")
 
     print("Chargement en QLoRA 4-bit...")
     bnb_config = BitsAndBytesConfig(
@@ -347,9 +228,7 @@ def train_t5_qlora():
         bnb_4bit_compute_dtype=torch.float16
     )
     base_model = AutoModelForSeq2SeqLM.from_pretrained(
-        BASE_MODEL,
-        device_map="auto",
-        quantization_config=bnb_config
+        BASE_MODEL, device_map="auto", quantization_config=bnb_config
     )
     base_model.config.use_cache = False
 
@@ -361,7 +240,7 @@ def train_t5_qlora():
         bias="none",
         target_modules="all-linear"
     )
-    
+
     model = get_peft_model(base_model, lora_config)
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
@@ -403,40 +282,36 @@ def train_t5_qlora():
 
     trainer.train()
 
-    # Evaluation Finale sur Test Cross-Dataset
-    print(f"\n🔍 [WANDB SWEEP RUN] Démarrage EVALUATION FINALE sur {len(test_data)} exemples de {test_ds_name.upper()}...")
-    import sys; sys.stdout.flush()
+    # Évaluation finale sur Test
+    print(f"\n[EVAL FINALE] {len(test_data)} exemples...")
     test_results = trainer.evaluate(test_data, metric_key_prefix="test")
-    print(f"✅ EVALUATION TERMINÉE !")
     test_acc = test_results["test_accuracy"]
-    print(f"FINAL TEST ACCURACY : {test_acc:.2%}")
+    print(f"TEST ACCURACY : {test_acc:.2%}")
     if "test_f1_score" in test_results:
         test_f1 = test_results["test_f1_score"]
-        print(f"FINAL TEST F1-SCORE : {test_f1:.4f}")
+        print(f"TEST F1-SCORE : {test_f1:.4f}")
         wandb.summary["final_test_f1_score"] = test_f1
-
     wandb.summary["final_test_accuracy"] = test_acc
 
-    # Nettoyage des checkpoints locaux de ce run (Kaggle n'a que 20 Go par défaut)
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)
 
     wandb.finish()
 
+
 if __name__ == "__main__":
     total_runs = 1
     for param in SWEEP_CONFIG["parameters"].values():
         total_runs *= len(param["values"])
-    
+
     if len(sys.argv) > 1:
         confirm = "o"
     else:
-        confirm = input(f"\nLancer {total_runs} sweeps T5Gemma QLoRA ? (o/n): ").strip().lower()
-        
+        confirm = input(f"\nLancer {total_runs} sweeps T5Gemma QLoRA unifié ? (o/n): ").strip().lower()
+
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
         print(f"\nSweep créé ! ID: {sweep_id}")
-        print(f"📊 Suivez en direct : https://wandb.ai/votre_profil/fewshot-nli-fr/sweeps/{sweep_id}")
         wandb.agent(sweep_id, function=train_t5_qlora, count=total_runs)
         print("\nTerminé ! Consultez les résultats sur WandB.")
     else:
