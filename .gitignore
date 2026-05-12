@@ -109,3 +109,6 @@ rapport/*.fls
 
 # Keep .gitkeep files
 !.gitkeep
+
+#Obsidian
+ProjetNLI/
