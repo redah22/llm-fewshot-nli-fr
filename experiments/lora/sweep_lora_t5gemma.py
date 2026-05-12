@@ -201,8 +201,25 @@ def compute_metrics(eval_pred):
     try:
         cm = confusion_matrix(int_labels, int_preds, labels=[0, 1, 2])
         print(f"\nMatrice de confusion:\n{cm}")
-    except Exception:
-        pass
+        label_names = ["entailment", "neutral", "contradiction"]
+        wandb.log({
+            "confusion_matrix": wandb.plot.confusion_matrix(
+                probs=None, y_true=int_labels, preds=int_preds,
+                class_names=label_names
+            )
+        })
+        # Log per-class precision/recall/f1
+        from sklearn.metrics import precision_recall_fscore_support
+        prec, rec, f1_per, sup = precision_recall_fscore_support(int_labels, int_preds, labels=[0, 1, 2], zero_division=0)
+        for i, name in enumerate(label_names):
+            wandb.log({
+                f"{name}_precision": prec[i],
+                f"{name}_recall": rec[i],
+                f"{name}_f1": f1_per[i],
+                f"{name}_support": int(sup[i]),
+            })
+    except Exception as e:
+        print(f"Erreur logging confusion matrix: {e}")
 
     acc = sum(p == l for p, l in zip(cleaned_preds, dec_labels)) / max(1, len(dec_labels))
     return {
