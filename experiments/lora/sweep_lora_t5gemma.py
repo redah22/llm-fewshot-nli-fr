@@ -280,6 +280,16 @@ def train_t5_qlora():
         compute_metrics=compute_metrics
     )
 
+    # Évaluation zero-shot (avant entraînement)
+    print(f"\n[ZERO-SHOT] Évaluation du modèle vierge sur {len(test_data)} exemples...")
+    zs_results = trainer.evaluate(test_data, metric_key_prefix="zeroshot")
+    zs_acc = zs_results["zeroshot_accuracy"]
+    zs_f1 = zs_results.get("zeroshot_f1_score", 0.0)
+    print(f"ZERO-SHOT ACCURACY : {zs_acc:.2%}")
+    print(f"ZERO-SHOT F1-SCORE : {zs_f1:.4f}")
+    wandb.summary["zeroshot_accuracy"] = zs_acc
+    wandb.summary["zeroshot_f1_score"] = zs_f1
+
     trainer.train()
 
     # Évaluation finale sur Test
