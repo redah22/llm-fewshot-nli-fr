@@ -49,7 +49,7 @@ from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precisio
 
 MODEL_CONFIGS = {
     "camembert-xnli": {
-        "hf_name": "BaptisteDoyen/camembert-base-xnli",
+        "hf_name": "almanach/camembert-base",
         "short": "camembert_xnli",
         "target_modules": ["query", "value"],
         "modules_to_save": ["classifier"],
