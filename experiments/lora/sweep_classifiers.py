@@ -655,7 +655,8 @@ def train_run():
     print(f"\n{'='*60}\n{run_label}\n{'='*60}")
 
     base_model = AutoModelForSequenceClassification.from_pretrained(
-        MODEL_CFG["hf_name"], num_labels=NUM_LABELS, device_map="auto"
+        MODEL_CFG["hf_name"], num_labels=NUM_LABELS, device_map="auto",
+        ignore_mismatched_sizes=True,
     )
     base_model.config.use_cache = False
     if MODEL_CFG["is_decoder"]:
