@@ -1,5 +1,5 @@
 {
-  "id": "colindvrt/nli-flaubert-exp10",
+  "id": "colindvrt/nli-flaubert-xnli-exp10",
   "title": "NLI FLAUBERT-XNLI EXP10",
   "code_file": "run.py",
   "language": "python",

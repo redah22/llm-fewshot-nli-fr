@@ -1,5 +1,5 @@
 {
-  "id": "colindvrt/nli-camembert-exp10",
+  "id": "colindvrt/nli-camembert-xnli-exp10",
   "title": "NLI CAMEMBERT-XNLI EXP10",
   "code_file": "run.py",
   "language": "python",

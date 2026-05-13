@@ -109,7 +109,8 @@ print("\\nTerminé !")
 
 
 def make_metadata(model_arg: str, model_short: str, exp: int) -> dict:
-    slug = f"nli-{model_short}-exp{exp}"
+    # Le slug doit correspondre exactement au titre slugifié par Kaggle
+    slug = f"nli-{model_arg}-exp{exp}"   # ex: nli-camembert-xnli-exp1
     title = f"NLI {model_arg.upper()} EXP{exp}"
     return {
         "id": f"{KAGGLE_USERNAME}/{slug}",
@@ -119,6 +120,7 @@ def make_metadata(model_arg: str, model_short: str, exp: int) -> dict:
         "kernel_type": "script",
         "is_private": True,
         "enable_gpu": True,
+        "accelerator": "nvidiaTeslaT4x2",
         "enable_tpu": False,
         "enable_internet": True,
         "dataset_sources": [],

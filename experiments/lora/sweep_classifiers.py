@@ -24,7 +24,8 @@ Règles de splitting :
 
 import os
 os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+# Multi-GPU : laisser le Trainer utiliser tous les GPUs disponibles (DataParallel auto)
+# os.environ["CUDA_VISIBLE_DEVICES"] = "0"  # décommenter pour forcer GPU unique
 
 import sys
 import random
@@ -722,18 +723,19 @@ def train_run():
         save_total_limit=1,
         save_only_model=True,
         learning_rate=config.learning_rate,
-        per_device_train_batch_size=16,
-        per_device_eval_batch_size=16,
+        per_device_train_batch_size=32,   # 32 par GPU × 2 GPU = 64 effectif
+        per_device_eval_batch_size=64,
         num_train_epochs=20,
         weight_decay=0.01,
+        fp16=True,                         # Mixed precision pour accélérer sur T4
         load_best_model_at_end=True,
         metric_for_best_model="f1_score",
         greater_is_better=True,
         logging_steps=10,
         report_to="wandb",
         remove_unused_columns=False,
-        dataloader_num_workers=0,
-        dataloader_pin_memory=False,
+        dataloader_num_workers=2,
+        dataloader_pin_memory=True,
     )
 
     trainer = Trainer(
