@@ -1,25 +1,27 @@
 """
 Script unifié de Sweep WandB pour les classifieurs NLI (~110M params).
-Modèles : CamemBERT-XNLI, GPT-2 French, FlauBERT-XNLI
+Modèles : CamemBERT-XNLI, GPT-2 French, FlauBERT-XNLI, FlauBERT-custom
 
-Expériences (selon spécifications tuteur) :
-  1. FraCaS(GQ) train → val=GQNLI(16%) / test=GQNLI(84%)
-  2. FraCaS(GQ 85/15) train/val → test=GQNLI complet
-  3. FraCaS(GQ 85%)+SICK_train(20%) → val=FraCaS(GQ 15%)+SICK_dev(15%) / test=GQNLI+SICK_test
-  4. GQNLI(80%) train → val=GQNLI(20%) / test=FraCaS(GQ)
-  5. GQNLI(80%)+SICK_train(25%) → val=GQNLI(20%)+SICK_dev(25%) / test=FraCaS(GQ)+SICK_test
-  6. FraCaS(GQ 85%)+GQNLI(20%) → val=FraCaS(GQ 15%)+GQNLI(10%) / test=GQNLI(70%)
-  7. tout FraCaS (335 ex, tous phénomènes) → val=SICK_dev / test=SICK_test
-  8. Courbe few-shot N-shot SICK (N=10,25,50,100,200) — balanced_select
-  9. RTE3-dev intra (80/20 par prémisse) → test=RTE3-test
- 10. RTE3-dev(2-label,80%)+DACCORD(20%) / val=RTE3-dev(2L,20%)+DACCORD(20%) / test=RTE3-test(2L)
- 11. RTE3-dev(2-label,80%) / val=RTE3-dev(2L,20%) / test=DACCORD+RTE3-test(2L)
+Expériences (spécifications tuteur — Mémoire Master 1 GL) :
+  1. FraCaS(GQ)[0:50]+GQNLI[80-100,180-200,280-300] → val=FraCaS[50:60]+GQNLI[60-80,160-180,260-280]
+     test=GQNLI[0-60,100-160,200-260]+FraCaS[60:]   (logique formelle + grammaire)
+  2. SICK_train[0:60] → val=SICK_val / test=SICK_test+FraCaS_GQ   (few-shot sémantique)
+  3. FraCaS_GQ[0:50] → val=FraCaS_GQ[50:] / test=SICK_test        (transfert cross-style)
+  4. GQNLI[80-100,180-200,280-300] → val=GQNLI[60-80,...] / test=GQNLI[0-60,...]+FraCaS_GQ (grammaire→logique)
+  5. RTE3-dev(90%)+SICK_train+DACCORD(½)+GQNLI[80-100,...] → val=RTE3-dev(10%)+SICK_val+GQNLI[60-80,...]
+     test=RTE3-test+SICK_test+DACCORD(½)+GQNLI[0-60,...]           (distribution unifiée / comparaison Gemma)
+  6. RTE3-dev(80%, binaire) → val=RTE3-dev(20%, binaire) / test=DACCORD complet  (transfert binaire)
+  7. RTE3-dev(80%, 3-class) → val=RTE3-dev(20%) / test=RTE3-test   (intra-dataset 3 classes)
+  8. Courbe N-shot SICK (N=10,25,50,100,200) — balanced_select      (data efficiency)
 
-Règles de splitting :
-  - GQNLI : groupes de prémisses définis par le tuteur → tous les membres d'un groupe dans le même split
+Splitting GQNLI (plages tuteur) :
+  test  : [0:60,  100:160, 200:260]  →  180 ex
+  val   : [60:80, 160:180, 260:280]  →   60 ex
+  train : [80:100,180:200, 280:300]  →   60 ex
+
+Autres règles :
   - DACCORD : split proportionnel par thème (a/b/c) + même prémisse = même split
-  - RTE3-dev : même prémisse = même split
-  - Labels équilibrés vérifiés à chaque construction
+  - RTE3     : même prémisse = même split
 """
 
 import os
@@ -86,24 +88,32 @@ MODEL_CONFIGS = {
 }
 
 # ─────────────────────────────────────────────────────────
-# 2. GROUPES GQNLI (définis par le tuteur)
-# Chaque groupe partage la même prémisse.
-# Tous les membres d'un groupe doivent être dans le même split.
-# Structure : 10 groupes × 3 pages (offsets 0, 100, 200)
+# 2. SPLIT GQNLI PAR PLAGES D'INDEX (tuteur)
 # ─────────────────────────────────────────────────────────
 
-GQNLI_GROUPS = [
-    list(range(0, 20))  + list(range(100, 120)) + list(range(200, 220)),   # G1 : 60 ex
-    list(range(20, 29)) + list(range(120, 129)) + list(range(220, 229)),   # G2 : 27 ex
-    list(range(29, 41)) + list(range(129, 141)) + list(range(229, 241)),   # G3 : 36 ex
-    list(range(41, 50)) + list(range(141, 150)) + list(range(241, 250)),   # G4 : 27 ex
-    list(range(50, 62)) + list(range(150, 162)) + list(range(250, 262)),   # G5 : 36 ex
-    list(range(62, 67)) + list(range(162, 167)) + list(range(262, 267)),   # G6 : 15 ex
-    list(range(67, 80)) + list(range(167, 180)) + list(range(267, 280)),   # G7 : 39 ex
-    list(range(80, 85)) + list(range(180, 185)) + list(range(280, 285)),   # G8 : 15 ex
-    list(range(85, 91)) + list(range(185, 191)) + list(range(285, 291)),   # G9 : 18 ex
-    list(range(91, 100)) + list(range(191, 200)) + list(range(291, 300)),  # G10: 27 ex
-]  # Total : 300 exemples
+def gqnli_by_index(gqnli_ds):
+    """
+    Splits GQNLI-FR (300 ex, 3 pages × 100) selon les plages tuteur :
+      test  : [0:60,  100:160, 200:260]  → 180 ex
+      val   : [60:80, 160:180, 260:280]  →  60 ex
+      train : [80:100,180:200, 280:300]  →  60 ex
+    """
+    test_idx  = list(range(0, 60))  + list(range(100, 160)) + list(range(200, 260))
+    val_idx   = list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))
+    train_idx = list(range(80,100)) + list(range(180, 200)) + list(range(280, 300))
+    return (gqnli_ds.select(train_idx),
+            gqnli_ds.select(val_idx),
+            gqnli_ds.select(test_idx))
+
+
+def load_daccord_full(binary=True):
+    """Charge DACCORD complet avec labels natifs (0=compatible, 1=contradiction)."""
+    dacc = load_dataset('maximoss/daccord-contradictions')['train']
+    cols = [c for c in dacc.column_names if c not in {'premise', 'hypothesis', 'label'}]
+    dacc = dacc.remove_columns(cols)
+    if not binary:
+        dacc = dacc.map(lambda ex: {'label': 2 if ex['label'] == 1 else 0})
+    return dacc
 
 # ─────────────────────────────────────────────────────────
 # 3. UTILITAIRES DE LABELS
@@ -180,39 +190,6 @@ def load_gqnli():
     return normalize_columns(ds, premise_key="premise")
 
 
-def split_gqnli(gqnli_ds, train_r=0.0, val_r=0.15, seed=42):
-    """
-    Splits GQNLI en respectant l'intégrité des groupes (tuteur).
-    train_r + val_r <= 1.0 ; le reste va en test.
-    """
-    rng = random.Random(seed)
-    groups = [list(g) for g in GQNLI_GROUPS]
-    rng.shuffle(groups)
-
-    total = len(gqnli_ds)  # 300
-    n_train = int(total * train_r)
-    n_val   = int(total * val_r)
-
-    train_idx, val_idx, test_idx = [], [], []
-    for g in groups:
-        if len(train_idx) < n_train:
-            train_idx.extend(g)
-        elif len(val_idx) < n_val:
-            val_idx.extend(g)
-        else:
-            test_idx.extend(g)
-
-    result = {}
-    if train_idx:
-        result['train'] = gqnli_ds.select(sorted(train_idx))
-    if val_idx:
-        result['val'] = gqnli_ds.select(sorted(val_idx))
-    if test_idx:
-        result['test'] = gqnli_ds.select(sorted(test_idx))
-
-    for k, ds in result.items():
-        print_dist(ds, f"GQNLI-{k}")
-    return result
 
 
 def load_sick():
@@ -359,182 +336,166 @@ def balanced_select(ds, n, seed=42):
     return ds.select(selected)
 
 # ─────────────────────────────────────────────────────────
-# 5. DÉFINITION DES EXPÉRIENCES
+# 5. DÉFINITION DES EXPÉRIENCES (PDF tuteur)
 # ─────────────────────────────────────────────────────────
 
 def build_experiment_1():
-    """
-    EXP 1 — FraCaS(GQ) train → val=GQNLI(~16%) / test=GQNLI(~84%)
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    splits = split_gqnli(gqnli, train_r=0.0, val_r=0.16, seed=42)
-    train_ds = fracas_gq.shuffle(seed=42)
-    val_ds   = splits['val']
-    test_ds  = splits['test']
-    print_dist(train_ds, "TRAIN")
+    """EXP 1 — FraCaS quantifiers + GQNLI (logique formelle + grammaire)"""
+    fracas = load_fracas_gq()
+    gqnli  = load_gqnli()
+    gq_train, gq_val, gq_test = gqnli_by_index(gqnli)
+    n = len(fracas)
+    train_ds = concatenate_datasets([fracas.select(range(min(50, n))), gq_train]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([fracas.select(range(min(50, n), min(60, n))), gq_val]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([gq_test, fracas.select(range(min(60, n), n))]).shuffle(seed=42)
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds), ("TEST", test_ds)]:
+        print_dist(ds, name)
     print(f"  EXP1 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "fracas_gq_train_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    return "fracas_gq_gqnli_mixed", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_2():
-    """
-    EXP 2 — FraCaS(GQ) 85/15 train/val → test=GQNLI complet
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    labels = fracas_gq['label']
-    idx = list(range(len(fracas_gq)))
-    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=labels)
-    train_ds = fracas_gq.select(idx_tr).shuffle(seed=42)
-    val_ds   = fracas_gq.select(idx_vl)
-    test_ds  = gqnli
-    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL")
+    """EXP 2 — SICK few-shot 60 ex (sémantique compositionnelle)"""
+    sick   = load_sick()
+    fracas = load_fracas_gq()
+    train_ds = sick['train'].select(range(min(60, len(sick['train'])))).shuffle(seed=42)
+    val_ds   = sick['validation']
+    test_ds  = concatenate_datasets([sick['test'], fracas]).shuffle(seed=42)
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds), ("TEST", test_ds)]:
+        print_dist(ds, name)
     print(f"  EXP2 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "fracas_gq_split_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    eval_extra = {"sick_test_only": sick['test'], "fracas_gq_only": fracas}
+    return "sick_60shot_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_3():
-    """
-    EXP 3 — FraCaS(GQ 85%)+SICK_train(20%) → val=FraCaS(GQ 15%)+SICK_dev(15%) / test=GQNLI+SICK_test
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    sick = load_sick()
-    labels = fracas_gq['label']
-    idx = list(range(len(fracas_gq)))
-    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=labels)
-    sick_tr_sample = sick_sample(sick['train'], ratio=0.20)
-    sick_vl_sample = sick_sample(sick['validation'], ratio=0.15)
-    train_ds = concatenate_datasets([fracas_gq.select(idx_tr), sick_tr_sample]).shuffle(seed=42)
-    val_ds   = concatenate_datasets([fracas_gq.select(idx_vl), sick_vl_sample]).shuffle(seed=42)
-    test_ds  = concatenate_datasets([gqnli, sick['test']]).shuffle(seed=42)
-    eval_extra = {"gqnli_only": gqnli, "sick_test_only": sick['test']}
-    print_dist(train_ds, "TRAIN")
+    """EXP 3 — FraCaS formel → SICK naturel (transfert cross-style)"""
+    fracas = load_fracas_gq()
+    sick   = load_sick()
+    n50    = min(50, len(fracas))
+    train_ds = fracas.select(range(n50)).shuffle(seed=42)
+    val_ds   = fracas.select(range(n50, len(fracas)))
+    test_ds  = sick['test']
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds), ("TEST", test_ds)]:
+        print_dist(ds, name)
     print(f"  EXP3 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "fracas_gq_sick_aug_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    eval_extra = {"fracas_gq": fracas}
+    return "fracas_gq_to_sick", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_4():
-    """
-    EXP 4 — GQNLI(~80%) train → val=GQNLI(~20%) / test=FraCaS(GQ)
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    splits = split_gqnli(gqnli, train_r=0.80, val_r=0.20, seed=42)
-    train_ds = splits['train'].shuffle(seed=42)
-    val_ds   = splits['val']
-    test_ds  = fracas_gq
-    print(f"  EXP4 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "gqnli_train_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    """EXP 4 — GQNLI pur (grammaire → logique) + eval séparée FraCaS"""
+    fracas = load_fracas_gq()
+    gqnli  = load_gqnli()
+    gq_train, gq_val, gq_test = gqnli_by_index(gqnli)
+    for name, ds in [("TRAIN", gq_train), ("VAL", gq_val), ("TEST", gq_test)]:
+        print_dist(ds, name)
+    print(f"  EXP4 — Train:{len(gq_train)} Val:{len(gq_val)} Test:{len(gq_test)}")
+    eval_extra = {"fracas_gq": fracas}
+    return "gqnli_pure", DatasetDict({'train': gq_train.shuffle(seed=42), 'validation': gq_val, 'test': gq_test}), eval_extra, 3
 
 
 def build_experiment_5():
-    """
-    EXP 5 — GQNLI(~80%)+SICK_train(25%) → val=GQNLI(~20%)+SICK_dev(25%) / test=FraCaS(GQ)+SICK_test
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    sick = load_sick()
-    splits = split_gqnli(gqnli, train_r=0.80, val_r=0.20, seed=42)
-    sick_tr_sample = sick_sample(sick['train'], ratio=0.25)
-    sick_vl_sample = sick_sample(sick['validation'], ratio=0.25)
-    train_ds = concatenate_datasets([splits['train'], sick_tr_sample]).shuffle(seed=42)
-    val_ds   = concatenate_datasets([splits['val'],   sick_vl_sample]).shuffle(seed=42)
-    test_ds  = concatenate_datasets([fracas_gq, sick['test']]).shuffle(seed=42)
-    eval_extra = {"fracas_gq_only": fracas_gq, "sick_test_only": sick['test']}
-    print_dist(train_ds, "TRAIN")
+    """EXP 5 — Distribution unifiée multi-dataset (comparaison Gemma)"""
+    sick   = load_sick()
+    gqnli  = load_gqnli()
+    dacc   = split_daccord_by_theme(train_r=0.5, val_r=0.0, seed=42, binary=False)
+    gq_train, gq_val, gq_test = gqnli_by_index(gqnli)
+    rte3_train, rte3_val, rte3_test = split_rte3_by_premise(train_r=0.9, seed=42, binary=False)
+    train_ds = concatenate_datasets([rte3_train, sick['train'], dacc['train'], gq_train]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([rte3_val, sick['validation'], gq_val]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([rte3_test, sick['test'], dacc.get('test', sick['test'].select([])), gq_test]).shuffle(seed=42)
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds), ("TEST", test_ds)]:
+        print_dist(ds, name)
     print(f"  EXP5 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "gqnli_sick_aug_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    return "unified_multidataset", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_6():
-    """
-    EXP 6 — FraCaS(GQ 85%)+GQNLI(~20%) → val=FraCaS(GQ 15%)+GQNLI(~10%) / test=GQNLI(~70%)
-    """
-    fracas_gq = load_fracas_gq()
-    gqnli = load_gqnli()
-    frac_idx = list(range(len(fracas_gq)))
-    idx_tr, idx_vl = train_test_split(frac_idx, test_size=0.15, random_state=42, stratify=fracas_gq['label'])
-    gq_splits = split_gqnli(gqnli, train_r=0.20, val_r=0.10, seed=42)
-    train_ds = concatenate_datasets([fracas_gq.select(idx_tr), gq_splits['train']]).shuffle(seed=42)
-    val_ds   = concatenate_datasets([fracas_gq.select(idx_vl), gq_splits['val']]).shuffle(seed=42)
-    test_ds  = gq_splits['test']
-    print_dist(train_ds, "TRAIN")
-    print(f"  EXP6 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "fracas_gqnli_mixed_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    """EXP 6 — RTE3-FR binaire → DACCORD (classifieurs uniquement)"""
+    rte3_train, rte3_val, _ = split_rte3_by_premise(train_r=0.8, seed=42, binary=True)
+    dacc_test = load_daccord_full(binary=True)
+    for name, ds in [("TRAIN", rte3_train), ("VAL", rte3_val), ("TEST", dacc_test)]:
+        print_dist(ds, name)
+    print(f"  EXP6 — Train:{len(rte3_train)} Val:{len(rte3_val)} Test:{len(dacc_test)}")
+    return "rte3_binary_to_daccord", DatasetDict({'train': rte3_train, 'validation': rte3_val, 'test': dacc_test}), {}, 2
 
 
 def build_experiment_7():
-    """
-    EXP 7 — tout FraCaS (335 ex, tous phénomènes) → val=SICK_dev / test=SICK_test
-    """
-    fracas_all = load_fracas_all()
-    sick = load_sick()
-    train_ds = fracas_all.shuffle(seed=42)
-    val_ds   = sick['validation']
-    test_ds  = sick['test']
-    eval_extra = {"fracas_all": fracas_all}
-    print_dist(train_ds, "TRAIN")
-    print(f"  EXP7 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "fracas_all_sick_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    """EXP 7 — RTE3-FR intra 3 classes (classifieurs uniquement)"""
+    rte3_train, rte3_val, rte3_test = split_rte3_by_premise(train_r=0.8, seed=42, binary=False)
+    for name, ds in [("TRAIN", rte3_train), ("VAL", rte3_val), ("TEST", rte3_test)]:
+        print_dist(ds, name)
+    print(f"  EXP7 — Train:{len(rte3_train)} Val:{len(rte3_val)} Test:{len(rte3_test)}")
+    return "rte3_intra_3class", DatasetDict({'train': rte3_train, 'validation': rte3_val, 'test': rte3_test}), {}, 3
 
 
 def build_experiment_8():
-    """
-    EXP 8 — Courbe few-shot N-shot sur SICK (data efficiency)
-    La sélection effective de N (balanced_select) se fait dans train_run().
-    """
+    """EXP 8 — Courbe few-shot N-shot sur SICK (data efficiency — balanced_select)"""
     sick = load_sick()
-    print(f"  EXP8 — SICK complet Train:{len(sick['train'])} Val:{len(sick['validation'])} Test:{len(sick['test'])}")
+    print(f"  EXP8 — SICK Train:{len(sick['train'])} Val:{len(sick['validation'])} Test:{len(sick['test'])}")
     return "sick_nshot_curve", DatasetDict({'train': sick['train'], 'validation': sick['validation'], 'test': sick['test']}), {}, 3
 
 
 def build_experiment_9():
-    """
-    EXP 9 — RTE3-dev intra (80/20 par prémisse) → test=RTE3-test
-    """
-    train_ds, val_ds, test_ds = split_rte3_by_premise(train_r=0.8, seed=42, binary=False)
-    train_ds = train_ds.shuffle(seed=42)
-    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL"); print_dist(test_ds, "TEST")
+    """EXP 9 — FraCaS GQ (85/15) → test=GQNLI complet (split pur, sans mélange)"""
+    fracas = load_fracas_gq()
+    gqnli  = load_gqnli()
+    labels = fracas['label']
+    idx    = list(range(len(fracas)))
+    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=labels)
+    train_ds = fracas.select(idx_tr).shuffle(seed=42)
+    val_ds   = fracas.select(idx_vl)
+    test_ds  = gqnli
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds), ("TEST", test_ds)]:
+        print_dist(ds, name)
     print(f"  EXP9 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "rte3_intra", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    return "fracas_gq_split_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_10():
-    """
-    EXP 10 — RTE3-dev(2-label,80%)+DACCORD(20%) / val=RTE3-dev(2L,20%)+DACCORD(20%) / test=RTE3-test(2L)
-    """
-    train_rte, val_rte, test_rte = split_rte3_by_premise(train_r=0.8, seed=42, binary=True)
-    dacc = split_daccord_by_theme(train_r=0.80, val_r=0.20, seed=42, binary=True)
-    train_ds = concatenate_datasets([train_rte, dacc['train']]).shuffle(seed=42)
-    val_ds   = concatenate_datasets([val_rte,   dacc['val']]).shuffle(seed=42)
-    test_ds  = test_rte
-    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL")
+    """EXP 10 — FraCaS GQ(85%)+SICK(20%) → val=FraCaS(15%)+SICK(15%) / test=GQNLI+SICK_test"""
+    fracas = load_fracas_gq()
+    gqnli  = load_gqnli()
+    sick   = load_sick()
+    idx    = list(range(len(fracas)))
+    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=fracas['label'])
+    sick_tr = sick_sample(sick['train'],      ratio=0.20)
+    sick_vl = sick_sample(sick['validation'], ratio=0.15)
+    train_ds = concatenate_datasets([fracas.select(idx_tr), sick_tr]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([fracas.select(idx_vl), sick_vl]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([gqnli, sick['test']]).shuffle(seed=42)
+    eval_extra = {"gqnli_only": gqnli, "sick_test_only": sick['test']}
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds)]:
+        print_dist(ds, name)
     print(f"  EXP10 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "rte3_daccord_binary_rte_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 2
+    return "fracas_sick_aug_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_11():
-    """
-    EXP 11 — RTE3-dev(2-label,80%) / val=RTE3-dev(2L,20%) / test=DACCORD+RTE3-test(2L)
-    """
-    train_rte, val_rte, test_rte = split_rte3_by_premise(train_r=0.8, seed=42, binary=True)
-    dacc = split_daccord_by_theme(train_r=0.0, val_r=0.0, seed=42, binary=True)
-    train_ds = train_rte.shuffle(seed=42)
-    val_ds   = val_rte
-    test_ds  = concatenate_datasets([dacc['test'], test_rte]).shuffle(seed=42)
-    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL"); print_dist(test_ds, "TEST")
+    """EXP 11 — GQNLI(80%)+SICK(25%) → val=GQNLI(20%)+SICK(25%) / test=FraCaS GQ+SICK_test"""
+    fracas = load_fracas_gq()
+    gqnli  = load_gqnli()
+    sick   = load_sick()
+    gq_train, gq_val, _ = gqnli_by_index(gqnli)
+    sick_tr = sick_sample(sick['train'],      ratio=0.25)
+    sick_vl = sick_sample(sick['validation'], ratio=0.25)
+    train_ds = concatenate_datasets([gq_train, sick_tr]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([gq_val,   sick_vl]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([fracas, sick['test']]).shuffle(seed=42)
+    eval_extra = {"fracas_gq_only": fracas, "sick_test_only": sick['test']}
+    for name, ds in [("TRAIN", train_ds), ("VAL", val_ds)]:
+        print_dist(ds, name)
     print(f"  EXP11 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
-    return "rte3_binary_daccord_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 2
+    return "gqnli_sick_aug_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 EXPERIMENTS = {
-    "1": build_experiment_1,   "2": build_experiment_2,
-    "3": build_experiment_3,   "4": build_experiment_4,
-    "5": build_experiment_5,   "6": build_experiment_6,
-    "7": build_experiment_7,   "8": build_experiment_8,
-    "9": build_experiment_9,   "10": build_experiment_10,
+    "1":  build_experiment_1,  "2":  build_experiment_2,
+    "3":  build_experiment_3,  "4":  build_experiment_4,
+    "5":  build_experiment_5,  "6":  build_experiment_6,
+    "7":  build_experiment_7,  "8":  build_experiment_8,
+    "9":  build_experiment_9,  "10": build_experiment_10,
     "11": build_experiment_11,
 }
 
@@ -553,7 +514,7 @@ SWEEP_CONFIG = {
         "lora_dropout":  {"values": [0.1]},
     }
 }
-# Total EXP standard : 2 × 4 × 1 = 8 runs
+# Total EXP 1-7, 9-11 : 2 × 4 × 1 = 8 runs
 
 SWEEP_CONFIG_EXP8 = {
     "method": "grid",
@@ -800,7 +761,7 @@ if __name__ == "__main__":
         r_vals = active_sweep_config['parameters']['lora_r']['values']
         print(f"  lora_r  : {r_vals}  →  lora_alpha (2×r) : {[2*r for r in r_vals]}")
         print(f"  lr      : {active_sweep_config['parameters']['learning_rate']['values']}")
-        print(f"  dropout : fixé à 0.1")
+        print(f"  dropout : {active_sweep_config['parameters']['lora_dropout']['values']}")
 
     auto = len(sys.argv) > 3
     confirm = "o" if auto else input(f"\nLancer {total_runs} run(s) ? (o/n): ").strip().lower()
