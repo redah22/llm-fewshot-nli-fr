@@ -12,6 +12,8 @@ Modèles supportés :
   gpt-4o-mini → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
   gpt-4o      → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
   gemma       → google/gemma-4-E4B-it                    (HuggingFace, 4-bit)
+  lucie       → OpenLLM-France/Lucie-7B-Instruct         (HuggingFace, 4-bit — français natif)
+  aya         → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
 
 Variables d'environnement :
   OPENAI_API_KEY   pour les modèles GPT
@@ -90,6 +92,19 @@ MODEL_CONFIGS = {
     "gemma": {
         "hf_name":  "google/gemma-4-E4B-it",
         "short":    "gemma4_4b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
+    # ── Français / Multilingue ────────────────────────────
+    "lucie": {
+        "hf_name":  "OpenLLM-France/Lucie-7B-Instruct",
+        "short":    "lucie_7b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
+    "aya": {
+        "hf_name":  "CohereForAI/aya-expanse-8b",
+        "short":    "aya_expanse_8b",
         "use_4bit": True,
         "backend":  "hf",
     },
@@ -525,87 +540,62 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 8. MAIN
 # ─────────────────────────────────────────────────────────
 
-def parse_args():
-    p = argparse.ArgumentParser()
-    p.add_argument("--model",           required=True, choices=list(MODEL_CONFIGS.keys()))
-    p.add_argument("--dataset",         required=True, choices=list(DATASETS.keys()))
-    p.add_argument("--n_shots",         type=int, default=5)
-    p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT (zero-shot pur)")
-    p.add_argument("--max_eval_samples",type=int, default=300,
-                   help="Nb max d'exemples de test évalués (0 = tous)")
-    p.add_argument("--max_new_tokens",  type=int, default=256)
-    p.add_argument("--seed",            type=int, default=42)
-    p.add_argument("--fewshot_file",    type=str, default=None,
-                   help="JSON d'exemples few-shot manuels (fewshot_examples/<dataset>.json)")
-    p.add_argument("--auto",            action="store_true", help="Pas de confirmation interactive")
-    return p.parse_args()
+SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
+
+SWEEP_CONFIG = {
+    "method": "grid",
+    "metric": {"name": "test/f1_macro", "goal": "maximize"},
+    "parameters": {
+        "n_shots": {"values": SHOTS_SWEEP_VALUES},
+    },
+}
+
+# Variables globales alimentées avant le lancement de l'agent WandB
+_G_MODEL       = None
+_G_TOKENIZER   = None
+_G_MODEL_CFG   = None
+_G_TRAIN_DS    = None
+_G_TEST_DS     = None
+_G_NUM_LABELS  = None
+_G_ARGS        = None
 
 
-def main():
-    args = parse_args()
-    random.seed(args.seed)
+def eval_run():
+    """Fonction appelée par wandb.agent — lit n_shots depuis wandb.config."""
+    run = wandb.init()
+    config = wandb.config
+    n_shots = config.n_shots
+    use_cot = not _G_ARGS.no_cot
 
-    model_cfg  = MODEL_CONFIGS[args.model]
-    use_cot    = not args.no_cot
-    run_name   = f"{model_cfg['short']}_{DATASETS[args.dataset]}_n{args.n_shots}_{'cot' if use_cot else 'nocot'}"
-
-    print(f"\n{'='*60}")
-    print(f"Modèle  : {model_cfg['hf_name']}")
-    print(f"Dataset : {args.dataset}")
-    print(f"N-shots : {args.n_shots}")
-    print(f"CoT     : {use_cot}")
-    print(f"{'='*60}\n")
-
-    if not args.auto:
-        confirm = input("Lancer ? (o/n) : ").strip().lower()
-        if confirm != "o":
-            sys.exit(0)
-
-    # ── Chargement données ──
-    train_ds, test_ds, num_labels = get_train_test(args.dataset)
-    print(f"Train : {len(train_ds)} ex | Test : {len(test_ds)} ex | Labels : {num_labels}")
-
-    # Sous-échantillonnage équilibré du test set
-    if args.max_eval_samples > 0 and len(test_ds) > args.max_eval_samples:
-        test_ds = balanced_eval_sample(test_ds, args.max_eval_samples, num_labels, args.seed)
-        print(f"Test réduit à {len(test_ds)} ex (équilibré)")
+    run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}"
+    run.name = run_name
+    run.config.update({
+        "model":            _G_MODEL_CFG["hf_name"],
+        "model_short":      _G_MODEL_CFG["short"],
+        "dataset":          _G_ARGS.dataset,
+        "use_cot":          use_cot,
+        "num_labels":       _G_NUM_LABELS,
+        "max_eval_samples": _G_ARGS.max_eval_samples,
+        "seed":             _G_ARGS.seed,
+    })
 
     # Sélection des exemples few-shot
-    if args.fewshot_file:
-        fewshot_examples = load_fewshot_from_json(args.fewshot_file, args.n_shots)
-        print(f"Few-shot : {len(fewshot_examples)} exemples chargés depuis {args.fewshot_file}")
+    if _G_ARGS.fewshot_file:
+        fewshot_examples = load_fewshot_from_json(_G_ARGS.fewshot_file, n_shots)
+        print(f"Few-shot : {len(fewshot_examples)} exemples chargés depuis {_G_ARGS.fewshot_file}")
     else:
-        fewshot_examples = select_fewshot_examples(train_ds, args.n_shots, num_labels, args.seed)
+        fewshot_examples = select_fewshot_examples(_G_TRAIN_DS, n_shots, _G_NUM_LABELS, _G_ARGS.seed)
         print(f"Few-shot : {len(fewshot_examples)} exemples sélectionnés depuis le train set")
-
-    # ── WandB ──
-    wandb.init(
-        project="fewshot-nli-fr",
-        name=run_name,
-        config={
-            "model":            model_cfg["hf_name"],
-            "model_short":      model_cfg["short"],
-            "dataset":          args.dataset,
-            "n_shots":          args.n_shots,
-            "use_cot":          use_cot,
-            "num_labels":       num_labels,
-            "max_eval_samples": args.max_eval_samples,
-            "seed":             args.seed,
-        }
-    )
-
-    # ── Chargement modèle ──
-    model, tokenizer = load_model_and_tokenizer(model_cfg)
 
     # ── Inférence ──
     labels_true, labels_pred, raw_outputs = [], [], []
-    total = len(test_ds)
+    total = len(_G_TEST_DS)
 
-    print(f"\nInférence sur {total} exemples...\n")
-    for i, ex in enumerate(test_ds):
-        messages = build_prompt(fewshot_examples, ex, num_labels, use_cot)
-        response = generate_response(model, tokenizer, messages, args.max_new_tokens)
-        predicted = parse_label(response, num_labels)
+    print(f"\nInférence sur {total} exemples ({n_shots}-shot)...\n")
+    for i, ex in enumerate(_G_TEST_DS):
+        messages = build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot)
+        response = generate_response(_G_MODEL, _G_TOKENIZER, messages, _G_ARGS.max_new_tokens)
+        predicted = parse_label(response, _G_NUM_LABELS)
 
         labels_true.append(ex["label"])
         labels_pred.append(predicted)
@@ -624,11 +614,10 @@ def main():
             print()
 
     # ── Métriques finales ──
-    compute_and_log_metrics(labels_true, labels_pred, num_labels)
+    compute_and_log_metrics(labels_true, labels_pred, _G_NUM_LABELS)
 
-    # Log quelques exemples de prédictions
+    label_names = LABEL_NAMES_2 if _G_NUM_LABELS == 2 else LABEL_NAMES_3
     table = wandb.Table(columns=["premise", "hypothesis", "true_label", "pred_label", "response"])
-    label_names = LABEL_NAMES_2 if num_labels == 2 else LABEL_NAMES_3
     for r in raw_outputs[:50]:
         table.add_data(
             r["premise"], r["hypothesis"],
@@ -637,8 +626,80 @@ def main():
             r["response"][:500]
         )
     wandb.log({"predictions_sample": table})
-
     wandb.finish()
+
+
+def parse_args():
+    p = argparse.ArgumentParser()
+    p.add_argument("--model",           required=True, choices=list(MODEL_CONFIGS.keys()))
+    p.add_argument("--dataset",         required=True, choices=list(DATASETS.keys()))
+    p.add_argument("--n_shots",         type=int, default=5,
+                   help="Nombre de shots (ignoré si --sweep)")
+    p.add_argument("--sweep",           action="store_true",
+                   help=f"Lance un WandB sweep sur n_shots ∈ {SHOTS_SWEEP_VALUES}")
+    p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT")
+    p.add_argument("--max_eval_samples",type=int, default=300,
+                   help="Nb max d'exemples de test évalués (0 = tous)")
+    p.add_argument("--max_new_tokens",  type=int, default=256)
+    p.add_argument("--seed",            type=int, default=42)
+    p.add_argument("--fewshot_file",    type=str, default=None,
+                   help="JSON d'exemples few-shot manuels (fewshot_examples/<dataset>.json)")
+    p.add_argument("--auto",            action="store_true", help="Pas de confirmation interactive")
+    return p.parse_args()
+
+
+def main():
+    global _G_MODEL, _G_TOKENIZER, _G_MODEL_CFG, _G_TRAIN_DS, _G_TEST_DS, _G_NUM_LABELS, _G_ARGS
+
+    args = parse_args()
+    random.seed(args.seed)
+    _G_ARGS = args
+
+    model_cfg = MODEL_CONFIGS[args.model]
+    _G_MODEL_CFG = model_cfg
+    use_cot = not args.no_cot
+
+    n_runs = len(SHOTS_SWEEP_VALUES) if args.sweep else 1
+    shots_display = SHOTS_SWEEP_VALUES if args.sweep else [args.n_shots]
+
+    print(f"\n{'='*60}")
+    print(f"Modèle  : {model_cfg['hf_name']}")
+    print(f"Dataset : {args.dataset}")
+    print(f"Shots   : {shots_display}")
+    print(f"CoT     : {use_cot}")
+    print(f"Runs    : {n_runs}")
+    print(f"{'='*60}\n")
+
+    if not args.auto:
+        confirm = input("Lancer ? (o/n) : ").strip().lower()
+        if confirm != "o":
+            sys.exit(0)
+
+    # ── Chargement données (une seule fois) ──
+    _G_TRAIN_DS, _G_TEST_DS, _G_NUM_LABELS = get_train_test(args.dataset)
+    print(f"Train : {len(_G_TRAIN_DS)} ex | Test : {len(_G_TEST_DS)} ex | Labels : {_G_NUM_LABELS}")
+
+    if args.max_eval_samples > 0 and len(_G_TEST_DS) > args.max_eval_samples:
+        _G_TEST_DS = balanced_eval_sample(_G_TEST_DS, args.max_eval_samples, _G_NUM_LABELS, args.seed)
+        print(f"Test réduit à {len(_G_TEST_DS)} ex (équilibré)")
+
+    # ── Chargement modèle (une seule fois) ──
+    _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(model_cfg)
+
+    if args.sweep:
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
+        print(f"Sweep ID : {sweep_id}")
+        wandb.agent(sweep_id, function=eval_run, count=n_runs)
+    else:
+        # Run unique — on injecte n_shots directement via une config minimale
+        SWEEP_CONFIG_SINGLE = {
+            "method": "grid",
+            "metric": {"name": "test/f1_macro", "goal": "maximize"},
+            "parameters": {"n_shots": {"values": [args.n_shots]}},
+        }
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr")
+        wandb.agent(sweep_id, function=eval_run, count=1)
+
     print("\nTerminé !")
 
 

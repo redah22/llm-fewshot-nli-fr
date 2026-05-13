@@ -645,9 +645,11 @@ def train_run():
     nshots_suffix = f"_n{n_shots}" if n_shots is not None else ""
     run_label = f"{MODEL_CFG['short']}_exp{exp_choice}_r{config.lora_r}_a{lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}{nshots_suffix}"
 
-    # EXP 8 : balanced_select (N//3 par classe)
+    # EXP 8 : balanced_select sur le dataset brut (avant tokenisation), puis tokenise
     if n_shots is not None:
-        current_train_data = balanced_select(train_data, n_shots)
+        raw_subset = balanced_select(UNIFIED['train'], n_shots)
+        current_train_data = raw_subset.map(tokenize_fn, batched=True, remove_columns=raw_subset.column_names)
+        current_train_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
         print(f"\n[EXP8] N-shot={n_shots} → {len(current_train_data)} ex ({n_shots//3}/classe)")
     else:
         current_train_data = train_data
