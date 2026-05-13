@@ -1,24 +1,25 @@
 """
 Script unifié de Sweep WandB pour les classifieurs NLI (~110M params).
 Modèles : CamemBERT-XNLI, GPT-2 French, FlauBERT-XNLI
-Mêmes splits de données pour une comparaison équitable.
 
-Usage:
-    python3 sweep_classifiers.py <modele> <experience> [auto]
+Expériences (selon spécifications tuteur) :
+  1. FraCaS(GQ) train → val=GQNLI(16%) / test=GQNLI(84%)
+  2. FraCaS(GQ 85/15) train/val → test=GQNLI complet
+  3. FraCaS(GQ 85%)+SICK_train(20%) → val=FraCaS(GQ 15%)+SICK_dev(15%) / test=GQNLI+SICK_test
+  4. GQNLI(80%) train → val=GQNLI(20%) / test=FraCaS(GQ)
+  5. GQNLI(80%)+SICK_train(25%) → val=GQNLI(20%)+SICK_dev(25%) / test=FraCaS(GQ)+SICK_test
+  6. FraCaS(GQ 85%)+GQNLI(20%) → val=FraCaS(GQ 15%)+GQNLI(10%) / test=GQNLI(70%)
+  7. tout FraCaS (335 ex, tous phénomènes) → val=SICK_dev / test=SICK_test
+  8. Courbe few-shot N-shot SICK (N=10,25,50,100,200) — balanced_select
+  9. RTE3-dev intra (80/20 par prémisse) → test=RTE3-test
+ 10. RTE3-dev(2-label,80%)+DACCORD(20%) / val=RTE3-dev(2L,20%)+DACCORD(20%) / test=RTE3-test(2L)
+ 11. RTE3-dev(2-label,80%) / val=RTE3-dev(2L,20%) / test=DACCORD+RTE3-test(2L)
 
-    Modèles : camembert-xnli | gpt2 | flaubert-xnli
-    Expériences :
-      1. FraCaS quantifiers + GQNLI (logique formelle + grammaire)
-      2. SICK few-shot (60 ex) → test SICK + FraCaS
-      3. FraCaS formel → test SICK naturel (transfert cross-style)
-      4. GQNLI pur (grammaire) → eval FraCaS
-      5. Distribution unifiée multi-dataset (identique à Gemma)
-      6. RTE3-FR binaire → DACCORD (non-contradiction vs contradiction)
-      7. RTE3-FR intra 3 classes
-      8. Courbe few-shot N-shot sur SICK (N = 10, 25, 50, 100, 200)
-
-Sweeps EXP 1-7 : 24 combinaisons d'hyperparamètres LoRA (grid)
-Sweep  EXP 8   : 10 combinaisons (5 N-shots × 2 lr) — courbe d'apprentissage
+Règles de splitting :
+  - GQNLI : groupes de prémisses définis par le tuteur → tous les membres d'un groupe dans le même split
+  - DACCORD : split proportionnel par thème (a/b/c) + même prémisse = même split
+  - RTE3-dev : même prémisse = même split
+  - Labels équilibrés vérifiés à chaque construction
 """
 
 import os
@@ -26,13 +27,15 @@ os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 import sys
+import random
 import numpy as np
 import torch
 import torch.nn as nn
 import wandb
 import shutil
 
-from datasets import load_dataset, DatasetDict, concatenate_datasets
+from collections import defaultdict
+from datasets import load_dataset, DatasetDict, concatenate_datasets, Dataset
 from transformers import (
     AutoTokenizer,
     AutoModelForSequenceClassification,
@@ -42,6 +45,7 @@ from transformers import (
 )
 from peft import get_peft_model, LoraConfig, TaskType
 from sklearn.metrics import accuracy_score, confusion_matrix, f1_score, precision_recall_fscore_support
+from sklearn.model_selection import train_test_split
 
 # ─────────────────────────────────────────────────────────
 # 1. CONFIGURATION MODÈLES
@@ -69,18 +73,46 @@ MODEL_CONFIGS = {
         "modules_to_save": ["classifier"],
         "is_decoder": False,
     },
+    # Modèle FlauBERT custom entraîné par un ami — remplacer par le repo HuggingFace
+    # ou un chemin local (ex: "/kaggle/input/custom-flaubert/model")
+    "flaubert-custom": {
+        "hf_name": os.environ.get("CUSTOM_FLAUBERT_MODEL", "TODO/flaubert-xnli-custom"),
+        "short": "flaubert_custom",
+        "target_modules": ["q_lin", "v_lin"],
+        "modules_to_save": ["classifier"],
+        "is_decoder": False,
+    },
 }
 
 # ─────────────────────────────────────────────────────────
-# 2. CHARGEMENT DES DONNÉES
+# 2. GROUPES GQNLI (définis par le tuteur)
+# Chaque groupe partage la même prémisse.
+# Tous les membres d'un groupe doivent être dans le même split.
+# Structure : 10 groupes × 3 pages (offsets 0, 100, 200)
+# ─────────────────────────────────────────────────────────
+
+GQNLI_GROUPS = [
+    list(range(0, 20))  + list(range(100, 120)) + list(range(200, 220)),   # G1 : 60 ex
+    list(range(20, 29)) + list(range(120, 129)) + list(range(220, 229)),   # G2 : 27 ex
+    list(range(29, 41)) + list(range(129, 141)) + list(range(229, 241)),   # G3 : 36 ex
+    list(range(41, 50)) + list(range(141, 150)) + list(range(241, 250)),   # G4 : 27 ex
+    list(range(50, 62)) + list(range(150, 162)) + list(range(250, 262)),   # G5 : 36 ex
+    list(range(62, 67)) + list(range(162, 167)) + list(range(262, 267)),   # G6 : 15 ex
+    list(range(67, 80)) + list(range(167, 180)) + list(range(267, 280)),   # G7 : 39 ex
+    list(range(80, 85)) + list(range(180, 185)) + list(range(280, 285)),   # G8 : 15 ex
+    list(range(85, 91)) + list(range(185, 191)) + list(range(285, 291)),   # G9 : 18 ex
+    list(range(91, 100)) + list(range(191, 200)) + list(range(291, 300)),  # G10: 27 ex
+]  # Total : 300 exemples
+
+# ─────────────────────────────────────────────────────────
+# 3. UTILITAIRES DE LABELS
 # ─────────────────────────────────────────────────────────
 
 LABEL_MAP = {"yes": 0, "entailment": 0, "neutral": 1, "no": 2, "contradiction": 2}
-INVALID_LABEL = -1  # Marqueur pour les labels inconnus (unknown, undef) — filtrés de toutes les phases
+INVALID_LABEL = -1
 
 
 def map_label(label):
-    """Retourne 0/1/2 pour les labels valides, INVALID_LABEL pour unknown/undef/non reconnus."""
     if isinstance(label, int):
         return label if label in [0, 1, 2] else INVALID_LABEL
     s = str(label).lower().strip()
@@ -96,51 +128,15 @@ def map_label(label):
 
 
 def filter_valid(ds):
-    """Supprime les exemples avec un label invalide (unknown/undef)."""
     before = len(ds)
     ds = ds.filter(lambda ex: ex["label"] != INVALID_LABEL)
     removed = before - len(ds)
     if removed > 0:
-        print(f"    → {removed} exemple(s) inconnus/undef supprimés ({before} → {len(ds)})")
+        print(f"    → {removed} exemple(s) invalides supprimés ({before} → {len(ds)})")
     return ds
 
 
-def load_fracas():
-    """Charge FraCaS filtré (sans undef), retourne (dataset, premise_key)."""
-    fracas = load_dataset('maximoss/fracas')['train']
-    fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != "undef")
-    return fracas, "premises"
-
-
-def load_gqnli():
-    """Charge GQNLI-FR, retourne (dataset, premise_key)."""
-    return load_dataset('maximoss/gqnli-fr')['test'], "premise"
-
-
-def load_sick():
-    """Charge SICK-FR avec conversion de labels, retourne dict de splits."""
-    sick = load_dataset('maximoss/sick-fr')
-
-    def convert_sick(ex):
-        lbl = str(ex['entailment_label']).strip().upper()
-        if lbl == 'ENTAILMENT':
-            label_id = 0
-        elif lbl == 'NEUTRAL':
-            label_id = 1
-        elif lbl == 'CONTRADICTION':
-            label_id = 2
-        else:
-            label_id = 1
-        return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
-
-    result = {}
-    for split_name in sick:
-        result[split_name] = sick[split_name].map(convert_sick, remove_columns=sick[split_name].column_names)
-    return result
-
-
 def normalize_columns(ds, premise_key="premise"):
-    """Garde uniquement premise, hypothesis, label. Filtre les unknown/undef."""
     cols_to_remove = [c for c in ds.column_names if c not in {premise_key, "hypothesis", "label"}]
     ds = ds.remove_columns(cols_to_remove)
     if premise_key != "premise":
@@ -149,305 +145,420 @@ def normalize_columns(ds, premise_key="premise"):
     return filter_valid(ds)
 
 
+def print_dist(ds, name):
+    from collections import Counter
+    c = Counter(ds["label"])
+    total = len(ds)
+    parts = [f"{n}={c.get(n,0)}({100*c.get(n,0)/total:.0f}%)" for n in ["0-ent","1-neu","2-con"]]
+    # Simplified
+    ent, neu, con = c.get(0,0), c.get(1,0), c.get(2,0)
+    print(f"    {name} [{total}]: ent={ent}({100*ent/total:.0f}%) neu={neu}({100*neu/total:.0f}%) con={con}({100*con/total:.0f}%)")
+
 # ─────────────────────────────────────────────────────────
-# 3. DÉFINITION DES EXPÉRIENCES
+# 4. FONCTIONS DE CHARGEMENT ET SPLITTING
+# ─────────────────────────────────────────────────────────
+
+def load_fracas_gq():
+    """Charge FraCaS filtré sur Quantificateurs Généralisés (topic GQ, sans undef), 80 ex."""
+    fracas = load_dataset('maximoss/fracas')['train']
+    fracas = fracas.filter(lambda x: x['topic'] == 'GENERALIZED QUANTIFIERS'
+                           and str(x['label']).strip().lower() != 'undef')
+    return normalize_columns(fracas, premise_key="premises")
+
+
+def load_fracas_all():
+    """Charge tout FraCaS (tous phénomènes, sans undef), ~335 ex."""
+    fracas = load_dataset('maximoss/fracas')['train']
+    fracas = fracas.filter(lambda x: str(x['label']).strip().lower() != 'undef')
+    return normalize_columns(fracas, premise_key="premises")
+
+
+def load_gqnli():
+    """Charge GQNLI-FR complet (300 ex)."""
+    ds = load_dataset('maximoss/gqnli-fr')['test']
+    return normalize_columns(ds, premise_key="premise")
+
+
+def split_gqnli(gqnli_ds, train_r=0.0, val_r=0.15, seed=42):
+    """
+    Splits GQNLI en respectant l'intégrité des groupes (tuteur).
+    train_r + val_r <= 1.0 ; le reste va en test.
+    """
+    rng = random.Random(seed)
+    groups = [list(g) for g in GQNLI_GROUPS]
+    rng.shuffle(groups)
+
+    total = len(gqnli_ds)  # 300
+    n_train = int(total * train_r)
+    n_val   = int(total * val_r)
+
+    train_idx, val_idx, test_idx = [], [], []
+    for g in groups:
+        if len(train_idx) < n_train:
+            train_idx.extend(g)
+        elif len(val_idx) < n_val:
+            val_idx.extend(g)
+        else:
+            test_idx.extend(g)
+
+    result = {}
+    if train_idx:
+        result['train'] = gqnli_ds.select(sorted(train_idx))
+    if val_idx:
+        result['val'] = gqnli_ds.select(sorted(val_idx))
+    if test_idx:
+        result['test'] = gqnli_ds.select(sorted(test_idx))
+
+    for k, ds in result.items():
+        print_dist(ds, f"GQNLI-{k}")
+    return result
+
+
+def load_sick():
+    """Charge SICK-FR avec conversion de labels standard."""
+    sick = load_dataset('maximoss/sick-fr')
+
+    def convert(ex):
+        lbl = str(ex['entailment_label']).strip().upper()
+        if lbl == 'ENTAILMENT':    label_id = 0
+        elif lbl == 'NEUTRAL':     label_id = 1
+        elif lbl == 'CONTRADICTION': label_id = 2
+        else:                      label_id = 1
+        return {'premise': ex['sentence_A'], 'hypothesis': ex['sentence_B'], 'label': label_id}
+
+    result = {}
+    for split in sick:
+        result[split] = sick[split].map(convert, remove_columns=sick[split].column_names)
+    return result
+
+
+def sick_sample(sick_split_ds, ratio, seed=42):
+    """Sélection stratifiée d'un ratio du dataset SICK."""
+    idx = list(range(len(sick_split_ds)))
+    labels = sick_split_ds['label']
+    _, idx_keep = train_test_split(idx, test_size=ratio, random_state=seed, stratify=labels)
+    return sick_split_ds.select(sorted(idx_keep))
+
+
+def split_rte3_by_premise(train_r=0.8, seed=42, binary=False):
+    """
+    Charge RTE3-dev et le split 80/20 en respectant les groupes de prémisses.
+    Retourne (train_ds, val_ds, test_ds).
+    """
+    rng = random.Random(seed)
+    rte3 = load_dataset('maximoss/rte3-french')
+    dev_keys = [k for k in rte3.keys() if k != 'test']
+
+    # Agréger le dev et grouper par prémisse
+    all_rows = []
+    prem_groups = defaultdict(list)
+    for k in dev_keys:
+        for ex in rte3[k]:
+            idx = len(all_rows)
+            all_rows.append({'premise': ex['premise'], 'hypothesis': ex['hypothesis'],
+                              'label': map_label(ex['label'])})
+            prem_groups[ex['premise']].append(idx)
+
+    groups = list(prem_groups.values())
+    rng.shuffle(groups)
+
+    n_train = int(len(all_rows) * train_r)
+    train_idx, val_idx = [], []
+    for g in groups:
+        if len(train_idx) < n_train:
+            train_idx.extend(g)
+        else:
+            val_idx.extend(g)
+
+    def make_ds(indices, rows, binary):
+        ds = Dataset.from_list([rows[i] for i in indices])
+        ds = filter_valid(ds)
+        if binary:
+            ds = ds.map(lambda ex: {'label': 1 if ex['label'] == 2 else 0})
+        return ds
+
+    # Test set
+    test_rows = [{'premise': ex['premise'], 'hypothesis': ex['hypothesis'],
+                  'label': map_label(ex['label'])} for ex in rte3['test']]
+    test_ds = Dataset.from_list(test_rows)
+    test_ds = filter_valid(test_ds)
+    if binary:
+        test_ds = test_ds.map(lambda ex: {'label': 1 if ex['label'] == 2 else 0})
+
+    return make_ds(train_idx, all_rows, binary), make_ds(val_idx, all_rows, binary), test_ds
+
+
+def split_daccord_by_theme(train_r=0.8, val_r=0.2, seed=42, binary=False):
+    """
+    Charge DACCORD et split en respectant :
+    - Proportionnalité par thème (a=Russie-Ukraine, b=COVID, c=Climat)
+    - Même prémisse = même split
+    Retourne (train_ds, val_ds) ou (train_ds, val_ds, test_ds) si train_r+val_r < 1.
+    """
+    rng = random.Random(seed)
+    dacc = load_dataset('maximoss/daccord-contradictions')['train']
+
+    # Grouper par thème puis par prémisse
+    themes = defaultdict(lambda: defaultdict(list))
+    for i, ex in enumerate(dacc):
+        theme = str(ex['id'])[0]
+        themes[theme][ex['premise']].append(i)
+
+    split_idx = {'train': [], 'val': [], 'test': []}
+
+    for theme, prem_groups in themes.items():
+        groups = list(prem_groups.values())
+        rng.shuffle(groups)
+        theme_total = sum(len(g) for g in groups)
+        n_train = int(theme_total * train_r)
+        n_val   = int(theme_total * val_r)
+        t_tr, t_vl, t_te = [], [], []
+        for g in groups:
+            if len(t_tr) < n_train:
+                t_tr.extend(g)
+            elif len(t_vl) < n_val:
+                t_vl.extend(g)
+            else:
+                t_te.extend(g)
+        split_idx['train'].extend(t_tr)
+        split_idx['val'].extend(t_vl)
+        split_idx['test'].extend(t_te)
+
+    def make_ds(indices):
+        ds = dacc.select(sorted(indices))
+        cols = [c for c in ds.column_names if c not in {'premise', 'hypothesis', 'label'}]
+        ds = ds.remove_columns(cols)
+        if binary:
+            # 0=non-contradiction, 1=contradiction (labels DACCORD natifs : 0=compatibles, 1=contradiction)
+            return ds
+        else:
+            # Remap vers 3-class : 0=entailment, 2=contradiction
+            return ds.map(lambda ex: {'label': 2 if ex['label'] == 1 else 0})
+
+    result = {k: make_ds(v) for k, v in split_idx.items() if v}
+    for k, ds in result.items():
+        print_dist(ds, f"DACCORD-{k}")
+    return result
+
+
+def balanced_select(ds, n, seed=42):
+    """Sélectionne exactement n//3 exemples par classe pour un train parfaitement équilibré."""
+    rng = random.Random(seed)
+    per_class = n // 3
+    by_label = defaultdict(list)
+    for i, label in enumerate(ds['label']):
+        if label in [0, 1, 2]:
+            by_label[label].append(i)
+    selected = []
+    for label, indices in by_label.items():
+        rng.shuffle(indices)
+        selected += indices[:per_class]
+    rng.shuffle(selected)
+    print(f"    balanced_select: {per_class} ex/classe → {len(selected)} total")
+    return ds.select(selected)
+
+# ─────────────────────────────────────────────────────────
+# 5. DÉFINITION DES EXPÉRIENCES
 # ─────────────────────────────────────────────────────────
 
 def build_experiment_1():
     """
-    EXP 1 — FraCaS quantifiers + GQNLI (logique formelle + grammaire)
-    Train : FraCaS 0-50 + GQNLI 80-100, 180-200, 280-300
-    Val   : FraCaS 50-60 + GQNLI 61-80, 161-180, 261-280
-    Test  : GQNLI 0-60, 100-160, 200-260 + FraCaS 60-72
-    Eval séparée : FraCaS 0-72 complet + GQNLI train ranges
+    EXP 1 — FraCaS(GQ) train → val=GQNLI(~16%) / test=GQNLI(~84%)
     """
-    fracas, fkey = load_fracas()
-    gqnli, gkey = load_gqnli()
-
-    train_ds = concatenate_datasets([
-        normalize_columns(fracas.select(range(0, 50)), fkey),
-        normalize_columns(gqnli.select(list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))), gkey),
-    ]).shuffle(seed=42)
-
-    val_ds = concatenate_datasets([
-        normalize_columns(fracas.select(range(50, 60)), fkey),
-        normalize_columns(gqnli.select(list(range(61, 80)) + list(range(161, 180)) + list(range(261, 280))), gkey),
-    ]).shuffle(seed=42)
-
-    test_ds = concatenate_datasets([
-        normalize_columns(gqnli.select(list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))), gkey),
-        normalize_columns(fracas.select(range(60, 72)), fkey),
-    ]).shuffle(seed=42)
-
-    # Évaluations séparées
-    eval_extra = {
-        "fracas_full": normalize_columns(fracas.select(range(0, 72)), fkey),
-        "gqnli_train_ranges": normalize_columns(
-            gqnli.select(list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))), gkey
-        ),
-    }
-
-    print(f"  EXP1 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    return "fracas_gqnli_formal", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
+    splits = split_gqnli(gqnli, train_r=0.0, val_r=0.16, seed=42)
+    train_ds = fracas_gq.shuffle(seed=42)
+    val_ds   = splits['val']
+    test_ds  = splits['test']
+    print_dist(train_ds, "TRAIN")
+    print(f"  EXP1 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "fracas_gq_train_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_2():
     """
-    EXP 2 — SICK compositional (sémantique compositionnelle)
-    Train : SICK train (60 premiers exemples few-shot)
-    Val   : SICK validation
-    Test  : SICK test + FraCaS 0-72 (transfert naturel → formel)
-    Eval séparée : SICK test seul + FraCaS seul
+    EXP 2 — FraCaS(GQ) 85/15 train/val → test=GQNLI complet
     """
-    sick = load_sick()
-    fracas, fkey = load_fracas()
-
-    train_ds = sick['train'].select(range(60)).shuffle(seed=42)
-    val_ds = sick['validation']
-
-    test_ds = concatenate_datasets([
-        sick['test'],
-        normalize_columns(fracas.select(range(0, 72)), fkey),
-    ]).shuffle(seed=42)
-
-    eval_extra = {
-        "sick_test_only": sick['test'],
-        "fracas_full": normalize_columns(fracas.select(range(0, 72)), fkey),
-    }
-
-    print(f"  EXP2 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    return "sick_few_shot", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
+    labels = fracas_gq['label']
+    idx = list(range(len(fracas_gq)))
+    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=labels)
+    train_ds = fracas_gq.select(idx_tr).shuffle(seed=42)
+    val_ds   = fracas_gq.select(idx_vl)
+    test_ds  = gqnli
+    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL")
+    print(f"  EXP2 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "fracas_gq_split_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_3():
     """
-    EXP 3 — Cross-style : FraCaS formel → SICK naturel
-    Train : FraCaS 0-50 (quantificateurs formels)
-    Val   : FraCaS 50-72
-    Test  : SICK test (phrases naturelles compositionnelles)
-    Eval séparée : SICK test + FraCaS 0-72
-    Teste si la logique formelle aide à comprendre le langage naturel.
+    EXP 3 — FraCaS(GQ 85%)+SICK_train(20%) → val=FraCaS(GQ 15%)+SICK_dev(15%) / test=GQNLI+SICK_test
     """
-    fracas, fkey = load_fracas()
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
     sick = load_sick()
-
-    train_ds = normalize_columns(fracas.select(range(0, 50)), fkey).shuffle(seed=42)
-    val_ds = normalize_columns(fracas.select(range(50, 72)), fkey)
-    test_ds = sick['test']
-
-    eval_extra = {
-        "sick_test": sick['test'],
-        "fracas_full": normalize_columns(fracas.select(range(0, 72)), fkey),
-    }
-
-    print(f"  EXP3 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    return "fracas_to_sick_transfer", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    labels = fracas_gq['label']
+    idx = list(range(len(fracas_gq)))
+    idx_tr, idx_vl = train_test_split(idx, test_size=0.15, random_state=42, stratify=labels)
+    sick_tr_sample = sick_sample(sick['train'], ratio=0.20)
+    sick_vl_sample = sick_sample(sick['validation'], ratio=0.15)
+    train_ds = concatenate_datasets([fracas_gq.select(idx_tr), sick_tr_sample]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([fracas_gq.select(idx_vl), sick_vl_sample]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([gqnli, sick['test']]).shuffle(seed=42)
+    eval_extra = {"gqnli_only": gqnli, "sick_test_only": sick['test']}
+    print_dist(train_ds, "TRAIN")
+    print(f"  EXP3 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "fracas_gq_sick_aug_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_4():
     """
-    EXP 4 — GQNLI pur (grammaire et acceptabilité)
-    Train : GQNLI 80-100, 180-200, 280-300
-    Val   : GQNLI 61-80, 161-180, 261-280
-    Test  : GQNLI 0-60, 100-160, 200-260
-    Eval séparée : FraCaS 0-72 (transfert grammaire → logique)
-    Teste la capacité du modèle sur la grammaire pure.
+    EXP 4 — GQNLI(~80%) train → val=GQNLI(~20%) / test=FraCaS(GQ)
     """
-    gqnli, gkey = load_gqnli()
-    fracas, fkey = load_fracas()
-
-    train_ds = normalize_columns(
-        gqnli.select(list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))), gkey
-    ).shuffle(seed=42)
-
-    val_ds = normalize_columns(
-        gqnli.select(list(range(61, 80)) + list(range(161, 180)) + list(range(261, 280))), gkey
-    )
-
-    test_ds = normalize_columns(
-        gqnli.select(list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))), gkey
-    )
-
-    eval_extra = {
-        "fracas_full": normalize_columns(fracas.select(range(0, 72)), fkey),
-    }
-
-    print(f"  EXP4 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    return "gqnli_grammar_pure", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
+    splits = split_gqnli(gqnli, train_r=0.80, val_r=0.20, seed=42)
+    train_ds = splits['train'].shuffle(seed=42)
+    val_ds   = splits['val']
+    test_ds  = fracas_gq
+    print(f"  EXP4 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "gqnli_train_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_5():
     """
-    EXP 5 — Distribution unifiée multi-dataset (identique à Gemma)
-    Train : RTE3-DEV (90%) + SICK Train + DACCORD (1ère moitié) + GQNLI (80-100, 180-200, 280-300)
-    Val   : SICK-VAL + RTE3-DEV (10%) + GQNLI (60-80, 160-180, 260-280)
-    Test  : RTE3-test + SICK-Test + DACCORD (2ème moitié) + GQNLI (0-60, 100-160, 200-260)
-    Même distribution que T5Gemma pour comparaison directe entre modèles.
+    EXP 5 — GQNLI(~80%)+SICK_train(25%) → val=GQNLI(~20%)+SICK_dev(25%) / test=FraCaS(GQ)+SICK_test
     """
-    gqnli, gkey = load_gqnli()
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
     sick = load_sick()
-
-    # GQNLI
-    gqnli_train = normalize_columns(gqnli.select(list(range(80, 100)) + list(range(180, 200)) + list(range(280, 300))), gkey)
-    gqnli_val = normalize_columns(gqnli.select(list(range(60, 80)) + list(range(160, 180)) + list(range(260, 280))), gkey)
-    gqnli_test = normalize_columns(gqnli.select(list(range(0, 60)) + list(range(100, 160)) + list(range(200, 260))), gkey)
-
-    # RTE3-FR
-    rte3 = load_dataset('maximoss/rte3-french')
-    dev_keys = [k for k in rte3.keys() if k != 'test']
-    rte3_dev = concatenate_datasets([rte3[k] for k in dev_keys]).shuffle(seed=42)
-    split_90 = int(len(rte3_dev) * 0.9)
-    rte3_train = rte3_dev.select(range(0, split_90)).rename_column("premise", "premise")
-    rte3_val = rte3_dev.select(range(split_90, len(rte3_dev)))
-    rte3_test_ds = rte3['test'] if 'test' in rte3 else None
-
-    def normalize_rte3(ds):
-        cols = [c for c in ds.column_names if c not in {"premise", "hypothesis", "label"}]
-        ds = ds.remove_columns(cols)
-        ds = ds.map(lambda ex: {"label": map_label(ex["label"])})
-        return filter_valid(ds)
-
-    # DACCORD
-    daccord = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
-    daccord = daccord.map(lambda ex: {"label": 2 if ex["label"] == 1 else ex["label"]})
-    half = len(daccord) // 2
-    daccord_cols = [c for c in daccord.column_names if c not in {"premise", "hypothesis", "label"}]
-    daccord = daccord.remove_columns(daccord_cols)
-    daccord_train = daccord.select(range(0, half))
-    daccord_test = daccord.select(range(half, len(daccord)))
-
-    all_train = [gqnli_train, normalize_rte3(rte3_train), sick['train'], daccord_train]
-    all_val = [gqnli_val, normalize_rte3(rte3_val), sick['validation']]
-    all_test = [gqnli_test, sick['test'], daccord_test]
-    if rte3_test_ds:
-        all_test.append(normalize_rte3(rte3_test_ds))
-
-    train_ds = concatenate_datasets(all_train).shuffle(seed=42)
-    val_ds = concatenate_datasets(all_val).shuffle(seed=42)
-    test_ds = concatenate_datasets(all_test).shuffle(seed=42)
-
-    print(f"  EXP5 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    return "unified_multi_dataset", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+    splits = split_gqnli(gqnli, train_r=0.80, val_r=0.20, seed=42)
+    sick_tr_sample = sick_sample(sick['train'], ratio=0.25)
+    sick_vl_sample = sick_sample(sick['validation'], ratio=0.25)
+    train_ds = concatenate_datasets([splits['train'], sick_tr_sample]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([splits['val'],   sick_vl_sample]).shuffle(seed=42)
+    test_ds  = concatenate_datasets([fracas_gq, sick['test']]).shuffle(seed=42)
+    eval_extra = {"fracas_gq_only": fracas_gq, "sick_test_only": sick['test']}
+    print_dist(train_ds, "TRAIN")
+    print(f"  EXP5 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "gqnli_sick_aug_fracas_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_6():
     """
-    EXP 6 — RTE3-FR (binaire) → DACCORD
-    Classification binaire : non-contradiction (0) vs contradiction (1)
-    Train : RTE3-FR validation (80%), labels remappés (entailment/neutral→0, contradiction→1)
-    Val   : RTE3-FR validation (20%), même remapping
-    Test  : DACCORD complet (labels originaux 0/1 — 0=non-contradiction, 1=contradiction)
+    EXP 6 — FraCaS(GQ 85%)+GQNLI(~20%) → val=FraCaS(GQ 15%)+GQNLI(~10%) / test=GQNLI(~70%)
     """
-    rte3 = load_dataset('maximoss/rte3-french')
-    daccord = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
-
-    def to_binary(ex):
-        lbl = map_label(ex["label"])
-        if lbl == INVALID_LABEL:
-            return {"label": INVALID_LABEL}
-        return {"label": 1 if lbl == 2 else 0}
-
-    # RTE3 validation → train/val 80/20
-    rte3_dev = rte3['validation'].map(to_binary)
-    rte3_cols = [c for c in rte3_dev.column_names if c not in {"premise", "hypothesis", "label"}]
-    rte3_dev = filter_valid(rte3_dev.remove_columns(rte3_cols))
-    split = int(len(rte3_dev) * 0.8)
-    train_ds = rte3_dev.select(range(0, split)).shuffle(seed=42)
-    val_ds = rte3_dev.select(range(split, len(rte3_dev)))
-
-    # DACCORD : labels originaux 0/1 (1=contradiction), garder tel quel
-    daccord_cols = [c for c in daccord.column_names if c not in {"premise", "hypothesis", "label"}]
-    test_ds = daccord.remove_columns(daccord_cols)
-
-    print(f"  EXP6 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(test_ds)}")
-    print(f"  Labels train: {set(train_ds['label'])} | Labels test: {set(test_ds['label'])}")
-    return "rte3_binary_to_daccord", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 2
+    fracas_gq = load_fracas_gq()
+    gqnli = load_gqnli()
+    frac_idx = list(range(len(fracas_gq)))
+    idx_tr, idx_vl = train_test_split(frac_idx, test_size=0.15, random_state=42, stratify=fracas_gq['label'])
+    gq_splits = split_gqnli(gqnli, train_r=0.20, val_r=0.10, seed=42)
+    train_ds = concatenate_datasets([fracas_gq.select(idx_tr), gq_splits['train']]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([fracas_gq.select(idx_vl), gq_splits['val']]).shuffle(seed=42)
+    test_ds  = gq_splits['test']
+    print_dist(train_ds, "TRAIN")
+    print(f"  EXP6 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "fracas_gqnli_mixed_gqnli_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
 
 
 def build_experiment_7():
     """
-    EXP 7 — RTE3-FR intra (3 classes)
-    Train : RTE3-FR validation (80%), 3 classes standard
-    Val   : RTE3-FR validation (20%)
-    Test  : RTE3-FR test complet (800 ex)
-    Référence intra-dataset pour mesurer la capacité d'apprentissage pure sur RTE3.
+    EXP 7 — tout FraCaS (335 ex, tous phénomènes) → val=SICK_dev / test=SICK_test
     """
-    rte3 = load_dataset('maximoss/rte3-french')
-
-    rte3_dev = rte3['validation']
-    rte3_cols = [c for c in rte3_dev.column_names if c not in {"premise", "hypothesis", "label"}]
-    rte3_dev = filter_valid(rte3_dev.remove_columns(rte3_cols).map(lambda ex: {"label": map_label(ex["label"])}))
-    split = int(len(rte3_dev) * 0.8)
-    train_ds = rte3_dev.select(range(0, split)).shuffle(seed=42)
-    val_ds = rte3_dev.select(range(split, len(rte3_dev)))
-
-    rte3_test = filter_valid(rte3['test'].remove_columns(rte3_cols).map(lambda ex: {"label": map_label(ex["label"])}))
-
-    print(f"  EXP7 — Train: {len(train_ds)} | Val: {len(val_ds)} | Test: {len(rte3_test)}")
-    return "rte3_intra_3classes", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': rte3_test}), {}, 3
+    fracas_all = load_fracas_all()
+    sick = load_sick()
+    train_ds = fracas_all.shuffle(seed=42)
+    val_ds   = sick['validation']
+    test_ds  = sick['test']
+    eval_extra = {"fracas_all": fracas_all}
+    print_dist(train_ds, "TRAIN")
+    print(f"  EXP7 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "fracas_all_sick_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), eval_extra, 3
 
 
 def build_experiment_8():
     """
     EXP 8 — Courbe few-shot N-shot sur SICK (data efficiency)
-    Train : N premiers exemples de SICK train (N = 10, 25, 50, 100, 200 — paramètre de sweep)
-    Val   : SICK validation complet
-    Test  : SICK test complet
-    Objectif : mesurer à partir de combien d'exemples chaque modèle "décolle".
-    La sélection effective de N exemples se fait dans train_run() via config.n_shots.
-    Retourne le dataset SICK complet — la troncature est appliquée au moment de l'entraînement.
+    La sélection effective de N (balanced_select) se fait dans train_run().
     """
     sick = load_sick()
-    print(f"  EXP8 — SICK complet Train: {len(sick['train'])} | Val: {len(sick['validation'])} | Test: {len(sick['test'])}")
-    print(f"  (La courbe few-shot varie N via le paramètre n_shots dans le sweep)")
-    eval_extra = {"sick_test": sick['test']}
-    return "sick_nshot_curve", DatasetDict({'train': sick['train'], 'validation': sick['validation'], 'test': sick['test']}), eval_extra, 3
+    print(f"  EXP8 — SICK complet Train:{len(sick['train'])} Val:{len(sick['validation'])} Test:{len(sick['test'])}")
+    return "sick_nshot_curve", DatasetDict({'train': sick['train'], 'validation': sick['validation'], 'test': sick['test']}), {}, 3
+
+
+def build_experiment_9():
+    """
+    EXP 9 — RTE3-dev intra (80/20 par prémisse) → test=RTE3-test
+    """
+    train_ds, val_ds, test_ds = split_rte3_by_premise(train_r=0.8, seed=42, binary=False)
+    train_ds = train_ds.shuffle(seed=42)
+    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL"); print_dist(test_ds, "TEST")
+    print(f"  EXP9 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "rte3_intra", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 3
+
+
+def build_experiment_10():
+    """
+    EXP 10 — RTE3-dev(2-label,80%)+DACCORD(20%) / val=RTE3-dev(2L,20%)+DACCORD(20%) / test=RTE3-test(2L)
+    """
+    train_rte, val_rte, test_rte = split_rte3_by_premise(train_r=0.8, seed=42, binary=True)
+    dacc = split_daccord_by_theme(train_r=0.80, val_r=0.20, seed=42, binary=True)
+    train_ds = concatenate_datasets([train_rte, dacc['train']]).shuffle(seed=42)
+    val_ds   = concatenate_datasets([val_rte,   dacc['val']]).shuffle(seed=42)
+    test_ds  = test_rte
+    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL")
+    print(f"  EXP10 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "rte3_daccord_binary_rte_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 2
+
+
+def build_experiment_11():
+    """
+    EXP 11 — RTE3-dev(2-label,80%) / val=RTE3-dev(2L,20%) / test=DACCORD+RTE3-test(2L)
+    """
+    train_rte, val_rte, test_rte = split_rte3_by_premise(train_r=0.8, seed=42, binary=True)
+    dacc = split_daccord_by_theme(train_r=0.0, val_r=0.0, seed=42, binary=True)
+    train_ds = train_rte.shuffle(seed=42)
+    val_ds   = val_rte
+    test_ds  = concatenate_datasets([dacc['test'], test_rte]).shuffle(seed=42)
+    print_dist(train_ds, "TRAIN"); print_dist(val_ds, "VAL"); print_dist(test_ds, "TEST")
+    print(f"  EXP11 — Train:{len(train_ds)} Val:{len(val_ds)} Test:{len(test_ds)}")
+    return "rte3_binary_daccord_test", DatasetDict({'train': train_ds, 'validation': val_ds, 'test': test_ds}), {}, 2
 
 
 EXPERIMENTS = {
-    "1": build_experiment_1, "2": build_experiment_2, "3": build_experiment_3,
-    "4": build_experiment_4, "5": build_experiment_5,
-    "6": build_experiment_6, "7": build_experiment_7,
-    "8": build_experiment_8,
+    "1": build_experiment_1,   "2": build_experiment_2,
+    "3": build_experiment_3,   "4": build_experiment_4,
+    "5": build_experiment_5,   "6": build_experiment_6,
+    "7": build_experiment_7,   "8": build_experiment_8,
+    "9": build_experiment_9,   "10": build_experiment_10,
+    "11": build_experiment_11,
 }
 
 # ─────────────────────────────────────────────────────────
-# 4. SWEEP CONFIGS
+# 6. SWEEP CONFIGS
+# EXP 1-7, 9-11 : 8 runs (r∈{8,16} × lr∈{5e-5,1e-4,3e-4,5e-4} × dropout fixé 0.1)
+# EXP 8         : 10 runs (5 N-shots × 2 lr)
 # ─────────────────────────────────────────────────────────
-#
-# EXP 1-7 : 24 combinaisons grid
-#   lora_r      : [8, 16, 32]   — rang LoRA, capacité vs. surapprentissage
-#   lora_alpha  : [16, 64]      — scaling effectif (alpha/r = 2 ou 8)
-#   learning_rate: [5e-5, 1e-4, 3e-4, 5e-4]  — le paramètre le + critique
-#   lora_dropout : [0.1]         — fixé, peu d'impact sur ~100M params
-#   Total : 3 × 2 × 4 × 1 = 24 runs
-#
-# EXP 8 : courbe few-shot — n_shots varie dans le sweep
-#   n_shots     : [10, 25, 50, 100, 200]
-#   learning_rate: [1e-4, 3e-4]  — 2 valeurs pour vérifier stabilité
-#   lora_r/alpha/dropout : fixés aux valeurs standard
-#   Total : 5 × 2 × 1 × 1 × 1 = 10 runs
 
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
-        "lora_r":        {"values": [8, 16, 32]},
-        # lora_alpha est déduit automatiquement dans train_run() : alpha = 2 * r
-        # (convention LoRA standard — évite les combinaisons redondantes r/alpha)
+        "lora_r":        {"values": [8, 16]},
         "learning_rate": {"values": [5e-5, 1e-4, 3e-4, 5e-4]},
-        "lora_dropout":  {"values": [0.05, 0.1, 0.2]},
+        "lora_dropout":  {"values": [0.1]},
     }
 }
-# Total EXP 1-7 : 3 × 4 × 3 = 36 runs
+# Total EXP standard : 2 × 4 × 1 = 8 runs
 
-# Sweep dédié EXP 8 : n_shots est le paramètre principal
 SWEEP_CONFIG_EXP8 = {
     "method": "grid",
     "metric": {"name": "eval/f1_score", "goal": "maximize"},
     "parameters": {
         "lora_r":        {"values": [16]},
-        # lora_alpha = 2 * r = 32 (déduit automatiquement)
         "learning_rate": {"values": [1e-4, 3e-4]},
         "lora_dropout":  {"values": [0.1]},
         "n_shots":       {"values": [10, 25, 50, 100, 200]},
@@ -456,31 +567,25 @@ SWEEP_CONFIG_EXP8 = {
 # Total EXP 8 : 1 × 2 × 1 × 5 = 10 runs
 
 # ─────────────────────────────────────────────────────────
-# 5. PARSING DES ARGUMENTS
+# 7. PARSING DES ARGUMENTS
 # ─────────────────────────────────────────────────────────
 
 if len(sys.argv) < 3:
     print("Usage: python3 sweep_classifiers.py <modele> <experience> [auto]")
-    print(f"\nModèles disponibles : {', '.join(MODEL_CONFIGS.keys())}")
+    print(f"\nModèles : {', '.join(MODEL_CONFIGS.keys())}")
     print("Expériences :")
-    print("  1. FraCaS quantifiers + GQNLI (logique formelle + grammaire)        — 24 runs")
-    print("  2. SICK few-shot (60 ex) → test SICK + FraCaS                        — 24 runs")
-    print("  3. FraCaS formel → test SICK naturel (transfert cross-style)         — 24 runs")
-    print("  4. GQNLI pur (grammaire) → eval FraCaS                               — 24 runs")
-    print("  5. Distribution unifiée multi-dataset (identique à Gemma)            — 24 runs")
-    print("  6. RTE3-FR binaire → DACCORD (non-contradiction vs contradiction)    — 24 runs")
-    print("  7. RTE3-FR intra 3 classes                                            — 24 runs")
-    print("  8. Courbe few-shot N-shot sur SICK (N = 10, 25, 50, 100, 200)        — 10 runs")
+    for k, fn in sorted(EXPERIMENTS.items(), key=lambda x: int(x[0])):
+        print(f"  {k:>2}. {fn.__doc__.strip().split(chr(10))[0].strip()}")
     exit(1)
 
 model_choice = sys.argv[1].strip().lower()
-exp_choice = sys.argv[2].strip()
+exp_choice   = sys.argv[2].strip()
 
 if model_choice not in MODEL_CONFIGS:
-    print(f"Modèle '{model_choice}' inconnu. Choix : {', '.join(MODEL_CONFIGS.keys())}")
+    print(f"Modèle '{model_choice}' inconnu.")
     exit(1)
 if exp_choice not in EXPERIMENTS:
-    print(f"Expérience '{exp_choice}' inconnue. Choix : {', '.join(sorted(EXPERIMENTS.keys()))}")
+    print(f"Expérience '{exp_choice}' inconnue.")
     exit(1)
 
 MODEL_CFG = MODEL_CONFIGS[model_choice]
@@ -493,14 +598,13 @@ if not torch.cuda.is_available():
     exit(1)
 
 # ─────────────────────────────────────────────────────────
-# 6. CHARGEMENT DONNÉES + TOKENISATION
+# 8. CHARGEMENT DONNÉES + TOKENISATION
 # ─────────────────────────────────────────────────────────
 
 EXP_NAME, UNIFIED, EVAL_EXTRA, NUM_LABELS = EXPERIMENTS[exp_choice]()
 
 global_tokenizer = AutoTokenizer.from_pretrained(MODEL_CFG["hf_name"])
 
-# GPT-2 : fixer le pad token
 if MODEL_CFG["is_decoder"]:
     if global_tokenizer.pad_token is None:
         global_tokenizer.pad_token = global_tokenizer.eos_token
@@ -509,11 +613,12 @@ if MODEL_CFG["is_decoder"]:
 
 def tokenize_fn(examples):
     if MODEL_CFG["is_decoder"]:
-        prompts = [f"Prémisse : {p}\nHypothèse : {h}\n" for p, h in zip(examples["premise"], examples["hypothesis"])]
+        prompts = [f"Prémisse : {p}\nHypothèse : {h}\n"
+                   for p, h in zip(examples["premise"], examples["hypothesis"])]
         res = global_tokenizer(prompts, truncation=True, max_length=256)
     else:
-        res = global_tokenizer(examples["premise"], examples["hypothesis"], truncation=True, padding="max_length", max_length=128)
-    # Pour EXP 6 (binaire), les labels sont déjà 0/1 — on les passe tels quels
+        res = global_tokenizer(examples["premise"], examples["hypothesis"],
+                               truncation=True, padding="max_length", max_length=128)
     res["labels"] = [int(l) for l in examples["label"]]
     return res
 
@@ -528,7 +633,6 @@ val_data.set_format(type="torch", columns=["input_ids", "attention_mask", "label
 test_data = UNIFIED['test'].map(tokenize_fn, batched=True, remove_columns=UNIFIED['test'].column_names)
 test_data.set_format(type="torch", columns=["input_ids", "attention_mask", "labels"])
 
-# Tokeniser les évaluations séparées
 eval_extra_tokenized = {}
 for name, ds in EVAL_EXTRA.items():
     tok = ds.map(tokenize_fn, batched=True, remove_columns=ds.column_names)
@@ -536,7 +640,7 @@ for name, ds in EVAL_EXTRA.items():
     eval_extra_tokenized[name] = tok
 
 # ─────────────────────────────────────────────────────────
-# 7. MÉTRIQUES (avec confusion matrix + per-class dans WandB)
+# 9. MÉTRIQUES
 # ─────────────────────────────────────────────────────────
 
 LABEL_NAMES_3 = ["entailment", "neutral", "contradiction"]
@@ -546,62 +650,48 @@ LABEL_NAMES_2 = ["non-contradiction", "contradiction"]
 def compute_metrics(eval_pred):
     predictions, labels = eval_pred
     predictions = np.argmax(predictions, axis=1)
-
     acc = accuracy_score(labels, predictions)
-    f1 = f1_score(labels, predictions, average="macro")
-
-    label_ids = list(range(NUM_LABELS))
+    f1  = f1_score(labels, predictions, average="macro")
+    label_ids   = list(range(NUM_LABELS))
     label_names = LABEL_NAMES_2 if NUM_LABELS == 2 else LABEL_NAMES_3
-
     try:
         cm = confusion_matrix(labels, predictions, labels=label_ids)
         print(f"\nMatrice de confusion:\n{cm}")
-        wandb.log({
-            "confusion_matrix": wandb.plot.confusion_matrix(
-                probs=None, y_true=labels.tolist(), preds=predictions.tolist(),
-                class_names=label_names
-            )
-        })
-        prec, rec, f1_per, sup = precision_recall_fscore_support(labels, predictions, labels=label_ids, zero_division=0)
+        wandb.log({"confusion_matrix": wandb.plot.confusion_matrix(
+            probs=None, y_true=labels.tolist(), preds=predictions.tolist(),
+            class_names=label_names
+        )})
+        prec, rec, f1_per, sup = precision_recall_fscore_support(
+            labels, predictions, labels=label_ids, zero_division=0)
         for i, name in enumerate(label_names):
-            wandb.log({
-                f"{name}_precision": prec[i],
-                f"{name}_recall": rec[i],
-                f"{name}_f1": f1_per[i],
-                f"{name}_support": int(sup[i]),
-            })
+            wandb.log({f"{name}_precision": prec[i], f"{name}_recall": rec[i],
+                       f"{name}_f1": f1_per[i], f"{name}_support": int(sup[i])})
     except Exception as e:
-        print(f"Erreur logging confusion matrix: {e}")
-
+        print(f"Erreur confusion matrix: {e}")
     return {"accuracy": acc, "f1_score": f1}
 
-
 # ─────────────────────────────────────────────────────────
-# 8. FONCTION D'ENTRAÎNEMENT
+# 10. FONCTION D'ENTRAÎNEMENT
 # ─────────────────────────────────────────────────────────
 
 def train_run():
     run = wandb.init()
     config = wandb.config
-
-    # lora_alpha = 2 × r (convention standard, non balayé)
     lora_alpha = 2 * config.lora_r
 
-    # EXP 8 : n_shots est un paramètre du sweep
     n_shots = getattr(config, "n_shots", None)
     nshots_suffix = f"_n{n_shots}" if n_shots is not None else ""
     run_label = f"{MODEL_CFG['short']}_exp{exp_choice}_r{config.lora_r}_a{lora_alpha}_lr{config.learning_rate}_d{config.lora_dropout}{nshots_suffix}"
 
-    # Dataset d'entraînement effectif (troncature pour EXP 8)
+    # EXP 8 : balanced_select (N//3 par classe)
     if n_shots is not None:
-        current_train_data = train_data.select(range(min(n_shots, len(train_data))))
-        print(f"\n[EXP8] N-shot = {n_shots} → {len(current_train_data)} exemples d'entraînement")
+        current_train_data = balanced_select(train_data, n_shots)
+        print(f"\n[EXP8] N-shot={n_shots} → {len(current_train_data)} ex ({n_shots//3}/classe)")
     else:
         current_train_data = train_data
 
     print(f"\n{'='*60}\n{run_label}\n{'='*60}")
 
-    # Chargement du modèle
     base_model = AutoModelForSequenceClassification.from_pretrained(
         MODEL_CFG["hf_name"], num_labels=NUM_LABELS, device_map="auto"
     )
@@ -621,7 +711,6 @@ def train_run():
         lora_kwargs["modules_to_save"] = MODEL_CFG["modules_to_save"]
 
     model = get_peft_model(base_model, LoraConfig(**lora_kwargs))
-
     trainable = sum(p.numel() for p in model.parameters() if p.requires_grad)
     total = sum(p.numel() for p in model.parameters())
     print(f"Paramètres entraînables : {trainable:,} ({100 * trainable / total:.2f}%)")
@@ -648,61 +737,52 @@ def train_run():
     )
 
     trainer = Trainer(
-        model=model,
-        args=args,
+        model=model, args=args,
         train_dataset=current_train_data,
         eval_dataset=val_data,
         data_collator=DataCollatorWithPadding(tokenizer=global_tokenizer),
         compute_metrics=compute_metrics,
     )
 
-    # ── Zero-shot ──
-    print(f"\n[ZERO-SHOT] Évaluation sur Test ({len(test_data)} exemples)...")
-    zs_results = trainer.evaluate(test_data, metric_key_prefix="zeroshot")
-    zs_acc = zs_results["zeroshot_accuracy"]
-    zs_f1 = zs_results.get("zeroshot_f1_score", 0.0)
-    print(f"ZERO-SHOT — Accuracy: {zs_acc:.2%} | F1: {zs_f1:.4f}")
-    wandb.summary["zeroshot_accuracy"] = zs_acc
-    wandb.summary["zeroshot_f1_score"] = zs_f1
+    # ── Zero-shot avant entraînement ──
+    print(f"\n[ZERO-SHOT] Test ({len(test_data)} ex)...")
+    zs = trainer.evaluate(test_data, metric_key_prefix="zeroshot")
+    wandb.summary["zeroshot_accuracy"]  = zs["zeroshot_accuracy"]
+    wandb.summary["zeroshot_f1_score"]  = zs.get("zeroshot_f1_score", 0.0)
+    print(f"ZERO-SHOT — Acc:{zs['zeroshot_accuracy']:.2%} F1:{zs.get('zeroshot_f1_score',0):.4f}")
 
-    # Zero-shot sur évals séparées
     for eval_name, eval_ds in eval_extra_tokenized.items():
-        print(f"\n[ZERO-SHOT] Éval séparée : {eval_name} ({len(eval_ds)} ex)...")
-        zs_extra = trainer.evaluate(eval_ds, metric_key_prefix=f"zeroshot_{eval_name}")
-        wandb.summary[f"zeroshot_{eval_name}_accuracy"] = zs_extra[f"zeroshot_{eval_name}_accuracy"]
-        wandb.summary[f"zeroshot_{eval_name}_f1_score"] = zs_extra.get(f"zeroshot_{eval_name}_f1_score", 0.0)
+        print(f"\n[ZERO-SHOT] {eval_name} ({len(eval_ds)} ex)...")
+        zs_e = trainer.evaluate(eval_ds, metric_key_prefix=f"zeroshot_{eval_name}")
+        wandb.summary[f"zeroshot_{eval_name}_accuracy"] = zs_e[f"zeroshot_{eval_name}_accuracy"]
+        wandb.summary[f"zeroshot_{eval_name}_f1_score"] = zs_e.get(f"zeroshot_{eval_name}_f1_score", 0.0)
 
     # ── Entraînement ──
     trainer.train()
 
-    # ── Évaluation finale sur Test ──
-    print(f"\n[TEST FINAL] {len(test_data)} exemples...")
-    test_results = trainer.evaluate(test_data, metric_key_prefix="test")
-    test_acc = test_results["test_accuracy"]
-    test_f1 = test_results.get("test_f1_score", 0.0)
-    print(f"TEST — Accuracy: {test_acc:.2%} | F1: {test_f1:.4f}")
-    wandb.summary["final_test_accuracy"] = test_acc
-    wandb.summary["final_test_f1_score"] = test_f1
+    # ── Évaluation finale ──
+    print(f"\n[TEST FINAL] {len(test_data)} ex...")
+    res = trainer.evaluate(test_data, metric_key_prefix="test")
+    wandb.summary["final_test_accuracy"]  = res["test_accuracy"]
+    wandb.summary["final_test_f1_score"]  = res.get("test_f1_score", 0.0)
+    print(f"TEST — Acc:{res['test_accuracy']:.2%} F1:{res.get('test_f1_score',0):.4f}")
 
-    # Évals séparées post-entraînement
     for eval_name, eval_ds in eval_extra_tokenized.items():
-        print(f"\n[EVAL POST-TRAIN] {eval_name} ({len(eval_ds)} ex)...")
-        extra_results = trainer.evaluate(eval_ds, metric_key_prefix=f"final_{eval_name}")
-        wandb.summary[f"final_{eval_name}_accuracy"] = extra_results[f"final_{eval_name}_accuracy"]
-        wandb.summary[f"final_{eval_name}_f1_score"] = extra_results.get(f"final_{eval_name}_f1_score", 0.0)
+        print(f"\n[EVAL POST-TRAIN] {eval_name}...")
+        r_e = trainer.evaluate(eval_ds, metric_key_prefix=f"final_{eval_name}")
+        wandb.summary[f"final_{eval_name}_accuracy"] = r_e[f"final_{eval_name}_accuracy"]
+        wandb.summary[f"final_{eval_name}_f1_score"] = r_e.get(f"final_{eval_name}_f1_score", 0.0)
 
     if os.path.exists(args.output_dir):
         shutil.rmtree(args.output_dir)
-
     wandb.finish()
 
 
 # ─────────────────────────────────────────────────────────
-# 9. LANCEMENT
+# 11. LANCEMENT
 # ─────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # Sélection de la config de sweep selon l'expérience
     active_sweep_config = SWEEP_CONFIG_EXP8 if exp_choice == "8" else SWEEP_CONFIG
 
     total_runs = 1
@@ -710,27 +790,23 @@ if __name__ == "__main__":
         if "values" in param:
             total_runs *= len(param["values"])
 
+    print(f"\nEXP {exp_choice} — {total_runs} runs")
     if exp_choice == "8":
-        print(f"\nEXP 8 — Courbe few-shot : {total_runs} runs")
-        print(f"  N-shots  : {active_sweep_config['parameters']['n_shots']['values']}")
-        print(f"  LR       : {active_sweep_config['parameters']['learning_rate']['values']}")
+        print(f"  N-shots : {active_sweep_config['parameters']['n_shots']['values']}")
+        print(f"  LR      : {active_sweep_config['parameters']['learning_rate']['values']}")
     else:
-        print(f"\nEXP {exp_choice} — Sweep hyperparamètres : {total_runs} runs")
         r_vals = active_sweep_config['parameters']['lora_r']['values']
-        print(f"  lora_r   : {r_vals}  →  lora_alpha (2×r) : {[2*r for r in r_vals]}")
-        print(f"  lr       : {active_sweep_config['parameters']['learning_rate']['values']}")
-        print(f"  dropout  : {active_sweep_config['parameters']['lora_dropout']['values']}")
+        print(f"  lora_r  : {r_vals}  →  lora_alpha (2×r) : {[2*r for r in r_vals]}")
+        print(f"  lr      : {active_sweep_config['parameters']['learning_rate']['values']}")
+        print(f"  dropout : fixé à 0.1")
 
     auto = len(sys.argv) > 3
-    if auto:
-        confirm = "o"
-    else:
-        confirm = input(f"\nLancer {total_runs} run(s) {MODEL_CFG['short']} EXP{exp_choice} ? (o/n): ").strip().lower()
+    confirm = "o" if auto else input(f"\nLancer {total_runs} run(s) ? (o/n): ").strip().lower()
 
     if confirm == "o":
         sweep_id = wandb.sweep(sweep=active_sweep_config, project="fewshot-nli-fr")
-        print(f"\nSweep créé ! ID: {sweep_id}")
+        print(f"Sweep ID: {sweep_id}")
         wandb.agent(sweep_id, function=train_run, count=total_runs)
-        print("\nTerminé !")
+        print("Terminé !")
     else:
         print("Annulé.")

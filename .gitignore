@@ -112,3 +112,8 @@ rapport/*.fls
 
 #Obsidian
 ProjetNLI/
+
+# Claude / Claude-Flow
+.claude/
+.claude-flow/
+.mcp.json
