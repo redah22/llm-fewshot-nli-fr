@@ -271,12 +271,13 @@ def get_cached_dataset(ds_name):
     return _G_DATASETS_CACHE[ds_name]
 
 def eval_run():
-    run = wandb.init()
-    config = wandb.config
-    n_shots = config.n_shots
-    train_ds_name = config.train_dataset
-    eval_ds_name = config.eval_dataset
-    seed = config.seed
+    try:
+        run = wandb.init()
+        config = wandb.config
+        n_shots = config.n_shots
+        train_ds_name = config.train_dataset
+        eval_ds_name = config.eval_dataset
+        seed = config.seed
 
     run_name = f"{_G_MODEL_CFG['short']}_train-{train_ds_name}_eval-{eval_ds_name}_n{n_shots}_s{seed}"
     run.name = run_name
@@ -349,16 +350,25 @@ def eval_run():
             "parse_rate": metrics.get("test/parse_rate", ""),
         })
     print(f"💾 Résultat sauvegardé dans {csv_path}")
+
+    # Log des exemples sur WandB
+    table = wandb.Table(columns=["true_label", "pred_label", "response"])
+    for r in raw_outputs[:20]:
+        table.add_data(r["true"], r["pred"], r["response"])
+    wandb.log({"predictions_sample": table})
+    wandb.finish()
     # ──────────────────────────────────────────────────────────────────────
 
-    try:
-        table = wandb.Table(columns=["true_label", "pred_label", "response"])
-        for r in raw_outputs[:20]:
-            table.add_data(r["true"], r["pred"], r["response"])
-        wandb.log({"predictions_sample": table})
-        wandb.finish()
     except Exception as e:
-        print(f"[WARN] WandB finish failed: {e}")
+        import traceback
+        error_msg = f"❌ CRASH dans eval_run: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        with open("KAGGLE_CRASH_REPORT.txt", "a") as f:
+            f.write(error_msg + "\n" + "="*50 + "\n")
+        # On essaie de fermer proprement wandb si possible
+        try: wandb.finish(exit_code=1)
+        except: pass
+        raise e
 
 def parse_args():
     p = argparse.ArgumentParser()
