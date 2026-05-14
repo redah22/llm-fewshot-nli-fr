@@ -1,0 +1,9 @@
+{
+  "model": "models/flaubert_xnli_fr_full",
+  "dataset": "rte3_fr",
+  "mode": "eval_only",
+  "training_status": "fine-tuned",
+  "eval_split": "validation",
+  "eval_size": 320,
+  "accuracy": 0.6625
+}
