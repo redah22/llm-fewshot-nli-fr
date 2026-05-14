@@ -90,8 +90,8 @@ MODEL_CONFIGS = {
     },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
-        "hf_name":  "google/gemma-4-E4B-it",
-        "short":    "gemma4_4b",
+        "hf_name":  "google/gemma-2-9b-it",
+        "short":    "gemma2_9b",
         "use_4bit": True,
         "backend":  "hf",
     },
