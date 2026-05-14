@@ -218,9 +218,12 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
         metrics[f"{prefix}/{name}_precision"] = prec[i]
         metrics[f"{prefix}/{name}_recall"]    = rec[i]
 
-    wandb.log(metrics)
-    wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=y_true, preds=y_pred, class_names=label_names)})
-    wandb.summary.update({k: v for k, v in metrics.items()})
+    try:
+        wandb.log(metrics)
+        wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=y_true, preds=y_pred, class_names=label_names)})
+        wandb.summary.update({k: v for k, v in metrics.items()})
+    except Exception as e:
+        print(f"[WARN] WandB log failed: {e}")
 
     print(f"\nAccuracy : {acc:.2%} | F1 macro : {f1:.4f} | Parse rate : {parse_rate:.2%}")
     return metrics
@@ -279,7 +282,8 @@ def eval_run():
     run.config.update({
         "model": _G_MODEL_CFG["hf_name"],
         "mode": "intra" if train_ds_name == eval_ds_name else "cross",
-        "num_labels": target_num_labels
+        "num_labels": target_num_labels,
+        "use_cot": False
     })
 
     # Train (Few-Shot)
@@ -310,13 +314,41 @@ def eval_run():
         if (i + 1) % 50 == 0:
             print(f"  [{i+1}/{len(test_ds)}]...")
 
-    compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
+    metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
 
-    table = wandb.Table(columns=["true_label", "pred_label", "response"])
-    for r in raw_outputs[:20]:
-        table.add_data(r["true"], r["pred"], r["response"])
-    wandb.log({"predictions_sample": table})
-    wandb.finish()
+    # ── Sauvegarde CSV locale (récupérable depuis l'Output Kaggle) ─────────
+    import csv, os as _os
+    csv_path = "/kaggle/working/label_only_results.csv" if _os.path.exists("/kaggle") else "label_only_results.csv"
+    write_header = not _os.path.exists(csv_path)
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["run_name", "model", "train_ds", "eval_ds",
+                                               "mode", "n_shots", "seed",
+                                               "accuracy", "f1_macro", "parse_rate"])
+        if write_header:
+            writer.writeheader()
+        writer.writerow({
+            "run_name":   run_name,
+            "model":      _G_MODEL_CFG["short"],
+            "train_ds":   train_ds_name,
+            "eval_ds":    eval_ds_name,
+            "mode":       "intra" if train_ds_name == eval_ds_name else "cross",
+            "n_shots":    n_shots,
+            "seed":       seed,
+            "accuracy":   metrics.get("test/accuracy", ""),
+            "f1_macro":   metrics.get("test/f1_macro", ""),
+            "parse_rate": metrics.get("test/parse_rate", ""),
+        })
+    print(f"💾 Résultat sauvegardé dans {csv_path}")
+    # ──────────────────────────────────────────────────────────────────────
+
+    try:
+        table = wandb.Table(columns=["true_label", "pred_label", "response"])
+        for r in raw_outputs[:20]:
+            table.add_data(r["true"], r["pred"], r["response"])
+        wandb.log({"predictions_sample": table})
+        wandb.finish()
+    except Exception as e:
+        print(f"[WARN] WandB finish failed: {e}")
 
 def parse_args():
     p = argparse.ArgumentParser()
