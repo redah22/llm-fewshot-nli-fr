@@ -136,7 +136,6 @@ def load_model_and_tokenizer(model_cfg: dict):
     model_name = model_cfg["hf_name"]
     print(f"Chargement de {model_name}...")
 
-    # Récupération du token HF (Env → Secrets Kaggle)
     token = os.environ.get("HF_TOKEN")
     if not token:
         try:
@@ -174,12 +173,16 @@ def load_model_and_tokenizer(model_cfg: dict):
 
 def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15) -> str:
     try:
-        input_ids = tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt"
+        # On essaie le template de chat
+        inputs = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
         ).to(model.device)
+        input_ids = inputs["input_ids"]
     except Exception:
+        # Fallback si le template échoue
         prompt = "\n".join(m["content"] for m in messages) + "\n"
-        input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        input_ids = inputs["input_ids"]
 
     with torch.no_grad():
         output = model.generate(
@@ -278,7 +281,6 @@ def eval_run():
         run_name = f"{_G_MODEL_CFG['short']}_train-{train_ds_name}_eval-{eval_ds_name}_n{n_shots}_s{seed}"
         run.name = run_name
 
-        # Chargement des datasets
         train_info = get_cached_dataset(train_ds_name)
         eval_info  = get_cached_dataset(eval_ds_name)
 
@@ -292,12 +294,10 @@ def eval_run():
             "use_cot":    False
         })
 
-        # Sélection des exemples few-shot
         fewshot_examples = select_fewshot_examples(train_info["train"], n_shots, source_num_labels, seed)
         for ex in fewshot_examples:
             ex["label"] = harmonize_label(ex["label"], source_num_labels, target_num_labels)
 
-        # Évaluation
         test_ds = eval_info["test"]
         if _G_ARGS.max_eval_samples > 0 and len(test_ds) > _G_ARGS.max_eval_samples:
             test_ds = balanced_eval_sample(test_ds, _G_ARGS.max_eval_samples, eval_info["num_labels"], seed)
@@ -321,7 +321,6 @@ def eval_run():
 
         metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
 
-        # Sauvegarde CSV locale (toujours récupérable depuis Output Kaggle)
         csv_path = "/kaggle/working/label_only_results.csv" if os.path.exists("/kaggle") else "label_only_results.csv"
         write_header = not os.path.exists(csv_path)
         with open(csv_path, "a", newline="") as f:
@@ -346,7 +345,6 @@ def eval_run():
             })
         print(f"💾 Résultat sauvegardé dans {csv_path}")
 
-        # Log table de prédictions WandB
         try:
             table = wandb.Table(columns=["true_label", "pred_label", "response"])
             for r in raw_outputs[:20]:
@@ -376,9 +374,9 @@ def parse_args():
     p.add_argument("--eval_dataset",     type=str,      choices=DATASETS_LIST)
     p.add_argument("--n_shots",          type=int,      default=5)
     p.add_argument("--seed",             type=int,      default=42)
-    p.add_argument("--sweep",            action="store_true", help="Lance un Grid Sweep WandB complet")
+    p.add_argument("--sweep",            action="store_true")
     p.add_argument("--max_eval_samples", type=int,      default=300)
-    p.add_argument("--auto",             action="store_true", help="Mode non-interactif (Kaggle)")
+    p.add_argument("--auto",             action="store_true")
     return p.parse_args()
 
 def main():
@@ -387,9 +385,6 @@ def main():
     _G_MODEL_CFG = MODEL_CONFIGS[_G_ARGS.model]
 
     print(f"Modèle : {_G_MODEL_CFG['hf_name']}")
-    if _G_ARGS.sweep:
-        print(f"Sweep complet : {len(DATASETS_LIST)}x{len(DATASETS_LIST)} datasets x {SHOTS_SWEEP_VALUES} shots x {SEEDS_VALUES} seeds")
-
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(_G_MODEL_CFG)
 
     project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
@@ -398,9 +393,6 @@ def main():
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
     else:
-        if not _G_ARGS.train_dataset or not _G_ARGS.eval_dataset:
-            print("Erreur: en mode run simple, spécifiez --train_dataset et --eval_dataset")
-            sys.exit(1)
         sweep_config_single = {
             "method": "grid",
             "metric": {"name": "test/f1_macro", "goal": "maximize"},
