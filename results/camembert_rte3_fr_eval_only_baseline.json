@@ -1,0 +1,9 @@
+{
+  "model": "camembert-base",
+  "dataset": "rte3_fr",
+  "mode": "eval_only",
+  "training_status": "baseline",
+  "eval_split": "validation",
+  "eval_size": 320,
+  "accuracy": 0.5125
+}

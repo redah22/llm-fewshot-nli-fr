@@ -1,0 +1,10 @@
+{
+  "model": "camembert-base",
+  "dataset": "fracas_subset_75",
+  "mode": "train_eval",
+  "training_status": "fine-tuned",
+  "eval_split": "validation",
+  "eval_size": 60,
+  "accuracy": 0.31666666666666665,
+  "baseline_accuracy": 0.3
+}
