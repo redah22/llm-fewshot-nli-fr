@@ -97,10 +97,26 @@ def select_fewshot_examples(train_ds, n_shots: int, num_labels: int, seed: int =
     selected = []
     for label in range(num_labels):
         pool = by_label.get(label, [])
+        if not pool: continue
         rng.shuffle(pool)
         selected.extend(pool[:per_class])
     rng.shuffle(selected)
     return selected[:n_shots]
+
+def harmonize_label(label, source_num_labels, target_num_labels):
+    """Harmonise un label si on passe du 3-classes au 2-classes (ex: DACCORD)."""
+    if label == -1: return -1
+    if source_num_labels == 3 and target_num_labels == 2:
+        # RTE/GQNLI/SICK (0,1,2) -> DACCORD (0,1)
+        # 0 (entailment), 1 (neutral) -> 0 (non-contradiction/compatible)
+        # 2 (contradiction) -> 1 (contradiction)
+        return 1 if label == 2 else 0
+    if source_num_labels == 2 and target_num_labels == 3:
+        # DACCORD (0,1) -> RTE/GQNLI/SICK (0,1,2)
+        # 0 (non-contradiction) -> 0 (entailment) -- Choix par défaut
+        # 1 (contradiction) -> 2 (contradiction)
+        return 2 if label == 1 else 0
+    return label
 
 def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int = 42) -> Dataset:
     if len(test_ds) <= max_samples:
@@ -202,9 +218,12 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
         metrics[f"{prefix}/{name}_precision"] = prec[i]
         metrics[f"{prefix}/{name}_recall"]    = rec[i]
 
-    wandb.log(metrics)
-    wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=y_true, preds=y_pred, class_names=label_names)})
-    wandb.summary.update({k: v for k, v in metrics.items()})
+    try:
+        wandb.log(metrics)
+        wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=y_true, preds=y_pred, class_names=label_names)})
+        wandb.summary.update({k: v for k, v in metrics.items()})
+    except Exception as e:
+        print(f"[WARN] WandB log failed: {e}")
 
     print(f"\nAccuracy : {acc:.2%} | F1 macro : {f1:.4f} | Parse rate : {parse_rate:.2%}")
     return metrics
@@ -256,17 +275,22 @@ def eval_run():
     train_info = get_cached_dataset(train_ds_name)
     eval_info = get_cached_dataset(eval_ds_name)
     
-    # Si num_labels diffèrent (ex: daccord(2) et gqnli(3)), on force num_labels au max pour le parse
-    num_labels = max(train_info["num_labels"], eval_info["num_labels"])
+    # Si num_labels diffèrent (ex: daccord(2) et gqnli(3)), on se base sur le dataset d'EVAL
+    target_num_labels = eval_info["num_labels"]
+    source_num_labels = train_info["num_labels"]
 
     run.config.update({
         "model": _G_MODEL_CFG["hf_name"],
         "mode": "intra" if train_ds_name == eval_ds_name else "cross",
-        "num_labels": num_labels
+        "num_labels": target_num_labels,
+        "use_cot": False
     })
 
     # Train (Few-Shot)
-    fewshot_examples = select_fewshot_examples(train_info["train"], n_shots, train_info["num_labels"], seed)
+    fewshot_examples = select_fewshot_examples(train_info["train"], n_shots, source_num_labels, seed)
+    # Harmonisation des labels few-shot pour correspondre à la tâche d'eval
+    for ex in fewshot_examples:
+        ex["label"] = harmonize_label(ex["label"], source_num_labels, target_num_labels)
     
     # Eval
     test_ds = eval_info["test"]
@@ -279,9 +303,9 @@ def eval_run():
     labels_true, labels_pred, raw_outputs = [], [], []
 
     for i, ex in enumerate(test_ds):
-        messages = build_prompt_label_only(fewshot_examples, ex, num_labels)
+        messages = build_prompt_label_only(fewshot_examples, ex, target_num_labels)
         response = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=15)
-        predicted = parse_label(response, num_labels)
+        predicted = parse_label(response, target_num_labels)
 
         labels_true.append(ex["label"])
         labels_pred.append(predicted)
@@ -290,13 +314,41 @@ def eval_run():
         if (i + 1) % 50 == 0:
             print(f"  [{i+1}/{len(test_ds)}]...")
 
-    compute_and_log_metrics(labels_true, labels_pred, num_labels)
+    metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
 
-    table = wandb.Table(columns=["true_label", "pred_label", "response"])
-    for r in raw_outputs[:20]:
-        table.add_data(r["true"], r["pred"], r["response"])
-    wandb.log({"predictions_sample": table})
-    wandb.finish()
+    # ── Sauvegarde CSV locale (récupérable depuis l'Output Kaggle) ─────────
+    import csv, os as _os
+    csv_path = "/kaggle/working/label_only_results.csv" if _os.path.exists("/kaggle") else "label_only_results.csv"
+    write_header = not _os.path.exists(csv_path)
+    with open(csv_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["run_name", "model", "train_ds", "eval_ds",
+                                               "mode", "n_shots", "seed",
+                                               "accuracy", "f1_macro", "parse_rate"])
+        if write_header:
+            writer.writeheader()
+        writer.writerow({
+            "run_name":   run_name,
+            "model":      _G_MODEL_CFG["short"],
+            "train_ds":   train_ds_name,
+            "eval_ds":    eval_ds_name,
+            "mode":       "intra" if train_ds_name == eval_ds_name else "cross",
+            "n_shots":    n_shots,
+            "seed":       seed,
+            "accuracy":   metrics.get("test/accuracy", ""),
+            "f1_macro":   metrics.get("test/f1_macro", ""),
+            "parse_rate": metrics.get("test/parse_rate", ""),
+        })
+    print(f"💾 Résultat sauvegardé dans {csv_path}")
+    # ──────────────────────────────────────────────────────────────────────
+
+    try:
+        table = wandb.Table(columns=["true_label", "pred_label", "response"])
+        for r in raw_outputs[:20]:
+            table.add_data(r["true"], r["pred"], r["response"])
+        wandb.log({"predictions_sample": table})
+        wandb.finish()
+    except Exception as e:
+        print(f"[WARN] WandB finish failed: {e}")
 
 def parse_args():
     p = argparse.ArgumentParser()

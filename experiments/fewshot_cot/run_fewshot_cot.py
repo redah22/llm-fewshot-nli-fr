@@ -90,8 +90,8 @@ MODEL_CONFIGS = {
     },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
-        "hf_name":  "google/gemma-4-E4B-it",
-        "short":    "gemma4_4b",
+        "hf_name":  "google/gemma-2-9b-it",
+        "short":    "gemma2_9b",
         "use_4bit": True,
         "backend":  "hf",
     },
@@ -166,6 +166,9 @@ def map_label(label):
     s = str(label).lower().strip()
     if s in ("unknown", "undef"):
         return INVALID
+    # Support for string integers "0", "1", "2"
+    if s in ("0", "1", "2"):
+        return int(s)
     return LABEL_MAP.get(s, INVALID)
 
 
