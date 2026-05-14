@@ -142,7 +142,16 @@ def load_model_and_tokenizer(model_cfg: dict):
     model_name = model_cfg["hf_name"]
     print(f"Chargement de {model_name}...")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    # Récupération du token HF (Secrets Kaggle ou Env)
+    token = os.environ.get("HF_TOKEN")
+    if not token:
+        try:
+            from kaggle_secrets import UserSecretsClient
+            token = UserSecretsClient().get_secret("HF_TOKEN")
+        except:
+            pass
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -158,10 +167,11 @@ def load_model_and_tokenizer(model_cfg: dict):
             quantization_config=bnb_config,
             device_map="auto",
             torch_dtype=torch.float16,
+            token=token
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, device_map="auto", torch_dtype=torch.float16
+            model_name, device_map="auto", torch_dtype=torch.float16, token=token
         )
 
     model.eval()
