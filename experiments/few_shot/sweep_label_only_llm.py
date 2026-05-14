@@ -381,14 +381,12 @@ def main():
         print(f"Modèle : {_G_MODEL_CFG['hf_name']}")
         if _G_ARGS.sweep:
             print(f"Lancement d'un Sweep complet intra et cross dataset ({len(DATASETS_LIST)}x{len(DATASETS_LIST)} x 5 shots x 3 seeds)")
-        confirm = input("Lancer ? (o/n) : ").strip().lower()
-        if confirm != "o":
-            sys.exit(0)
 
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(_G_MODEL_CFG)
 
     if _G_ARGS.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
+        project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
     else:
         if not _G_ARGS.train_dataset or not _G_ARGS.eval_dataset:
