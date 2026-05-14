@@ -656,9 +656,9 @@ def train_run():
 
     print(f"\n{'='*60}\n{run_label}\n{'='*60}")
 
-    # Décodeurs (GPT-2) : device_map="auto" splitte sur plusieurs GPUs et
-    # cause un mismatch cuda:0/cuda:1 avec les labels du Trainer → forcer GPU 0.
-    _device_map = {"": 0} if MODEL_CFG["is_decoder"] else "auto"
+    # Sur Kaggle (2× T4), device_map="auto" peut splitter le modèle sur cuda:0/cuda:1
+    # et causer un mismatch avec les labels du Trainer → forcer GPU 0 pour tous les modèles.
+    _device_map = {"": 0}
     base_model = AutoModelForSequenceClassification.from_pretrained(
         MODEL_CFG["hf_name"], num_labels=NUM_LABELS, device_map=_device_map,
         ignore_mismatched_sizes=True,

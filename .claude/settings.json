@@ -166,7 +166,9 @@
       "Bash(npx @claude-flow*)",
       "Bash(npx claude-flow*)",
       "Bash(node .claude/*)",
-      "mcp__claude-flow__:*"
+      "mcp__claude-flow__:*",
+      "Bash(curl -s https://api.wandb.ai/graphql*)",
+      "Bash(curl -s https://api.wandb.ai/graphql -H*)"
     ],
     "deny": [
       "Read(./.env)",
