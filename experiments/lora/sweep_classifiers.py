@@ -69,17 +69,17 @@ MODEL_CONFIGS = {
         "modules_to_save": None,
         "is_decoder": True,
     },
+    # Modèle FlauBERT custom — alias "flaubert-xnli" (défaut) ou "flaubert-custom"
+    # Override via env var CUSTOM_FLAUBERT_MODEL, sinon utilise ColinDvrt/Flaubert-XNLI
     "flaubert-xnli": {
-        "hf_name": "moussaKam/flaubert-base-cased-xnli",
+        "hf_name": os.environ.get("CUSTOM_FLAUBERT_MODEL", "ColinDvrt/Flaubert-XNLI"),
         "short": "flaubert_xnli",
         "target_modules": ["q_lin", "v_lin"],
         "modules_to_save": ["classifier"],
         "is_decoder": False,
     },
-    # Modèle FlauBERT custom entraîné par un ami — remplacer par le repo HuggingFace
-    # ou un chemin local (ex: "/kaggle/input/custom-flaubert/model")
     "flaubert-custom": {
-        "hf_name": os.environ.get("CUSTOM_FLAUBERT_MODEL", "TODO/flaubert-xnli-custom"),
+        "hf_name": os.environ.get("CUSTOM_FLAUBERT_MODEL", "ColinDvrt/Flaubert-XNLI"),
         "short": "flaubert_custom",
         "target_modules": ["q_lin", "v_lin"],
         "modules_to_save": ["classifier"],
