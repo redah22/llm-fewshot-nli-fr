@@ -166,6 +166,9 @@ def map_label(label):
     s = str(label).lower().strip()
     if s in ("unknown", "undef"):
         return INVALID
+    # Support for string integers "0", "1", "2"
+    if s in ("0", "1", "2"):
+        return int(s)
     return LABEL_MAP.get(s, INVALID)
 
 
