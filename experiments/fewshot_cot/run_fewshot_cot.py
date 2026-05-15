@@ -352,41 +352,57 @@ Réponds toujours en suivant ce format :
 Raisonnement : <analyse étape par étape>
 Label : <non-contradiction | contradiction>"""
 
+SYSTEM_PROMPT_LABEL_ONLY = """Tu es un expert en inférence de langue naturelle (NLI) en français.
+Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
+Réponds uniquement avec le label, sans explication :
+- entailment
+- neutral
+- contradiction"""
 
-def format_example(ex: dict, num_labels: int, with_answer: bool = True) -> str:
+SYSTEM_PROMPT_LABEL_ONLY_BINARY = """Tu es un expert en détection de contradictions en français.
+Réponds uniquement avec le label, sans explication :
+- non-contradiction
+- contradiction"""
+
+
+def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot: bool = True) -> str:
     label_names = LABEL_NAMES_2 if num_labels == 2 else LABEL_NAMES_3
     text = f"Prémisse : {ex['premise']}\nHypothèse : {ex['hypothesis']}"
     if with_answer:
         label_str = label_names.get(ex["label"], "unknown")
-        # Utilise le chemin de pensée manuel s'il est disponible dans le JSON
-        cot = ex.get("chain_of_thought", "").strip()
-        reasoning = cot if cot and cot != "À remplir" \
-            else f"Cette relation est de type {label_str} car la prémisse et l'hypothèse sont analysées ensemble."
-        text += f"\nRaisonnement : {reasoning}\nLabel : {label_str}"
+        if use_cot:
+            cot = ex.get("chain_of_thought", "").strip()
+            reasoning = cot if cot and cot != "À remplir" \
+                else f"Cette relation est de type {label_str} car la prémisse et l'hypothèse sont analysées ensemble."
+            text += f"\nRaisonnement : {reasoning}\nLabel : {label_str}"
+        else:
+            text += f"\nLabel : {label_str}"
     else:
-        text += "\nRaisonnement :"
+        text += "\nRaisonnement :" if use_cot else "\nLabel :"
     return text
 
 
 def build_prompt(fewshot_examples: list, test_example: dict, num_labels: int, use_cot: bool) -> list:
     """Construit le prompt au format chat (liste de messages)."""
-    system = SYSTEM_PROMPT_BINARY if num_labels == 2 else SYSTEM_PROMPT
+    if use_cot:
+        system = SYSTEM_PROMPT_BINARY if num_labels == 2 else SYSTEM_PROMPT
+    else:
+        system = SYSTEM_PROMPT_LABEL_ONLY_BINARY if num_labels == 2 else SYSTEM_PROMPT_LABEL_ONLY
     messages = [{"role": "system", "content": system}]
 
     if fewshot_examples:
         examples_text = "\n\n---\n\n".join(
-            format_example(ex, num_labels, with_answer=True)
+            format_example(ex, num_labels, with_answer=True, use_cot=use_cot)
             for ex in fewshot_examples
         )
         messages.append({
             "role": "user",
-            "content": f"Voici {len(fewshot_examples)} exemple(s) :\n\n{examples_text}\n\n---\n\nMaintenant, analyse cet exemple :\n\n{format_example(test_example, num_labels, with_answer=False)}"
+            "content": f"Voici {len(fewshot_examples)} exemple(s) :\n\n{examples_text}\n\n---\n\nMaintenant, analyse cet exemple :\n\n{format_example(test_example, num_labels, with_answer=False, use_cot=use_cot)}"
         })
     else:
-        suffix = "\nRaisonne étape par étape." if use_cot else ""
         messages.append({
             "role": "user",
-            "content": format_example(test_example, num_labels, with_answer=False) + suffix
+            "content": format_example(test_example, num_labels, with_answer=False, use_cot=use_cot)
         })
 
     return messages
@@ -684,6 +700,9 @@ def main():
 
     args = parse_args()
     random.seed(args.seed)
+    # En mode label-only, 20 tokens suffisent — ajustement automatique
+    if args.no_cot and args.max_new_tokens == 150:
+        args.max_new_tokens = 20
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
