@@ -338,9 +338,9 @@ Les labels possibles sont :
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (raisonnement en une phrase maximum) :
-Raisonnement : <une phrase d'analyse>
-Label : <entailment | neutral | contradiction>"""
+Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
+Label : <entailment | neutral | contradiction>
+Raisonnement : <une phrase d'analyse>"""
 
 SYSTEM_PROMPT_BINARY = """Tu es un expert en détection de contradictions en français.
 Ta tâche est de déterminer si une hypothèse contredit une prémisse.
@@ -348,9 +348,9 @@ Les labels possibles sont :
 - non-contradiction : l'hypothèse ne contredit pas la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (raisonnement en une phrase maximum) :
-Raisonnement : <une phrase d'analyse>
-Label : <non-contradiction | contradiction>"""
+Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
+Label : <non-contradiction | contradiction>
+Raisonnement : <une phrase d'analyse>"""
 
 SYSTEM_PROMPT_LABEL_ONLY = """Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
@@ -374,11 +374,11 @@ def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot:
             cot = ex.get("chain_of_thought", "").strip()
             reasoning = cot if cot and cot != "À remplir" \
                 else f"Cette relation est de type {label_str} car la prémisse et l'hypothèse sont analysées ensemble."
-            text += f"\nRaisonnement : {reasoning}\nLabel : {label_str}"
+            text += f"\nLabel : {label_str}\nRaisonnement : {reasoning}"
         else:
             text += f"\nLabel : {label_str}"
     else:
-        text += "\nRaisonnement :" if use_cot else "\nLabel :"
+        text += "\nLabel :" if use_cot else "\nLabel :"
     return text
 
 
@@ -685,7 +685,7 @@ def parse_args():
     p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT")
     p.add_argument("--max_eval_samples",type=int, default=300,
                    help="Nb max d'exemples de test évalués (0 = tous)")
-    p.add_argument("--max_new_tokens",  type=int, default=150)
+    p.add_argument("--max_new_tokens",  type=int, default=60)
     p.add_argument("--batch_size",      type=int, default=4,
                    help="Nb d'exemples traités en parallèle sur le GPU")
     p.add_argument("--seed",            type=int, default=42)
@@ -701,7 +701,7 @@ def main():
     args = parse_args()
     random.seed(args.seed)
     # En mode label-only, 20 tokens suffisent — ajustement automatique
-    if args.no_cot and args.max_new_tokens == 150:
+    if args.no_cot and args.max_new_tokens == 60:
         args.max_new_tokens = 20
     _G_ARGS = args
 
