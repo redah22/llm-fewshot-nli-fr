@@ -468,24 +468,32 @@ def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 25
 
     # ── HuggingFace ──────────────────────────────────────
     try:
-        input_ids = tokenizer.apply_chat_template(
+        encoded = tokenizer.apply_chat_template(
             messages, add_generation_prompt=True, return_tensors="pt"
-        ).to(model.device)
+        )
     except Exception:
         # Fallback si apply_chat_template n'est pas supporté
         prompt = "\n".join(m["content"] for m in messages) + "\n"
-        input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+        encoded = tokenizer(prompt, return_tensors="pt").input_ids
+
+    # apply_chat_template peut retourner un tenseur ou un BatchEncoding selon la version
+    if hasattr(encoded, "input_ids"):
+        generate_kwargs = {k: v.to(model.device) for k, v in encoded.items()}
+        input_len = generate_kwargs["input_ids"].shape[-1]
+    else:
+        generate_kwargs = {"input_ids": encoded.to(model.device)}
+        input_len = encoded.shape[-1]
 
     with torch.no_grad():
         output = model.generate(
-            input_ids,
+            **generate_kwargs,
             max_new_tokens=max_new_tokens,
             do_sample=False,          # Greedy pour reproductibilité
             temperature=1.0,
             pad_token_id=tokenizer.pad_token_id,
         )
 
-    generated = output[0][input_ids.shape[-1]:]
+    generated = output[0][input_len:]
     return tokenizer.decode(generated, skip_special_tokens=True)
 
 
