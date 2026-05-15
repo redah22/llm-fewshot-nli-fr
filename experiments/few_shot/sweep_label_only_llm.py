@@ -6,13 +6,13 @@ Il prend des exemples de `train_dataset` et évalue sur `eval_dataset`.
 
 Usage :
   python3 sweep_label_only_llm.py --model llama3 --train_dataset gqnli --eval_dataset sick --n_shots 5
-  python3 sweep_label_only_llm.py --model qwen2.5 --sweep
+  python3 sweep_label_only_llm.py --model qwen2.5 --sweep --auto
 """
 
-import os, sys, random, argparse
+import os, sys, random, argparse, csv, traceback
 from collections import defaultdict
 
-os.environ["WANDB_PROJECT"] = "fewshot-nli-fr"
+os.environ.setdefault("WANDB_PROJECT", "fewshot-nli-fr")
 
 import torch
 import wandb
@@ -107,14 +107,8 @@ def harmonize_label(label, source_num_labels, target_num_labels):
     """Harmonise un label si on passe du 3-classes au 2-classes (ex: DACCORD)."""
     if label == -1: return -1
     if source_num_labels == 3 and target_num_labels == 2:
-        # RTE/GQNLI/SICK (0,1,2) -> DACCORD (0,1)
-        # 0 (entailment), 1 (neutral) -> 0 (non-contradiction/compatible)
-        # 2 (contradiction) -> 1 (contradiction)
         return 1 if label == 2 else 0
     if source_num_labels == 2 and target_num_labels == 3:
-        # DACCORD (0,1) -> RTE/GQNLI/SICK (0,1,2)
-        # 0 (non-contradiction) -> 0 (entailment) -- Choix par défaut
-        # 1 (contradiction) -> 2 (contradiction)
         return 2 if label == 1 else 0
     return label
 
@@ -142,7 +136,16 @@ def load_model_and_tokenizer(model_cfg: dict):
     model_name = model_cfg["hf_name"]
     print(f"Chargement de {model_name}...")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    token = os.environ.get("HF_TOKEN")
+    if not token:
+        try:
+            from kaggle_secrets import UserSecretsClient
+            token = UserSecretsClient().get_secret("HF_TOKEN")
+            os.environ["HF_TOKEN"] = token
+        except Exception:
+            pass
+
+    tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -158,24 +161,28 @@ def load_model_and_tokenizer(model_cfg: dict):
             quantization_config=bnb_config,
             device_map="auto",
             torch_dtype=torch.float16,
+            token=token
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, device_map="auto", torch_dtype=torch.float16
+            model_name, device_map="auto", torch_dtype=torch.float16, token=token
         )
 
     model.eval()
     return model, tokenizer
 
 def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15) -> str:
-    # Pour Label-Only, on a besoin de très peu de tokens
     try:
-        input_ids = tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt"
+        # On essaie le template de chat
+        inputs = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
         ).to(model.device)
+        input_ids = inputs["input_ids"]
     except Exception:
+        # Fallback si le template échoue
         prompt = "\n".join(m["content"] for m in messages) + "\n"
-        input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(model.device)
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        input_ids = inputs["input_ids"]
 
     with torch.no_grad():
         output = model.generate(
@@ -220,7 +227,9 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 
     try:
         wandb.log(metrics)
-        wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(probs=None, y_true=y_true, preds=y_pred, class_names=label_names)})
+        wandb.log({f"{prefix}/confusion_matrix": wandb.plot.confusion_matrix(
+            probs=None, y_true=y_true, preds=y_pred, class_names=label_names
+        )})
         wandb.summary.update({k: v for k, v in metrics.items()})
     except Exception as e:
         print(f"[WARN] WandB log failed: {e}")
@@ -236,22 +245,21 @@ SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
 SEEDS_VALUES = [42, 123, 999]
 DATASETS_LIST = list(DATASETS.keys())
 
-# Si on veut tout tester dans un seul Sweep (intra + cross) :
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "test/f1_macro", "goal": "maximize"},
     "parameters": {
-        "n_shots": {"values": SHOTS_SWEEP_VALUES},
+        "n_shots":       {"values": SHOTS_SWEEP_VALUES},
         "train_dataset": {"values": DATASETS_LIST},
-        "eval_dataset": {"values": DATASETS_LIST},
-        "seed": {"values": SEEDS_VALUES},
+        "eval_dataset":  {"values": DATASETS_LIST},
+        "seed":          {"values": SEEDS_VALUES},
     },
 }
 
-_G_MODEL = None
-_G_TOKENIZER = None
-_G_MODEL_CFG = None
-_G_ARGS = None
+_G_MODEL         = None
+_G_TOKENIZER     = None
+_G_MODEL_CFG     = None
+_G_ARGS          = None
 _G_DATASETS_CACHE = {}
 
 def get_cached_dataset(ds_name):
@@ -261,140 +269,141 @@ def get_cached_dataset(ds_name):
     return _G_DATASETS_CACHE[ds_name]
 
 def eval_run():
-    run = wandb.init()
-    config = wandb.config
-    n_shots = config.n_shots
-    train_ds_name = config.train_dataset
-    eval_ds_name = config.eval_dataset
-    seed = config.seed
-
-    run_name = f"{_G_MODEL_CFG['short']}_train-{train_ds_name}_eval-{eval_ds_name}_n{n_shots}_s{seed}"
-    run.name = run_name
-    
-    # Chargement
-    train_info = get_cached_dataset(train_ds_name)
-    eval_info = get_cached_dataset(eval_ds_name)
-    
-    # Si num_labels diffèrent (ex: daccord(2) et gqnli(3)), on se base sur le dataset d'EVAL
-    target_num_labels = eval_info["num_labels"]
-    source_num_labels = train_info["num_labels"]
-
-    run.config.update({
-        "model": _G_MODEL_CFG["hf_name"],
-        "mode": "intra" if train_ds_name == eval_ds_name else "cross",
-        "num_labels": target_num_labels,
-        "use_cot": False
-    })
-
-    # Train (Few-Shot)
-    fewshot_examples = select_fewshot_examples(train_info["train"], n_shots, source_num_labels, seed)
-    # Harmonisation des labels few-shot pour correspondre à la tâche d'eval
-    for ex in fewshot_examples:
-        ex["label"] = harmonize_label(ex["label"], source_num_labels, target_num_labels)
-    
-    # Eval
-    test_ds = eval_info["test"]
-    if _G_ARGS.max_eval_samples > 0 and len(test_ds) > _G_ARGS.max_eval_samples:
-        test_ds = balanced_eval_sample(test_ds, _G_ARGS.max_eval_samples, eval_info["num_labels"], seed)
-
-    print(f"\n--- {run_name} ---")
-    print(f"Test sur {len(test_ds)} exemples...")
-
-    labels_true, labels_pred, raw_outputs = [], [], []
-
-    for i, ex in enumerate(test_ds):
-        messages = build_prompt_label_only(fewshot_examples, ex, target_num_labels)
-        response = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=15)
-        predicted = parse_label(response, target_num_labels)
-
-        labels_true.append(ex["label"])
-        labels_pred.append(predicted)
-        raw_outputs.append({"true": ex["label"], "pred": predicted, "response": response})
-
-        if (i + 1) % 50 == 0:
-            print(f"  [{i+1}/{len(test_ds)}]...")
-
-    metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
-
-    # ── Sauvegarde CSV locale (récupérable depuis l'Output Kaggle) ─────────
-    import csv, os as _os
-    csv_path = "/kaggle/working/label_only_results.csv" if _os.path.exists("/kaggle") else "label_only_results.csv"
-    write_header = not _os.path.exists(csv_path)
-    with open(csv_path, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=["run_name", "model", "train_ds", "eval_ds",
-                                               "mode", "n_shots", "seed",
-                                               "accuracy", "f1_macro", "parse_rate"])
-        if write_header:
-            writer.writeheader()
-        writer.writerow({
-            "run_name":   run_name,
-            "model":      _G_MODEL_CFG["short"],
-            "train_ds":   train_ds_name,
-            "eval_ds":    eval_ds_name,
-            "mode":       "intra" if train_ds_name == eval_ds_name else "cross",
-            "n_shots":    n_shots,
-            "seed":       seed,
-            "accuracy":   metrics.get("test/accuracy", ""),
-            "f1_macro":   metrics.get("test/f1_macro", ""),
-            "parse_rate": metrics.get("test/parse_rate", ""),
-        })
-    print(f"💾 Résultat sauvegardé dans {csv_path}")
-    # ──────────────────────────────────────────────────────────────────────
-
+    """Fonction appelée par wandb.agent pour chaque run du sweep."""
     try:
-        table = wandb.Table(columns=["true_label", "pred_label", "response"])
-        for r in raw_outputs[:20]:
-            table.add_data(r["true"], r["pred"], r["response"])
-        wandb.log({"predictions_sample": table})
+        run = wandb.init()
+        config = wandb.config
+        n_shots       = config.n_shots
+        train_ds_name = config.train_dataset
+        eval_ds_name  = config.eval_dataset
+        seed          = config.seed
+
+        run_name = f"{_G_MODEL_CFG['short']}_train-{train_ds_name}_eval-{eval_ds_name}_n{n_shots}_s{seed}"
+        run.name = run_name
+
+        train_info = get_cached_dataset(train_ds_name)
+        eval_info  = get_cached_dataset(eval_ds_name)
+
+        target_num_labels = eval_info["num_labels"]
+        source_num_labels = train_info["num_labels"]
+
+        run.config.update({
+            "model":      _G_MODEL_CFG["hf_name"],
+            "mode":       "intra" if train_ds_name == eval_ds_name else "cross",
+            "num_labels": target_num_labels,
+            "use_cot":    False
+        })
+
+        fewshot_examples = select_fewshot_examples(train_info["train"], n_shots, source_num_labels, seed)
+        for ex in fewshot_examples:
+            ex["label"] = harmonize_label(ex["label"], source_num_labels, target_num_labels)
+
+        test_ds = eval_info["test"]
+        if _G_ARGS.max_eval_samples > 0 and len(test_ds) > _G_ARGS.max_eval_samples:
+            test_ds = balanced_eval_sample(test_ds, _G_ARGS.max_eval_samples, eval_info["num_labels"], seed)
+
+        print(f"\n--- {run_name} ---")
+        print(f"Test sur {len(test_ds)} exemples...")
+
+        labels_true, labels_pred, raw_outputs = [], [], []
+
+        for i, ex in enumerate(test_ds):
+            messages  = build_prompt_label_only(fewshot_examples, ex, target_num_labels)
+            response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=15)
+            predicted = parse_label(response, target_num_labels)
+
+            labels_true.append(ex["label"])
+            labels_pred.append(predicted)
+            raw_outputs.append({"true": ex["label"], "pred": predicted, "response": response})
+
+            if (i + 1) % 50 == 0:
+                print(f"  [{i+1}/{len(test_ds)}]...")
+
+        metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
+
+        csv_path = "/kaggle/working/label_only_results.csv" if os.path.exists("/kaggle") else "label_only_results.csv"
+        write_header = not os.path.exists(csv_path)
+        with open(csv_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=[
+                "run_name", "model", "train_ds", "eval_ds",
+                "mode", "n_shots", "seed",
+                "accuracy", "f1_macro", "parse_rate"
+            ])
+            if write_header:
+                writer.writeheader()
+            writer.writerow({
+                "run_name":   run_name,
+                "model":      _G_MODEL_CFG["short"],
+                "train_ds":   train_ds_name,
+                "eval_ds":    eval_ds_name,
+                "mode":       "intra" if train_ds_name == eval_ds_name else "cross",
+                "n_shots":    n_shots,
+                "seed":       seed,
+                "accuracy":   metrics.get("test/accuracy", ""),
+                "f1_macro":   metrics.get("test/f1_macro", ""),
+                "parse_rate": metrics.get("test/parse_rate", ""),
+            })
+        print(f"💾 Résultat sauvegardé dans {csv_path}")
+
+        try:
+            table = wandb.Table(columns=["true_label", "pred_label", "response"])
+            for r in raw_outputs[:20]:
+                table.add_data(r["true"], r["pred"], r["response"])
+            wandb.log({"predictions_sample": table})
+        except Exception as e:
+            print(f"[WARN] WandB table log failed: {e}")
+
         wandb.finish()
+
     except Exception as e:
-        print(f"[WARN] WandB finish failed: {e}")
+        error_msg = f"❌ CRASH dans eval_run: {str(e)}\n{traceback.format_exc()}"
+        print(error_msg)
+        crash_path = "/kaggle/working/KAGGLE_CRASH_REPORT.txt" if os.path.exists("/kaggle") else "KAGGLE_CRASH_REPORT.txt"
+        with open(crash_path, "a") as f:
+            f.write(error_msg + "\n" + "="*60 + "\n")
+        try:
+            wandb.finish(exit_code=1)
+        except Exception:
+            pass
+        raise e
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--model", required=True, choices=list(MODEL_CONFIGS.keys()))
-    p.add_argument("--train_dataset", type=str, choices=DATASETS_LIST)
-    p.add_argument("--eval_dataset", type=str, choices=DATASETS_LIST)
-    p.add_argument("--n_shots", type=int, default=5)
-    p.add_argument("--seed", type=int, default=42)
-    p.add_argument("--sweep", action="store_true", help="Lance un Grid Sweep WandB complet (très long !)")
-    p.add_argument("--max_eval_samples", type=int, default=300)
-    p.add_argument("--auto", action="store_true")
+    p.add_argument("--model",            required=True, choices=list(MODEL_CONFIGS.keys()))
+    p.add_argument("--train_dataset",    type=str,      choices=DATASETS_LIST)
+    p.add_argument("--eval_dataset",     type=str,      choices=DATASETS_LIST)
+    p.add_argument("--n_shots",          type=int,      default=5)
+    p.add_argument("--seed",             type=int,      default=42)
+    p.add_argument("--sweep",            action="store_true")
+    p.add_argument("--max_eval_samples", type=int,      default=300)
+    p.add_argument("--auto",             action="store_true")
     return p.parse_args()
 
 def main():
     global _G_MODEL, _G_TOKENIZER, _G_MODEL_CFG, _G_ARGS
-    _G_ARGS = parse_args()
+    _G_ARGS      = parse_args()
     _G_MODEL_CFG = MODEL_CONFIGS[_G_ARGS.model]
 
-    if not _G_ARGS.auto:
-        print(f"Modèle : {_G_MODEL_CFG['hf_name']}")
-        if _G_ARGS.sweep:
-            print(f"Lancement d'un Sweep complet intra et cross dataset ({len(DATASETS_LIST)}x{len(DATASETS_LIST)} x 5 shots x 3 seeds)")
-        confirm = input("Lancer ? (o/n) : ").strip().lower()
-        if confirm != "o":
-            sys.exit(0)
-
+    print(f"Modèle : {_G_MODEL_CFG['hf_name']}")
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(_G_MODEL_CFG)
 
+    project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
+
     if _G_ARGS.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
     else:
-        if not _G_ARGS.train_dataset or not _G_ARGS.eval_dataset:
-            print("Erreur: en mode run simple, spécifiez --train_dataset et --eval_dataset")
-            sys.exit(1)
-        SWEEP_CONFIG_SINGLE = {
+        sweep_config_single = {
             "method": "grid",
             "metric": {"name": "test/f1_macro", "goal": "maximize"},
             "parameters": {
-                "n_shots": {"values": [_G_ARGS.n_shots]},
+                "n_shots":       {"values": [_G_ARGS.n_shots]},
                 "train_dataset": {"values": [_G_ARGS.train_dataset]},
-                "eval_dataset": {"values": [_G_ARGS.eval_dataset]},
-                "seed": {"values": [_G_ARGS.seed]},
+                "eval_dataset":  {"values": [_G_ARGS.eval_dataset]},
+                "seed":          {"values": [_G_ARGS.seed]},
             },
         }
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=sweep_config_single, project=project_name)
         wandb.agent(sweep_id, function=eval_run, count=1)
 
 if __name__ == "__main__":

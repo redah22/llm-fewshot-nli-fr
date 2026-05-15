@@ -25,34 +25,83 @@ def fetch_wandb_data():
     print(f"🔄 Connexion à WandB (Projet: {PROJECT_NAME})...")
     api = wandb.Api()
     
-    # Récupérer tous les runs du projet
-    # On filtre par tag ou par config si possible, sinon on filtre après
-    runs = api.runs(f"{PROJECT_NAME}")
+    # On ne garde que les runs "finished" pour gagner du temps
+    filters = {"state": "finished"}
+    runs = api.runs(f"reda300050-univer/{PROJECT_NAME}", filters=filters)
     
     data = []
-    for run in runs:
-        # On ne prend que les runs "Label-Only" (pas de CoT)
-        # Et on vérifie que le run est terminé
-        if run.state != "finished":
-            continue
+    print("📥 Récupération des runs (cela peut prendre un peu de temps) : ", end="", flush=True)
+    for i, run in enumerate(runs):
+        if i % 10 == 0:
+            print(".", end="", flush=True)
             
         cfg = run.config
-        # Vérifier si c'est un run Label-Only (selon les nouveaux scripts)
-        if cfg.get("use_cot") is False:
-            summary = run.summary
+        summary = run.summary
+        
+        # 1. Runs Label-Only (LLM) - par config OU par nom
+        if cfg.get("use_cot") is False or cfg.get("mode") in ["intra", "cross"] or "hf_name" in str(cfg.get("model", "")) or any(m in run.name for m in ["deepseek", "llama", "qwen", "gemma", "mistral"]):
             
-            data.append({
-                "model": cfg.get("model_short"),
-                "n_shots": cfg.get("n_shots"),
-                "train_ds": cfg.get("train_dataset"),
-                "eval_ds": cfg.get("eval_dataset"),
-                "mode": cfg.get("mode", "intra"),
-                "seed": cfg.get("seed"),
-                "accuracy": summary.get("test/accuracy"),
-                "f1_macro": summary.get("test/f1_macro"),
-                "parse_rate": summary.get("test/parse_rate", 1.0)
-            })
+            # Essayer de lire depuis la config
+            model_name = cfg.get("model", "Unknown")
+            train_ds = cfg.get("train_dataset")
+            eval_ds = cfg.get("eval_dataset")
+            mode = cfg.get("mode")
+            n_shots = cfg.get("n_shots")
+            seed = cfg.get("seed")
             
+            # Si la config est vide, parser le nom du run (ex: deepseek_r1_8b_train-rte3_eval-fracas-gq_n1_s999)
+            if not train_ds and "_train-" in run.name:
+                try:
+                    parts = run.name.split("_")
+                    model_name = parts[0] + "_" + parts[1] if len(parts) > 1 else parts[0]
+                    
+                    for p in parts:
+                        if p.startswith("train-"): train_ds = p.replace("train-", "")
+                        elif p.startswith("eval-"): eval_ds = p.replace("eval-", "")
+                        elif p.startswith("n") and p[1:].isdigit(): n_shots = int(p[1:])
+                        elif p.startswith("s") and p[1:].isdigit(): seed = int(p[1:])
+                except:
+                    pass
+            
+            if not mode:
+                mode = "intra" if train_ds == eval_ds else "cross"
+
+            
+        # 2. Runs PEFT (IA3 / LoRA)
+        elif cfg.get("peft_method") or summary.get("peft_method"):
+            peft = cfg.get("peft_method") or summary.get("peft_method")
+            model_name = f"{cfg.get('model_key', summary.get('model', 'model'))} ({peft})"
+            train_ds = cfg.get("train_ds") or summary.get("train_ds")
+            eval_ds = cfg.get("test_ds") or summary.get("test_ds") or train_ds
+            mode = cfg.get("mode") or summary.get("mode") or ("intra" if train_ds == eval_ds else "cross")
+            n_shots = cfg.get("n_shots") or summary.get("n_shots")
+            seed = cfg.get("seed_data") or summary.get("seed_data") or 42
+            
+        else:
+            print(f"Skipping {run.name}: Unrecognized run type (no peft_method or LLM signature)")
+            continue
+            
+        # Sécurité pour certains vieux runs
+        acc = summary.get("test/accuracy") or summary.get("eval/accuracy") or summary.get("final_test_accuracy")
+        f1 = summary.get("test/f1_macro") or summary.get("eval/f1_score") or summary.get("test/f1_score") or summary.get("final_test_f1_score")
+        
+        if acc is None or f1 is None:
+            print(f"Skipping {run.name}: Missing metrics (acc={acc}, f1={f1})")
+            continue
+            
+        data.append({
+            "model": model_name,
+            "n_shots": n_shots or 0,
+            "train_ds": train_ds or "unknown",
+            "eval_ds": eval_ds or "unknown",
+            "mode": mode or "intra",
+            "seed": seed or 42,
+            "accuracy": acc,
+            "f1_macro": f1,
+            "parse_rate": summary.get("test/parse_rate", 1.0)
+        })
+
+    print(f"\n✅ {len(data)} runs valides récupérés.")
     df = pd.DataFrame(data)
     if df.empty:
         print("⚠️ Aucun résultat Label-Only trouvé sur WandB.")
