@@ -437,64 +437,77 @@ def load_model_and_tokenizer(model_cfg: dict):
     return model, tokenizer
 
 
-def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 256) -> str:
-    """Génère une réponse. Dispatche vers HF, OpenAI ou Google selon le backend."""
+def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 150) -> str:
+    """Génère une réponse pour un seul exemple (API ou HF)."""
+    return batch_generate_responses(model, tokenizer, [messages], max_new_tokens)[0]
 
-    # ── APIs externes ─────────────────────────────────────
+
+def batch_generate_responses(model, tokenizer, messages_list: list, max_new_tokens: int = 150) -> list:
+    """Génère des réponses pour un batch d'exemples. Dispatche selon le backend."""
+
+    # ── APIs externes : toujours séquentiel ──────────────
     if isinstance(model, tuple):
         backend, client, model_name = model
+        results = []
+        for messages in messages_list:
+            if backend == "openai":
+                import time
+                response = ""
+                for attempt in range(5):
+                    try:
+                        resp = client.chat.completions.create(
+                            model=model_name, messages=messages,
+                            max_tokens=max_new_tokens, temperature=0,
+                        )
+                        response = resp.choices[0].message.content
+                        break
+                    except Exception as e:
+                        err = str(e)
+                        if "429" in err or "rate_limit" in err.lower():
+                            wait = 30 * (2 ** attempt)
+                            print(f"\n  [OpenAI] Rate limit — attente {wait}s...")
+                            time.sleep(wait)
+                        else:
+                            print(f"\n  [OpenAI] Erreur : {e}")
+                            break
+                results.append(response)
+        return results
 
-        if backend == "openai":
-            import time
-            for attempt in range(5):
-                try:
-                    resp = client.chat.completions.create(
-                        model=model_name,
-                        messages=messages,
-                        max_tokens=max_new_tokens,
-                        temperature=0,
-                    )
-                    return resp.choices[0].message.content
-                except Exception as e:
-                    err = str(e)
-                    if "429" in err or "rate_limit" in err.lower():
-                        wait = 30 * (2 ** attempt)
-                        print(f"\n  [OpenAI] Rate limit — attente {wait}s (essai {attempt+1}/5)...")
-                        time.sleep(wait)
-                    else:
-                        print(f"\n  [OpenAI] Erreur : {e}")
-                        return ""
-            return ""
+    # ── HuggingFace : inférence batched ──────────────────
+    # Construire les prompts texte (tokenize=False pour batch-tokenizer ensuite)
+    prompts = []
+    for messages in messages_list:
+        try:
+            prompt = tokenizer.apply_chat_template(
+                messages, add_generation_prompt=True, tokenize=False
+            )
+        except Exception:
+            prompt = "\n".join(m["content"] for m in messages) + "\n"
+        prompts.append(prompt)
 
-    # ── HuggingFace ──────────────────────────────────────
-    try:
-        encoded = tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt"
-        )
-    except Exception:
-        # Fallback si apply_chat_template n'est pas supporté
-        prompt = "\n".join(m["content"] for m in messages) + "\n"
-        encoded = tokenizer(prompt, return_tensors="pt").input_ids
+    # Left-padding obligatoire pour la génération batched sur modèles causaux
+    orig_padding_side = tokenizer.padding_side
+    tokenizer.padding_side = "left"
+    inputs = tokenizer(
+        prompts, return_tensors="pt", padding=True,
+        truncation=True, max_length=2048
+    ).to(model.device)
+    tokenizer.padding_side = orig_padding_side
 
-    # apply_chat_template peut retourner un tenseur ou un BatchEncoding selon la version
-    if hasattr(encoded, "input_ids"):
-        generate_kwargs = {k: v.to(model.device) for k, v in encoded.items()}
-        input_len = generate_kwargs["input_ids"].shape[-1]
-    else:
-        generate_kwargs = {"input_ids": encoded.to(model.device)}
-        input_len = encoded.shape[-1]
+    input_len = inputs["input_ids"].shape[-1]
 
     with torch.no_grad():
-        output = model.generate(
-            **generate_kwargs,
+        outputs = model.generate(
+            **inputs,
             max_new_tokens=max_new_tokens,
-            do_sample=False,          # Greedy pour reproductibilité
-            temperature=1.0,
+            do_sample=False,
             pad_token_id=tokenizer.pad_token_id,
         )
 
-    generated = output[0][input_len:]
-    return tokenizer.decode(generated, skip_special_tokens=True)
+    return [
+        tokenizer.decode(out[input_len:], skip_special_tokens=True)
+        for out in outputs
+    ]
 
 
 # ─────────────────────────────────────────────────────────
@@ -598,28 +611,33 @@ def eval_run():
         fewshot_examples = select_fewshot_examples(_G_TRAIN_DS, n_shots, _G_NUM_LABELS, _G_ARGS.seed)
         print(f"Few-shot : {len(fewshot_examples)} exemples sélectionnés depuis le train set")
 
-    # ── Inférence ──
+    # ── Inférence batched ──
     labels_true, labels_pred, raw_outputs = [], [], []
     total = len(_G_TEST_DS)
+    batch_size = _G_ARGS.batch_size
+    examples = list(_G_TEST_DS)
 
-    print(f"\nInférence sur {total} exemples ({n_shots}-shot)...\n")
-    for i, ex in enumerate(_G_TEST_DS):
-        messages = build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot)
-        response = generate_response(_G_MODEL, _G_TOKENIZER, messages, _G_ARGS.max_new_tokens)
-        predicted = parse_label(response, _G_NUM_LABELS)
+    print(f"\nInférence sur {total} exemples ({n_shots}-shot, batch_size={batch_size})...\n")
+    for batch_start in range(0, total, batch_size):
+        batch = examples[batch_start:batch_start + batch_size]
+        messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot) for ex in batch]
+        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, _G_ARGS.max_new_tokens)
 
-        labels_true.append(ex["label"])
-        labels_pred.append(predicted)
-        raw_outputs.append({"premise": ex["premise"], "hypothesis": ex["hypothesis"],
-                            "true": ex["label"], "pred": predicted, "response": response})
+        for ex, response in zip(batch, responses):
+            predicted = parse_label(response, _G_NUM_LABELS)
+            labels_true.append(ex["label"])
+            labels_pred.append(predicted)
+            raw_outputs.append({"premise": ex["premise"], "hypothesis": ex["hypothesis"],
+                                "true": ex["label"], "pred": predicted, "response": response})
 
-        if (i + 1) % 10 == 0:
+        done = min(batch_start + batch_size, total)
+        if done % 20 == 0 or done == total:
             so_far_valid = [p for p in labels_pred if p != -1]
             parsed = len(so_far_valid)
-            print(f"  [{i+1}/{total}] parse_rate={parsed/(i+1):.0%}", end="")
+            print(f"  [{done}/{total}] parse_rate={parsed/done:.0%}", end="")
             if parsed > 0:
-                y_t = [labels_true[j] for j, p in enumerate(labels_pred[:i+1]) if p != -1]
-                y_p = [p for p in labels_pred[:i+1] if p != -1]
+                y_t = [labels_true[j] for j, p in enumerate(labels_pred) if p != -1]
+                y_p = [p for p in labels_pred if p != -1]
                 f1 = f1_score(y_t, y_p, average="macro", zero_division=0)
                 print(f"  F1={f1:.3f}", end="")
             print()
@@ -651,7 +669,9 @@ def parse_args():
     p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT")
     p.add_argument("--max_eval_samples",type=int, default=300,
                    help="Nb max d'exemples de test évalués (0 = tous)")
-    p.add_argument("--max_new_tokens",  type=int, default=256)
+    p.add_argument("--max_new_tokens",  type=int, default=150)
+    p.add_argument("--batch_size",      type=int, default=4,
+                   help="Nb d'exemples traités en parallèle sur le GPU")
     p.add_argument("--seed",            type=int, default=42)
     p.add_argument("--fewshot_file",    type=str, default=None,
                    help="JSON d'exemples few-shot manuels (fewshot_examples/<dataset>.json)")
