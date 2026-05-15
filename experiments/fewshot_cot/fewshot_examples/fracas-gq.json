@@ -1,20 +1,62 @@
 [
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "Chaque chercheur qui a publié un article a reçu une invitation à la conférence.",
+    "hypothesis": "Certains chercheurs ont reçu une invitation à la conférence.",
+    "chain_of_thought": "La prémisse établit une implication universelle : pour tout chercheur ayant publié un article, la propriété 'avoir reçu une invitation' est vraie. Si au moins un chercheur a publié un article (ce qui est probable dans le contexte), alors au moins un chercheur a reçu une invitation. Le quantificateur existentiel de l'hypothèse est satisfait dès qu'il existe un seul membre de l'ensemble décrit par la prémisse.",
     "label": 0
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "La plupart des participants au séminaire ont posé des questions.",
+    "hypothesis": "Tous les participants au séminaire ont posé des questions.",
+    "chain_of_thought": "La prémisse indique qu'une majorité (mais pas nécessairement la totalité) des participants ont posé des questions. 'La plupart' laisse ouverte la possibilité que certains participants n'aient pas posé de questions. L'hypothèse généralise à l'ensemble total, ce qui excède l'information contenue dans la prémisse. On ne peut ni confirmer ni infirmer cette généralisation.",
     "label": 1
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "Aucun des livres sélectionnés par le comité ne traite de linguistique formelle.",
+    "hypothesis": "Certains des livres sélectionnés par le comité traitent de linguistique formelle.",
+    "chain_of_thought": "La prémisse utilise la négation universelle 'aucun', éliminant totalement la propriété 'traiter de linguistique formelle' pour l'ensemble des livres sélectionnés. L'hypothèse affirme l'existence d'au moins un livre possédant cette propriété dans cet ensemble. Ces deux affirmations sont directement contradictoires : ∀x¬P(x) est incompatible avec ∃xP(x) sur le même domaine.",
     "label": 2
+  },
+  {
+    "premise": "Tous les étudiants inscrits au cours ont passé l'examen de mi-semestre.",
+    "hypothesis": "Au moins un étudiant inscrit au cours a passé l'examen de mi-semestre.",
+    "chain_of_thought": "La prémisse quantifie universellement sur les étudiants inscrits : tous ont passé l'examen. Si l'ensemble des étudiants inscrits est non vide (hypothèse raisonnable dans un contexte de cours), alors il existe au moins un étudiant qui a passé l'examen. L'assertion existentielle de l'hypothèse est logiquement impliquée par l'assertion universelle de la prémisse.",
+    "label": 0
+  },
+  {
+    "premise": "Quelques membres du jury ont voté contre la proposition.",
+    "hypothesis": "La majorité des membres du jury ont voté contre la proposition.",
+    "chain_of_thought": "'Quelques' désigne typiquement un nombre restreint, potentiellement minoritaire. 'La majorité' exige plus de la moitié des membres. La prémisse est compatible avec de nombreuses situations : que ce soit 2 membres sur 10 ou 6 sur 10 qui ont voté contre. Il est impossible de déterminer si la majorité est atteinte à partir de 'quelques' seul. L'hypothèse est donc indéterminée par rapport à la prémisse.",
+    "label": 1
+  },
+  {
+    "premise": "Tous les rapports soumis avant la date limite ont été examinés par le comité.",
+    "hypothesis": "Aucun rapport soumis avant la date limite n'a été examiné par le comité.",
+    "chain_of_thought": "La prémisse affirme une propriété positive universelle : tous les rapports soumis à temps ont été examinés. L'hypothèse affirme la négation universelle de cette même propriété. Ces deux assertions sont logiquement incompatibles sur le même domaine non vide : ∀xP(x) et ∀x¬P(x) ne peuvent pas être vraies simultanément.",
+    "label": 2
+  },
+  {
+    "premise": "Plusieurs candidats ont satisfait aux exigences minimales du poste.",
+    "hypothesis": "Au moins un candidat a satisfait aux exigences minimales du poste.",
+    "chain_of_thought": "'Plusieurs' implique strictement plus d'un. Si plusieurs candidats satisfont aux exigences, a fortiori au moins un le fait. L'hypothèse exprime une condition nécessaire qui est logiquement plus faible que ce qu'affirme la prémisse.",
+    "label": 0
+  },
+  {
+    "premise": "Certains délégués ont soutenu l'amendement lors du vote.",
+    "hypothesis": "Aucun délégué n'a soutenu l'amendement lors du vote.",
+    "chain_of_thought": "La prémisse affirme l'existence d'au moins un délégué ayant soutenu l'amendement (∃x). L'hypothèse affirme l'absence de tout délégué ayant cette propriété (∀x¬P(x)). Ces deux assertions sont mutuellement exclusives : si certains ont soutenu l'amendement, il est impossible qu'aucun ne l'ait fait.",
+    "label": 2
+  },
+  {
+    "premise": "La majorité des entreprises du secteur ont adopté de nouvelles pratiques environnementales.",
+    "hypothesis": "Toutes les entreprises du secteur ont adopté de nouvelles pratiques environnementales.",
+    "chain_of_thought": "'La majorité' signifie plus de 50% mais pas nécessairement 100%. La prémisse est compatible avec l'existence d'une minorité d'entreprises n'ayant pas adopté ces pratiques. L'hypothèse généralise à l'ensemble sans que la prémisse le permette. L'hypothèse est donc indéterminée.",
+    "label": 1
+  },
+  {
+    "premise": "Chaque nation représentée au sommet a signé le protocole d'accord.",
+    "hypothesis": "Certaines nations représentées au sommet ont signé le protocole d'accord.",
+    "chain_of_thought": "La prémisse établit une implication universelle couvrant toutes les nations représentées : chacune a signé. Cela implique nécessairement que certaines (au moins une) ont signé. L'assertion existentielle de l'hypothèse est une conséquence directe de l'assertion universelle de la prémisse.",
+    "label": 0
   }
 ]

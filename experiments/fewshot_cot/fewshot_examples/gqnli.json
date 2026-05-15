@@ -1,20 +1,62 @@
 [
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "Tous les professeurs de mathématiques ont un diplôme universitaire.",
+    "hypothesis": "Certains professeurs de mathématiques ont un diplôme universitaire.",
+    "chain_of_thought": "La prémisse utilise le quantificateur universel 'tous', qui s'applique à l'ensemble des professeurs de mathématiques. Si la propriété 'avoir un diplôme universitaire' est vraie pour tous les membres d'un ensemble, elle est nécessairement vraie pour au moins certains d'entre eux. Le quantificateur 'certains' (∃) est logiquement impliqué par 'tous' (∀). L'hypothèse est donc une conséquence directe de la prémisse.",
     "label": 0
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "Certains médecins travaillent le week-end.",
+    "hypothesis": "La plupart des médecins travaillent le week-end.",
+    "chain_of_thought": "La prémisse indique que certains médecins (au moins un) travaillent le week-end, sans préciser combien. 'Certains' est un quantificateur existentiel faible qui ne permet pas de conclure sur la proportion. 'La plupart' implique une majorité, ce qui dépasse ce que la prémisse affirme. Il est possible que seulement quelques médecins travaillent le week-end. L'hypothèse n'est donc ni confirmée ni réfutée par la prémisse.",
     "label": 1
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "premise": "Aucun étudiant de cette université n'a échoué à l'examen de fin d'année.",
+    "hypothesis": "Certains étudiants de cette université ont échoué à l'examen de fin d'année.",
+    "chain_of_thought": "La prémisse utilise le quantificateur universel négatif 'aucun', signifiant que zéro étudiant a échoué. L'hypothèse affirme au contraire que certains (au moins un) ont échoué. Ces deux quantifications s'excluent mutuellement : si aucun n'a échoué, il est impossible que certains aient échoué. L'hypothèse contredit directement la prémisse.",
     "label": 2
+  },
+  {
+    "premise": "La plupart des enfants aiment le chocolat.",
+    "hypothesis": "Certains enfants aiment le chocolat.",
+    "chain_of_thought": "La prémisse affirme que la plupart des enfants (une majorité) aiment le chocolat. Si une majorité aime le chocolat, cela implique logiquement qu'au moins certains (existentiel) l'aiment également. 'La plupart' est plus fort que 'certains', donc l'hypothèse est entailée.",
+    "label": 0
+  },
+  {
+    "premise": "Certains ingénieurs parlent trois langues.",
+    "hypothesis": "Tous les ingénieurs parlent trois langues.",
+    "chain_of_thought": "La prémisse dit que certains ingénieurs (au moins un sous-groupe) parlent trois langues. Cela ne permet pas d'inférer que tous les ingénieurs ont cette capacité — il pourrait exister des ingénieurs qui ne parlent qu'une ou deux langues. L'hypothèse étend la propriété à l'ensemble sans justification. On ne peut ni la confirmer ni l'infirmer.",
+    "label": 1
+  },
+  {
+    "premise": "Tous les chats de ce refuge ont été adoptés.",
+    "hypothesis": "Aucun chat de ce refuge n'a été adopté.",
+    "chain_of_thought": "La prémisse affirme que tous les chats ont été adoptés (quantificateur universel positif). L'hypothèse affirme qu'aucun n'a été adopté (quantificateur universel négatif). Ces deux assertions portent sur le même ensemble et affirment des propriétés opposées. Elles sont logiquement incompatibles : si tous ont été adoptés, il est impossible qu'aucun ne l'ait été.",
+    "label": 2
+  },
+  {
+    "premise": "Aucun oiseau de la forêt ne chante la nuit.",
+    "hypothesis": "Certains oiseaux de la forêt chantent la nuit.",
+    "chain_of_thought": "'Aucun' exclut totalement la propriété de chanter la nuit pour les oiseaux de la forêt. 'Certains' affirme l'existence d'au moins un oiseau possédant cette propriété. Ces deux quantifications sont en contradiction directe.",
+    "label": 2
+  },
+  {
+    "premise": "Plusieurs étudiants ont participé au concours de programmation.",
+    "hypothesis": "Au moins un étudiant a participé au concours de programmation.",
+    "chain_of_thought": "'Plusieurs' implique un nombre supérieur à un (donc au moins deux). Si plusieurs étudiants ont participé, il est certain qu'au moins un a participé. L'hypothèse est une version affaiblie de la prémisse et est donc logiquement entailée.",
+    "label": 0
+  },
+  {
+    "premise": "Beaucoup de touristes visitent Paris en été.",
+    "hypothesis": "Peu de touristes visitent Paris en été.",
+    "chain_of_thought": "'Beaucoup' et 'peu' sont des quantificateurs proportionnels opposés. Si beaucoup de touristes visitent Paris en été, affirmer que peu le font est contradictoire. Ces deux énoncés ne peuvent pas être vrais simultanément.",
+    "label": 2
+  },
+  {
+    "premise": "Quelques scientifiques ont remis en question cette théorie.",
+    "hypothesis": "La majorité des scientifiques ont remis en question cette théorie.",
+    "chain_of_thought": "'Quelques' désigne un petit nombre, généralement perçu comme une minorité. 'La majorité' implique plus de 50% des membres du groupe. La prémisse n'indique pas combien de scientifiques au total existent, mais 'quelques' suggère un nombre restreint qui ne correspond pas nécessairement à une majorité. L'hypothèse va au-delà de ce que la prémisse affirme sans le contredire formellement.",
+    "label": 1
   }
 ]
