@@ -338,8 +338,8 @@ Les labels possibles sont :
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format :
-Raisonnement : <analyse étape par étape>
+Réponds toujours en suivant ce format (raisonnement en une phrase maximum) :
+Raisonnement : <une phrase d'analyse>
 Label : <entailment | neutral | contradiction>"""
 
 SYSTEM_PROMPT_BINARY = """Tu es un expert en détection de contradictions en français.
@@ -348,8 +348,8 @@ Les labels possibles sont :
 - non-contradiction : l'hypothèse ne contredit pas la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format :
-Raisonnement : <analyse étape par étape>
+Réponds toujours en suivant ce format (raisonnement en une phrase maximum) :
+Raisonnement : <une phrase d'analyse>
 Label : <non-contradiction | contradiction>"""
 
 SYSTEM_PROMPT_LABEL_ONLY = """Tu es un expert en inférence de langue naturelle (NLI) en français.
