@@ -312,9 +312,9 @@ def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15
 
     with torch.no_grad():
         output = model.generate(
-            input_ids, max_new_tokens=max_new_tokens, do_sample=False, temperature=1.0, pad_token_id=tokenizer.pad_token_id,
+            **inputs, max_new_tokens=max_new_tokens, do_sample=False, pad_token_id=tokenizer.pad_token_id,
         )
-    generated = output[0][input_ids.shape[-1]:]
+    generated = output[0][inputs["input_ids"].shape[-1]:]
     return tokenizer.decode(generated, skip_special_tokens=True)
 
 def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test"):
