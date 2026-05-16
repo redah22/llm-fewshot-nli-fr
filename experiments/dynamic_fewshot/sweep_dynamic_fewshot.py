@@ -445,7 +445,15 @@ def eval_run():
 
             labels_true.append(ex_label_harmonized)
             labels_pred.append(predicted)
-            raw_outputs.append({"true": ex_label_harmonized, "pred": predicted, "response": response})
+            dyn_text = "\n\n".join([f"Ex {idx+1}:\nP: {d['premise']}\nH: {d['hypothesis']}\nL: {d['label']}" for idx, d in enumerate(dynamic_examples)])
+            raw_outputs.append({
+                "test_premise": ex["premise"],
+                "test_hypothesis": ex["hypothesis"],
+                "dynamic_examples_used": dyn_text,
+                "true": ex_label_harmonized, 
+                "pred": predicted, 
+                "response": response
+            })
 
             if (i + 1) % 50 == 0:
                 print(f"  [{i+1}/{len(test_ds)}]...")
@@ -475,8 +483,9 @@ def eval_run():
             })
 
         try:
-            table = wandb.Table(columns=["true_label", "pred_label", "response"])
-            for r in raw_outputs[:20]: table.add_data(r["true"], r["pred"], r["response"])
+            table = wandb.Table(columns=["test_premise", "test_hypothesis", "dynamic_examples_used", "true_label", "pred_label", "response"])
+            for r in raw_outputs[:20]: 
+                table.add_data(r["test_premise"], r["test_hypothesis"], r["dynamic_examples_used"], r["true"], r["pred"], r["response"])
             wandb.log({"predictions_sample": table})
         except Exception:
             pass
