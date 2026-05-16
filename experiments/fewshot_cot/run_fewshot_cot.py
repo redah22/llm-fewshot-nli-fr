@@ -146,9 +146,12 @@ def parse_label(text: str, num_labels: int) -> int:
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     text_low = text.lower()
 
+    # Supprimer le markdown bold/italic qui peut entourer les mots-clés (ex: **Label:**)
+    text_low = re.sub(r"\*+", "", text_low).strip()
+
     # Chercher la ligne "Label :" ou "Étiquette :" ou "Réponse :"
     for line in text_low.split("\n"):
-        for kw in ["label :", "label:", "étiquette :", "réponse :", "answer:"]:
+        for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:", "answer:", "relation :", "relation:"]:
             if kw in line:
                 remainder = line.split(kw, 1)[-1].strip()
                 for alias, val in LABEL_ALIASES.items():
