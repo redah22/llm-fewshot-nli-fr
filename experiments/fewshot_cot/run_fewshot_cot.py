@@ -109,6 +109,13 @@ MODEL_CONFIGS = {
         "use_4bit": True,
         "backend":  "hf",
     },
+    "qwen3": {
+        "hf_name":        "Qwen/Qwen3-8B",
+        "short":          "qwen3_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 350,  # Modèle de raisonnement — génère un bloc <think> avant de répondre
+    },
 }
 
 # ─────────────────────────────────────────────────────────
@@ -682,7 +689,8 @@ def eval_run():
 
 def parse_args():
     p = argparse.ArgumentParser()
-    p.add_argument("--model",           required=True, choices=list(MODEL_CONFIGS.keys()))
+    p.add_argument("--model",           required=True, choices=list(MODEL_CONFIGS.keys()),
+                   help=f"Modèle à utiliser : {', '.join(MODEL_CONFIGS.keys())}")
     p.add_argument("--dataset",         required=True, choices=list(DATASETS.keys()))
     p.add_argument("--n_shots",         type=int, default=5,
                    help="Nombre de shots (ignoré si --sweep)")
