@@ -123,13 +123,6 @@ MODEL_CONFIGS = {
         "backend":        "hf",
         "max_new_tokens": 350,  # Modèle de raisonnement — génère un bloc <think> avant de répondre
     },
-    "ministral-r": {
-        "hf_name":        "mistralai/Ministral-3-8B-Reasoning-2512",
-        "short":          "ministral_8b_r",
-        "use_4bit":       True,
-        "backend":        "hf",
-        "max_new_tokens": 350,  # Modèle de raisonnement Mistral
-    },
 }
 
 # ─────────────────────────────────────────────────────────
@@ -466,22 +459,18 @@ def load_model_and_tokenizer(model_cfg: dict):
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=True,
         )
-        load_kwargs = dict(quantization_config=bnb_config, device_map="auto",
-                          dtype=torch.float16, trust_remote_code=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            device_map="auto",
+            dtype=torch.float16,
+            trust_remote_code=True,
+        )
     else:
-        load_kwargs = dict(device_map="auto", dtype=torch.float16,
-                          trust_remote_code=True)
-
-    try:
-        model = AutoModelForCausalLM.from_pretrained(model_name, **load_kwargs)
-    except ValueError as e:
-        if "Mistral3Config" in str(e) or "Unrecognized configuration class" in str(e):
-            # Workaround : charger directement la classe depuis transformers.models.mistral3
-            print(f"[workaround] AutoModelForCausalLM a échoué ({e.__class__.__name__}), tentative via Mistral3ForCausalLM...")
-            from transformers.models.mistral3.modeling_mistral3 import Mistral3ForCausalLM
-            model = Mistral3ForCausalLM.from_pretrained(model_name, **load_kwargs)
-        else:
-            raise
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, device_map="auto", dtype=torch.float16,
+            trust_remote_code=True,
+        )
 
     model.eval()
     return model, tokenizer
