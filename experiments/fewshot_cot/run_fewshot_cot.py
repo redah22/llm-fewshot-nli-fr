@@ -399,8 +399,9 @@ def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot:
             text += f"\nLabel : {label_str}\nRaisonnement : {reasoning}"
         else:
             text += f"\nLabel : {label_str}"
-    else:
-        text += "\nLabel :" if use_cot else "\nLabel :"
+    # Pour l'exemple test (without_answer), on n'ajoute pas "Label :" pour laisser
+    # le modèle générer le format complet (certains modèles comme Gemma ignorent
+    # "Label :" en fin de message user et sautent directement à "Raisonnement :")
     return text
 
 
