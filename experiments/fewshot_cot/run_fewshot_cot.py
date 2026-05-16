@@ -116,6 +116,13 @@ MODEL_CONFIGS = {
         "backend":        "hf",
         "max_new_tokens": 350,  # Modèle de raisonnement — génère un bloc <think> avant de répondre
     },
+    "ministral-r": {
+        "hf_name":        "mistralai/Ministral-3-8B-Reasoning-2512",
+        "short":          "ministral_8b_r",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 350,  # Modèle de raisonnement Mistral
+    },
 }
 
 # ─────────────────────────────────────────────────────────
