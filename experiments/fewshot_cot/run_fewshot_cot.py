@@ -171,6 +171,7 @@ def parse_label(text: str, num_labels: int) -> int:
                 return 0
             return val
 
+    print(f"  [PARSE FAIL] {repr(text[:300])}")
     return -1  # Pas trouvé
 
 
