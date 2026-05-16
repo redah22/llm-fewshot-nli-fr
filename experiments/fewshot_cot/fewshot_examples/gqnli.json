@@ -7,13 +7,6 @@
     "label": 0
   },
   {
-    "group": "G1",
-    "premise": "Il y a six chiens. Trois chiens bruns, un chien noir et un chien blanc courent le long de l'herbe verte.",
-    "hypothesis": "Plus d'un chien est assis.",
-    "chain_of_thought": "Il y a 6 chjiens, 5 chiens courent mais aucun n'est assis",
-    "label": 2
-  },
-  {
     "group": "G2",
     "premise": "Il y a 100 villageois et 100 citadins. La plupart des villageois et la plupart des citadins se détestent.",
     "hypothesis": "Certains villageois et tous les citadins se détestent.",
@@ -61,6 +54,13 @@
     "hypothesis": "Il y avait plus d'hommes que de femmes en Ukraine.",
     "chain_of_thought": "86,33 est inférieur a 100, il y avait donc plus de femmes que d'hommes",
     "label": 2
+  },
+  {
+    "group": "G9",
+    "premise": "En 2021, 490 millions de personnes en Australie vivent dans l'extrême pauvreté, soit 36% de la population totale.",
+    "hypothesis": "Certaines personnes en Australie ne vivent pas dans la pauvreté extrême.",
+    "chain_of_thought": "36% de la population australienne vit dans l'extrême pauvreté, donc 64% n'y vivent pas, ce qui confirme que certaines personnes en Australie n'y vivent pas.",
+    "label": 0
   },
   {
     "group": "G10",

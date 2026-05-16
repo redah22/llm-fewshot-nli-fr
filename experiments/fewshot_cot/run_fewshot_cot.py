@@ -257,7 +257,7 @@ def get_train_test(dataset_name: str):
     elif dataset_name == "gqnli":
         ds = load_gqnli()
         train_idx = list(range(80,100)) + list(range(180,200)) + list(range(280,300))
-        test_idx  = list(range(0, 60)) + list(range(100,160)) + list(range(200,260))
+        test_idx  = list(range(300))
         return ds.select(train_idx), ds.select(test_idx), 3
 
     elif dataset_name == "sick":
