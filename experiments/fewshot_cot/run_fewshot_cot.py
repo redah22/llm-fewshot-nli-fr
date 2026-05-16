@@ -62,7 +62,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 300,  # R1 génère un bloc <think> avant de répondre
+        "max_new_tokens": 350,  # R1 génère un bloc <think> avant de répondre
     },
     "mistral": {
         "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
@@ -642,7 +642,7 @@ def eval_run():
     for batch_start in range(0, total, batch_size):
         batch = examples[batch_start:batch_start + batch_size]
         messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot) for ex in batch]
-        model_max_tokens = _G_MODEL_CFG.get("max_new_tokens", _G_ARGS.max_new_tokens)
+        model_max_tokens = _G_ARGS.max_new_tokens if _G_ARGS.max_new_tokens != 60 else _G_MODEL_CFG.get("max_new_tokens", _G_ARGS.max_new_tokens)
         responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, model_max_tokens)
 
         for ex, response in zip(batch, responses):
