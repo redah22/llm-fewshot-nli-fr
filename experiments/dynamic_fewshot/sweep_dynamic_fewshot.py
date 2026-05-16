@@ -356,7 +356,6 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 
 SHOTS_SWEEP_VALUES = [5] # Concentrons-nous sur 5 exemples comme demandé
 SEEDS_VALUES = [42]
-DATASETS_LIST = list(DATASETS.keys())
 
 SWEEP_CONFIG = {
     "method": "grid",
