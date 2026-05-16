@@ -58,10 +58,11 @@ MODEL_CONFIGS = {
         "backend":  "hf",
     },
     "deepseek-r1": {
-        "hf_name":  "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
-        "short":    "deepseek_r1_8b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
+        "short":          "deepseek_r1_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 300,  # R1 génère un bloc <think> avant de répondre
     },
     "mistral": {
         "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
@@ -126,6 +127,9 @@ LABEL_ALIASES = {
 
 def parse_label(text: str, num_labels: int) -> int:
     """Extrait le label prédit depuis le texte généré."""
+    # DeepSeek-R1 : ignorer le bloc <think>...</think>, garder ce qui suit
+    if "<think>" in text:
+        text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     text_low = text.lower()
 
     # Chercher la ligne "Label :" ou "Étiquette :" ou "Réponse :"
@@ -638,7 +642,8 @@ def eval_run():
     for batch_start in range(0, total, batch_size):
         batch = examples[batch_start:batch_start + batch_size]
         messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot) for ex in batch]
-        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, _G_ARGS.max_new_tokens)
+        model_max_tokens = _G_MODEL_CFG.get("max_new_tokens", _G_ARGS.max_new_tokens)
+        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, model_max_tokens)
 
         for ex, response in zip(batch, responses):
             predicted = parse_label(response, _G_NUM_LABELS)

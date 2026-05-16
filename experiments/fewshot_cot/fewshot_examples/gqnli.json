@@ -3,7 +3,7 @@
     "group": "G1",
     "premise": "Il y a six chiens. Trois chiens bruns, un chien noir et un chien blanc courent le long de l'herbe verte.",
     "hypothesis": "Plus de deux chiens courent.",
-    "chain_of_thought": "Trois chiens bruns, un chien noir et un chien blanc courent, il y a donc plus de deux chiens qui courent.",
+    "chain_of_thought": "Trois chiens bruns, un chien noir et un chien blanc courent, soit 5 chiens qui courent donc il y a donc plus de deux chiens qui courent.",
     "label": 0
   },
   {
