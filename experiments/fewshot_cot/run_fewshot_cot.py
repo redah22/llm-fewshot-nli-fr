@@ -91,10 +91,11 @@ MODEL_CONFIGS = {
     },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
-        "hf_name":  "google/gemma-2-9b-it",
-        "short":    "gemma2_9b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "google/gemma-2-9b-it",
+        "short":          "gemma2_9b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 100,  # Gemma génère du markdown bold et du raisonnement avant le label
     },
     # ── Français / Multilingue ────────────────────────────
     "lucie": {
