@@ -12,7 +12,7 @@ Modèles supportés :
   gpt-4o-mini → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
   gpt-4o      → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
   gemma       → google/gemma-4-E4B-it                    (HuggingFace, 4-bit)
-  lucie       → OpenLLM-France/Lucie-7B-Instruct         (HuggingFace, 4-bit — français natif)
+  lucie       → OpenLLM-France/Lucie-7B-Instruct-v1.1    (HuggingFace, 4-bit — français natif)
   aya         → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
 
 Variables d'environnement :
@@ -97,7 +97,7 @@ MODEL_CONFIGS = {
     },
     # ── Français / Multilingue ────────────────────────────
     "lucie": {
-        "hf_name":  "OpenLLM-France/Lucie-7B-Instruct",
+        "hf_name":  "OpenLLM-France/Lucie-7B-Instruct-v1.1",
         "short":    "lucie_7b",
         "use_4bit": True,
         "backend":  "hf",
@@ -511,6 +511,7 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
     tokenizer.padding_side = orig_padding_side
 
     input_len = inputs["input_ids"].shape[-1]
+    print(f"  [tokens] prompt={input_len} tokens (max_length=2048, max_new={max_new_tokens})")
 
     with torch.no_grad():
         outputs = model.generate(
