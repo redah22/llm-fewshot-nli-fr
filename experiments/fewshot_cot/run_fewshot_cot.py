@@ -284,11 +284,11 @@ def get_train_test(dataset_name: str):
 
 def load_fewshot_from_json(path: str, n_shots: int) -> list:
     """Charge les exemples few-shot depuis un fichier JSON manuel."""
+    if n_shots == 0:
+        return []
     with open(path, encoding="utf-8") as f:
         examples = json.load(f)
-    if n_shots > 0:
-        examples = examples[:n_shots]
-    return examples
+    return examples[:n_shots]
 
 
 def select_fewshot_examples(train_ds, n_shots: int, num_labels: int, seed: int = 42) -> list:
@@ -506,7 +506,7 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
     tokenizer.padding_side = "left"
     inputs = tokenizer(
         prompts, return_tensors="pt", padding=True,
-        truncation=True, max_length=2048
+        truncation=True, max_length=4096
     ).to(model.device)
     tokenizer.padding_side = orig_padding_side
 
