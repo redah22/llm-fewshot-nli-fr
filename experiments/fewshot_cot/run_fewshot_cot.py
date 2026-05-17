@@ -1,22 +1,26 @@
 """
-Few-Shot + Chain-of-Thought NLI — Modèles génératifs (HuggingFace, OpenAI, Google)
+Few-Shot + Chain-of-Thought NLI — Modèles génératifs (HuggingFace, OpenAI, Groq)
 
 Pas de fine-tuning : inférence pure avec N exemples dans le prompt.
 
 Modèles supportés :
-  llama3      → meta-llama/Llama-3.1-8B-Instruct         (HuggingFace, 4-bit)
-  qwen2.5     → Qwen/Qwen2.5-7B-Instruct                 (HuggingFace, 4-bit)
-  deepseek-r1 → deepseek-ai/DeepSeek-R1-Distill-Llama-8B (HuggingFace, 4-bit)
-  mistral     → mistralai/Mistral-7B-Instruct-v0.3        (HuggingFace, 4-bit)
-  magistral   → mistralai/Magistral-Small-24B-Instruct-2506 (HuggingFace, 4-bit)
-  gpt-4o-mini → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
-  gpt-4o      → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
-  gemma       → google/gemma-4-E4B-it                    (HuggingFace, 4-bit)
-  lucie       → OpenLLM-France/Lucie-7B-Instruct-v1.1    (HuggingFace, 4-bit — français natif)
-  aya         → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
+  llama3           → meta-llama/Llama-3.1-8B-Instruct         (HuggingFace, 4-bit)
+  qwen2.5          → Qwen/Qwen2.5-7B-Instruct                 (HuggingFace, 4-bit)
+  deepseek-r1      → deepseek-ai/DeepSeek-R1-Distill-Llama-8B (HuggingFace, 4-bit)
+  mistral          → mistralai/Mistral-7B-Instruct-v0.3        (HuggingFace, 4-bit)
+  magistral        → mistralai/Magistral-Small-24B-Instruct-2506 (HuggingFace, 4-bit)
+  gpt-4o-mini      → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
+  gpt-4o           → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
+  gemma            → google/gemma-2-9b-it                     (HuggingFace, 4-bit)
+  lucie            → OpenLLM-France/Lucie-7B-Instruct-v1.1    (HuggingFace, 4-bit — français natif)
+  aya              → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
+  llama3-70b       → llama-3.3-70b-versatile                  (Groq API — GROQ_API_KEY)
+  deepseek-r1-70b  → deepseek-r1-distill-llama-70b            (Groq API — GROQ_API_KEY)
+  gemma-groq       → gemma2-9b-it                             (Groq API — GROQ_API_KEY)
 
 Variables d'environnement :
   OPENAI_API_KEY   pour les modèles GPT
+  GROQ_API_KEY     pour les modèles Groq
 
 Datasets : fracas-gq | gqnli | sick | rte3 | daccord
 
@@ -62,7 +66,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 350,  # R1 génère un bloc <think> avant de répondre
+        "max_new_tokens": 200,  # R1 génère un bloc <think> avant de répondre (1 phrase CoT → 200 suffisant)
     },
     "mistral": {
         "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
@@ -95,6 +99,107 @@ MODEL_CONFIGS = {
         "use_4bit": False,
         "backend":  "openai",
     },
+    # ── Together AI (inférence rapide, $0.10-0.20/M tok) ─
+    "llama3-together": {
+        "hf_name":  "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        "short":    "llama3_8b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "qwen2.5-together": {
+        "hf_name":  "Qwen/Qwen2.5-7B-Instruct-Turbo",
+        "short":    "qwen25_7b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "mistral-together": {
+        "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
+        "short":    "mistral_7b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "deepseek-r1-together": {
+        "hf_name":        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "short":          "deepseek_r1_7b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,
+    },
+    "gemma-together": {
+        "hf_name":  "google/gemma-2-9b-it",
+        "short":    "gemma2_9b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "qwen3-together": {
+        "hf_name":        "Qwen/Qwen3-8B",
+        "short":          "qwen3_8b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,
+    },
+    "qwen3.5-together": {
+        "hf_name":        "Qwen/Qwen3.5-9B",
+        "short":          "qwen35_9b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    # ── Cerebras API (LPU ultra-rapide, gratuit) ─────────
+    "llama3-cerebras": {
+        "hf_name":  "llama3.1-8b",
+        "short":    "llama31_8b_cerebras",
+        "use_4bit": False,
+        "backend":  "cerebras",
+    },
+    "gpt-oss-120b-cerebras": {
+        "hf_name":        "gpt-oss-120b",
+        "short":          "gpt_oss_120b_cerebras",
+        "use_4bit":       False,
+        "backend":        "cerebras",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    "qwen3-235b": {
+        "hf_name":        "qwen-3-235b-a22b-instruct-2507",
+        "short":          "qwen3_235b_cerebras",
+        "use_4bit":       False,
+        "backend":        "cerebras",
+        "max_new_tokens": 350,  # Modèle de raisonnement (235B MoE)
+    },
+    # ── Groq API (inference rapide, gratuit) ─────────────
+    "llama3-70b": {
+        "hf_name":  "llama-3.3-70b-versatile",
+        "short":    "llama3_70b",
+        "use_4bit": False,
+        "backend":  "groq",
+    },
+    "deepseek-r1-70b": {
+        "hf_name":        "deepseek-r1-distill-llama-70b",
+        "short":          "deepseek_r1_70b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    "gemma-groq": {
+        "hf_name":  "gemma2-9b-it",
+        "short":    "gemma2_9b_groq",
+        "use_4bit": False,
+        "backend":  "groq",
+    },
+    "qwen3-32b": {
+        "hf_name":        "qwen/qwen3-32b",
+        "short":          "qwen3_32b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement (même famille que Qwen3-8B)
+    },
+    "gpt-oss-120b": {
+        "hf_name":        "openai/gpt-oss-120b",
+        "short":          "gpt_oss_120b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement — format <think> à vérifier au premier run
+    },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
         "hf_name":        "google/gemma-2-9b-it",
@@ -121,7 +226,7 @@ MODEL_CONFIGS = {
         "short":          "qwen3_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 350,  # Modèle de raisonnement — génère un bloc <think> avant de répondre
+        "max_new_tokens": 200,  # Modèle de raisonnement — 1 phrase CoT → 200 suffisant
     },
 }
 
@@ -141,6 +246,8 @@ LABEL_ALIASES = {
 
 def parse_label(text: str, num_labels: int) -> int:
     """Extrait le label prédit depuis le texte généré."""
+    if not text:
+        return -1
     # DeepSeek-R1 : ignorer le bloc <think>...</think>, garder ce qui suit
     if "<think>" in text:
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
@@ -171,7 +278,6 @@ def parse_label(text: str, num_labels: int) -> int:
                 return 0
             return val
 
-    print(f"  [PARSE FAIL] {repr(text[:300])}")
     return -1  # Pas trouvé
 
 
@@ -270,11 +376,8 @@ def get_train_test(dataset_name: str):
     """Retourne (train_ds, test_ds, num_labels)."""
     if dataset_name == "fracas-gq":
         ds = load_fracas_gq()
-        # Split 80/20 par index
-        n = len(ds)
-        train_ds = ds.select(range(int(n * 0.8)))
-        test_ds  = ds.select(range(int(n * 0.8), n))
-        return train_ds, test_ds, 3
+        # Tout le dataset en test — few-shot viennent de --fewshot_file (ex: gqnli.json)
+        return ds.select([]), ds, 3
 
     elif dataset_name == "gqnli":
         ds = load_gqnli()
@@ -449,6 +552,30 @@ def load_model_and_tokenizer(model_cfg: dict):
         client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         return ("openai", client, model_name), None
 
+    if backend == "groq":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["GROQ_API_KEY"],
+            base_url="https://api.groq.com/openai/v1",
+        )
+        return ("groq", client, model_name), None
+
+    if backend == "together":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["TOGETHER_API_KEY"],
+            base_url="https://api.together.xyz/v1",
+        )
+        return ("together", client, model_name), None
+
+    if backend == "cerebras":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["CEREBRAS_API_KEY"],
+            base_url="https://api.cerebras.ai/v1",
+        )
+        return ("cerebras", client, model_name), None
+
     # ── HuggingFace ──────────────────────────────────────
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     if tokenizer.pad_token is None:
@@ -491,7 +618,7 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
         backend, client, model_name = model
         results = []
         for messages in messages_list:
-            if backend == "openai":
+            if backend in ("openai", "groq", "together", "cerebras"):
                 import time
                 response = ""
                 for attempt in range(5):
@@ -505,11 +632,11 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
                     except Exception as e:
                         err = str(e)
                         if "429" in err or "rate_limit" in err.lower():
-                            wait = 30 * (2 ** attempt)
-                            print(f"\n  [OpenAI] Rate limit — attente {wait}s...")
+                            wait = 20 * (2 ** attempt)
+                            print(f"\n  [{backend.upper()}] Rate limit — attente {wait}s...")
                             time.sleep(wait)
                         else:
-                            print(f"\n  [OpenAI] Erreur : {e}")
+                            print(f"\n  [{backend.upper()}] Erreur : {e}")
                             break
                 results.append(response)
         return results
