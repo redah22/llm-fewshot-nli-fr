@@ -512,7 +512,12 @@ def eval_run(config_dict=None):
             )
             
             messages  = build_prompt(dynamic_examples, ex, target_num_labels)
-            response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=15)
+            
+            # Ajustement adaptatif des tokens pour permettre aux modèles de raisonnement (comme DeepSeek R1) de penser
+            is_reasoning = "deepseek" in _G_MODEL_CFG["hf_name"].lower()
+            max_tokens = 512 if is_reasoning else 15
+            
+            response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=max_tokens)
             predicted = parse_label(response, target_num_labels)
 
             ex_label_harmonized = harmonize_label(ex["label"], source_num_labels, target_num_labels)
