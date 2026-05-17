@@ -14,9 +14,10 @@ from collections import defaultdict
 
 os.environ.setdefault("WANDB_PROJECT", "fewshot-nli-fr")
 
+import torch
 import wandb
-import openai
 from datasets import Dataset
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_recall_fscore_support
 
 # ─────────────────────────────────────────────────────────
@@ -133,35 +134,67 @@ def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int =
 
 def load_model_and_tokenizer(model_cfg: dict):
     model_name = model_cfg["hf_name"]
-    print(f"Initialisation du client OpenAI pour {model_name}...")
+    print(f"Chargement de {model_name}...")
 
-    token = os.environ.get("OPENAI_API_KEY")
+    token = os.environ.get("HF_TOKEN")
     if not token:
         try:
             from kaggle_secrets import UserSecretsClient
-            token = UserSecretsClient().get_secret("OPENAI_API_KEY")
-            os.environ["OPENAI_API_KEY"] = token
+            token = UserSecretsClient().get_secret("HF_TOKEN")
+            os.environ["HF_TOKEN"] = token
         except Exception:
             pass
-            
-    if not token:
-        raise ValueError("OPENAI_API_KEY introuvable. Veuillez le définir dans les secrets Kaggle ou en variable d'environnement.")
 
-    client = openai.OpenAI(api_key=token)
-    return client, model_name
+    tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
-def generate_response(client, model_name, messages: list, max_new_tokens: int = 15) -> str:
-    try:
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=messages,
-            max_tokens=max_new_tokens,
-            temperature=0.0,
+    if model_cfg.get("use_4bit", True):
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.float16,
+            bnb_4bit_use_double_quant=True,
         )
-        return response.choices[0].message.content.strip()
-    except Exception as e:
-        print(f"Erreur API OpenAI : {e}")
-        return ""
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            device_map="auto",
+            torch_dtype=torch.float16,
+            token=token
+        )
+    else:
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name, device_map="auto", torch_dtype=torch.float16, token=token
+        )
+
+    model.eval()
+    return model, tokenizer
+
+def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15) -> str:
+    try:
+        # On essaie le template de chat
+        inputs = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
+        ).to(model.device)
+        input_ids = inputs["input_ids"]
+    except Exception:
+        # Fallback si le template échoue
+        prompt = "\n".join(m["content"] for m in messages) + "\n"
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+        input_ids = inputs["input_ids"]
+
+    with torch.no_grad():
+        output = model.generate(
+            input_ids,
+            max_new_tokens=max_new_tokens,
+            do_sample=False,
+            temperature=1.0,
+            pad_token_id=tokenizer.pad_token_id,
+        )
+
+    generated = output[0][input_ids.shape[-1]:]
+    return tokenizer.decode(generated, skip_special_tokens=True)
 
 def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test"):
     valid_mask = [i for i, p in enumerate(labels_pred) if p != -1]
@@ -223,8 +256,8 @@ SWEEP_CONFIG = {
     },
 }
 
-_G_CLIENT         = None
-_G_MODEL_NAME     = None
+_G_MODEL         = None
+_G_TOKENIZER     = None
 _G_MODEL_CFG     = None
 _G_ARGS          = None
 _G_DATASETS_CACHE = {}
@@ -276,7 +309,7 @@ def eval_run():
 
         for i, ex in enumerate(test_ds):
             messages  = build_prompt_label_only(fewshot_examples, ex, target_num_labels)
-            response  = generate_response(_G_CLIENT, _G_MODEL_NAME, messages, max_new_tokens=15)
+            response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=15)
             predicted = parse_label(response, target_num_labels)
 
             labels_true.append(ex["label"])
@@ -347,12 +380,12 @@ def parse_args():
     return p.parse_args()
 
 def main():
-    global _G_CLIENT, _G_MODEL_NAME, _G_MODEL_CFG, _G_ARGS
+    global _G_MODEL, _G_TOKENIZER, _G_MODEL_CFG, _G_ARGS
     _G_ARGS      = parse_args()
     _G_MODEL_CFG = MODEL_CONFIGS[_G_ARGS.model]
 
     print(f"Modèle : {_G_MODEL_CFG['hf_name']}")
-    _G_CLIENT, _G_MODEL_NAME = load_model_and_tokenizer(_G_MODEL_CFG)
+    _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(_G_MODEL_CFG)
 
     project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
 
