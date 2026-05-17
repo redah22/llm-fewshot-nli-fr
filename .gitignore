@@ -117,3 +117,9 @@ ProjetNLI/
 .claude/
 .claude-flow/
 .mcp.json
+ruvector.db
+
+# API Keys
+TOGETHER_API_KEY*
+*_API_KEY*
+RAPPORT_RESULTATS.md
