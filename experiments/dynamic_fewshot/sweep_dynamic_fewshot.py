@@ -48,6 +48,12 @@ MODEL_CONFIGS = {
         "short": "gpt4o_mini",
         "use_4bit": False,
         "backend": "openai",
+    },
+    "qwen-fast": {
+        "hf_name": "Qwen/Qwen2.5-1.5B-Instruct",
+        "short": "qwen_1.5b",
+        "use_4bit": False,
+        "backend": "hf",
     }
 }
 
@@ -391,9 +397,14 @@ def get_cached_dataset(ds_name):
         }
     return _G_DATASETS_CACHE[ds_name]
 
-def eval_run():
+def eval_run(config_dict=None):
     try:
-        run = wandb.init()
+        if config_dict is not None:
+            project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
+            run = wandb.init(project=project_name, config=config_dict)
+        else:
+            run = wandb.init()
+            
         config = wandb.config
         n_shots       = config.n_shots
         train_ds_name = config.train_dataset
@@ -455,7 +466,7 @@ def eval_run():
                 "response": response
             })
 
-            if (i + 1) == 1 or (i + 1) % 10 == 0:
+            if (i + 1) % 50 == 0:
                 print(f"  [{i+1}/{len(test_ds)}]...")
 
         metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
@@ -526,18 +537,13 @@ def main():
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
     else:
-        sweep_config_single = {
-            "method": "grid",
-            "metric": {"name": "test/f1_macro", "goal": "maximize"},
-            "parameters": {
-                "n_shots":       {"values": [_G_ARGS.n_shots]},
-                "train_dataset": {"values": [_G_ARGS.train_dataset]},
-                "eval_dataset":  {"values": [_G_ARGS.eval_dataset]},
-                "seed":          {"values": [_G_ARGS.seed]},
-            },
+        config_single = {
+            "n_shots":       _G_ARGS.n_shots,
+            "train_dataset": _G_ARGS.train_dataset,
+            "eval_dataset":  _G_ARGS.eval_dataset,
+            "seed":          _G_ARGS.seed,
         }
-        sweep_id = wandb.sweep(sweep=sweep_config_single, project=project_name)
-        wandb.agent(sweep_id, function=eval_run, count=1)
+        eval_run(config_single)
 
 if __name__ == "__main__":
     main()
