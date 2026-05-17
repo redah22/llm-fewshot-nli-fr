@@ -86,6 +86,30 @@ MODEL_CONFIGS = {
         "use_4bit": True,
         "backend":  "hf",
     },
+    "phi3": {
+        "hf_name":  "microsoft/Phi-3-mini-4k-instruct",
+        "short":    "phi3_3_8b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
+    "mistral-nemo": {
+        "hf_name":  "mistralai/Mistral-Nemo-Instruct-2407",
+        "short":    "mistral_nemo_12b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
+    "mixtral": {
+        "hf_name":  "mistralai/Mixtral-8x7B-Instruct-v0.1",
+        "short":    "mixtral_8x7b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
+    "qwen-14b": {
+        "hf_name":  "Qwen/Qwen2.5-14B-Instruct",
+        "short":    "qwen25_14b",
+        "use_4bit": True,
+        "backend":  "hf",
+    },
     # ── OpenAI API ────────────────────────────────────────
     "gpt-4o-mini": {
         "hf_name":  "gpt-4o-mini",
