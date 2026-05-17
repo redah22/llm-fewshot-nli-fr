@@ -315,8 +315,11 @@ def load_model_and_tokenizer(model_cfg: dict):
     except Exception as e:
         if token is not None:
             print(f"[WARN] Échec du chargement du tokenizer avec HF_TOKEN ({e}). Tentative sans token...")
-            token = None
-            tokenizer = AutoTokenizer.from_pretrained(model_name, token=None)
+            if "HF_TOKEN" in os.environ:
+                del os.environ["HF_TOKEN"]
+            os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+            token = False
+            tokenizer = AutoTokenizer.from_pretrained(model_name, token=False)
         else:
             raise e
 
@@ -336,10 +339,14 @@ def load_model_and_tokenizer(model_cfg: dict):
                 model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=token
             )
         except Exception as e:
-            if token is not None:
+            if token is not False:
                 print(f"[WARN] Échec du chargement du modèle avec HF_TOKEN ({e}). Tentative sans token...")
+                if "HF_TOKEN" in os.environ:
+                    del os.environ["HF_TOKEN"]
+                os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+                token = False
                 model = AutoModelForCausalLM.from_pretrained(
-                    model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=None
+                    model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=False
                 )
             else:
                 raise e
@@ -347,9 +354,13 @@ def load_model_and_tokenizer(model_cfg: dict):
         try:
             model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=token)
         except Exception as e:
-            if token is not None:
+            if token is not False:
                 print(f"[WARN] Échec du chargement du modèle avec HF_TOKEN ({e}). Tentative sans token...")
-                model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=None)
+                if "HF_TOKEN" in os.environ:
+                    del os.environ["HF_TOKEN"]
+                os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+                token = False
+                model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=False)
             else:
                 raise e
 
