@@ -62,8 +62,8 @@ MODEL_CONFIGS = {
         "backend": "hf",
     },
     "deepseek-r1-distill": {
-        "hf_name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-8B",
-        "short": "deepseek_8b",
+        "hf_name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B", 
+        "short": "deepseek_7b",
         "use_4bit": True,
         "backend": "hf",
     }
