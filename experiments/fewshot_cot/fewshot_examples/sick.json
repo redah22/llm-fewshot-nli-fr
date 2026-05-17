@@ -1,20 +1,72 @@
 [
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "group": "S1",
+    "premise": "Trois garçons sautent dans les feuilles.",
+    "hypothesis": "Trois enfants sautent dans les feuilles.",
+    "chain_of_thought": "Les garçons qui sautent dans les feuilles sont des enfants, donc c'est vrai",
     "label": 0
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "group": "S2",
+    "premise": "Un groupe d'enfants joue dans une cour et un vieil homme se tient à l'arrière-plan.",
+    "hypothesis": "Un groupe de garçons dans une cour joue et un homme se tient en arrière-plan.",
+    "chain_of_thought": "On ne sait pas si le groupe d'enfants est un groupe de garçons",
     "label": 1
   },
   {
-    "premise": "À remplir",
-    "hypothesis": "À remplir",
-    "chain_of_thought": "À remplir",
+    "group": "S3",
+    "premise": "Trois enfants sont assis dans les feuilles.",
+    "hypothesis": "Trois enfants sautent dans les feuilles.",
+    "chain_of_thought": "Si les enfants sont assis dans les feuilles ils ne sautent pas",
     "label": 2
+  },
+  {
+    "group": "S4",
+    "premise": "La tortue suit le poisson rouge.",
+    "hypothesis": "La tortue suit le poisson.",
+    "chain_of_thought": "Un poisson rouge est un poisson donc c'est vrai",
+    "label": 0
+  },
+  {
+    "group": "S5",
+    "premise": "Un chien brun attaque un autre animal devant l'homme en pantalon.",
+    "hypothesis": "Deux chiens se battent.",
+    "chain_of_thought": "On ne sait pas si l'autre animal que le chien attaque est aussi un chien",
+    "label": 1
+  },
+  {
+    "group": "S6",
+    "premise": "Deux personnes font du kickboxing et les spectateurs ne regardent pas.",
+    "hypothesis": "Deux personnes font du kickboxing et les spectateurs regardent.",
+    "chain_of_thought": "Les spectateurs ne regardent pas, ils ne peuvent donc pas regarder en meme temps",
+    "label": 2
+  },
+  {
+    "group": "S7",
+    "premise": "Un homme chante et joue de la guitare.",
+    "hypothesis": "Un homme chante une chanson et joue de la guitare.",
+    "chain_of_thought": "Si il chante et joue de la guitr=ate, alors c'est vrai qu'il chante une chanson et joue de la guitare",
+    "label": 0
+  },
+  {
+    "group": "S8",
+    "premise": "Un homme ouvre un paquet qui contient des écouteurs.",
+    "hypothesis": "Un homme qui porte des écouteurs ouvre un paquet.",
+    "chain_of_thought": "Il ouvre un paquet avec des ecouteurs, mais on ne sait pas si il en porte",
+    "label": 1
+  },
+  {
+    "group": "S9",
+    "premise": "Il n'y a pas de chien sur une planche à roulettes.",
+    "hypothesis": "Un chien fait du skateboard.",
+    "chain_of_thought": "C'est faux, un skateboard est une planche a roulettes, si il n'y a pas de chien sur une plache a roulettes, aucun chien ne fait de skateboard",
+    "label": 2
+  },
+  {
+    "group": "S10",
+    "premise": "Une femme fait craquer des œufs dans un bol.",
+    "hypothesis": "Une femme ajoute des ingrédients dans un bol.",
+    "chain_of_thought": "Elle ajoute des oeufs dans un bol, donc elle ajoute des ingrédients qui sont des oeufs",
+    "label": 0
   }
 ]
