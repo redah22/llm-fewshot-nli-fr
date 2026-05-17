@@ -66,6 +66,12 @@ MODEL_CONFIGS = {
         "short": "deepseek_7b",
         "use_4bit": True,
         "backend": "hf",
+    },
+    "magistral": {
+        "hf_name": "mistralai/Magistral-Small-2506",
+        "short": "magistral_24b",
+        "use_4bit": True,
+        "backend": "hf",
     }
 }
 
@@ -143,7 +149,7 @@ def get_train_test(dataset_name: str):
     elif dataset_name == "rte3":
         raw = load_dataset("maximoss/rte3-french")
         def convert(ex): return {"premise": ex["premise"], "hypothesis": ex["hypothesis"], "label": map_lbl(ex["label"])}
-        return raw["dev"].map(convert, remove_columns=raw["dev"].column_names).filter(lambda x: x["label"] != -1), \
+        return raw["validation"].map(convert, remove_columns=raw["validation"].column_names).filter(lambda x: x["label"] != -1), \
                raw["test"].map(convert, remove_columns=raw["test"].column_names).filter(lambda x: x["label"] != -1), 3
                
     elif dataset_name == "gqnli":
@@ -523,8 +529,8 @@ def eval_run(config_dict=None):
             
             messages  = build_prompt(dynamic_examples, ex, target_num_labels)
             
-            # Ajustement adaptatif des tokens pour permettre aux modèles de raisonnement (comme DeepSeek R1) de penser
-            is_reasoning = "deepseek" in _G_MODEL_CFG["hf_name"].lower()
+            # Ajustement adaptatif des tokens pour permettre aux modèles de raisonnement (comme DeepSeek R1 et Magistral) de penser
+            is_reasoning = "deepseek" in _G_MODEL_CFG["hf_name"].lower() or "magistral" in _G_MODEL_CFG["hf_name"].lower()
             max_tokens = 1024 if is_reasoning else 15
             
             response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=max_tokens)
