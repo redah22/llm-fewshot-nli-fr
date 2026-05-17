@@ -54,6 +54,18 @@ MODEL_CONFIGS = {
         "short": "qwen_1.5b",
         "use_4bit": False,
         "backend": "hf",
+    },
+    "qwen": {
+        "hf_name": "Qwen/Qwen2.5-7B-Instruct",
+        "short": "qwen_7b",
+        "use_4bit": True,
+        "backend": "hf",
+    },
+    "deepseek-r1-distill": {
+        "hf_name": "deepseek-ai/DeepSeek-R1-Distill-Qwen-8B",
+        "short": "deepseek_8b",
+        "use_4bit": True,
+        "backend": "hf",
     }
 }
 
@@ -67,6 +79,13 @@ LABEL_ALIASES = {
 def parse_label(text: str, num_labels: int) -> int:
     import re
     text_low = text.lower()
+    
+    # Éliminer les blocs de pensée/raisonnement pour les modèles comme DeepSeek R1
+    if "</think>" in text_low:
+        text_low = text_low.split("</think>")[-1].strip()
+    elif "<think>" in text_low:
+        text_low = text_low.split("<think>")[-1].strip()
+        
     text_low = re.sub(r"\*+", "", text_low).strip()
     for line in text_low.split("\n"):
         for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:"]:
@@ -469,6 +488,22 @@ def eval_run(config_dict=None):
             })
 
         metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
+
+        # Affichage qualitatif en console des exemples et du raisonnement pour l'utilisateur
+        if raw_outputs:
+            print("\n======================================================================")
+            print("🔍 EXEMPLE QUALITATIF : DÉMONSTRATION DYNAMIQUE (RAG) SÉLECTIONNÉE")
+            print("======================================================================")
+            sample_ex = raw_outputs[0]
+            print(f"📝 Phrase de TEST évaluée :")
+            print(f"   -> Prémisse  : {sample_ex['test_premise']}")
+            print(f"   -> Hypothèse : {sample_ex['test_hypothesis']}")
+            print(f"   -> Vrai Label: {sample_ex['true']}")
+            print(f"   -> Prédit    : {sample_ex['pred']}")
+            print(f"   -> Réponse brute du LLM : {sample_ex['response'].strip()}")
+            print("\n📚 5 exemples d'entraînement sélectionnés dynamiquement par similarité sémantique :")
+            print(sample_ex['dynamic_examples_used'])
+            print("======================================================================\n")
 
         csv_path = "/kaggle/working/dynamic_fewshot_results.csv" if os.path.exists("/kaggle") else "dynamic_fewshot_results.csv"
         write_header = not os.path.exists(csv_path)
