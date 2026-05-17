@@ -306,10 +306,24 @@ def load_model_and_tokenizer(model_cfg: dict):
     model_name = model_cfg["hf_name"]
     print(f"Chargement de {model_name}...")
     token = os.environ.get("HF_TOKEN")
-    tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+    if token and not token.strip():
+        token = None
+
+    # Chargement robuste du tokenizer (fallback si le token HF_TOKEN est invalide ou expiré)
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_name, token=token)
+    except Exception as e:
+        if token is not None:
+            print(f"[WARN] Échec du chargement du tokenizer avec HF_TOKEN ({e}). Tentative sans token...")
+            token = None
+            tokenizer = AutoTokenizer.from_pretrained(model_name, token=None)
+        else:
+            raise e
+
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
+    # Chargement robuste du modèle
     if model_cfg.get("use_4bit", True):
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -317,14 +331,31 @@ def load_model_and_tokenizer(model_cfg: dict):
             bnb_4bit_compute_dtype=torch.float16,
             bnb_4bit_use_double_quant=True,
         )
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=token
-        )
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=token
+            )
+        except Exception as e:
+            if token is not None:
+                print(f"[WARN] Échec du chargement du modèle avec HF_TOKEN ({e}). Tentative sans token...")
+                model = AutoModelForCausalLM.from_pretrained(
+                    model_name, quantization_config=bnb_config, device_map="auto", torch_dtype=torch.float16, token=None
+                )
+            else:
+                raise e
     else:
-        model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=token)
+        try:
+            model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=token)
+        except Exception as e:
+            if token is not None:
+                print(f"[WARN] Échec du chargement du modèle avec HF_TOKEN ({e}). Tentative sans token...")
+                model = AutoModelForCausalLM.from_pretrained(model_name, device_map="auto", torch_dtype=torch.float16, token=None)
+            else:
+                raise e
 
     model.eval()
     return model, tokenizer
+
 
 def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15) -> str:
     try:

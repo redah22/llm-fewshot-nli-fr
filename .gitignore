@@ -117,3 +117,6 @@ ProjetNLI/
 .claude/
 .claude-flow/
 .mcp.json
+
+# Ignorer les résultats WandB locaux de Tala
+RESULTATSwandB/
