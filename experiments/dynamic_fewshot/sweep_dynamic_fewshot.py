@@ -455,7 +455,7 @@ def eval_run():
                 "response": response
             })
 
-            if (i + 1) % 50 == 0:
+            if (i + 1) == 1 or (i + 1) % 10 == 0:
                 print(f"  [{i+1}/{len(test_ds)}]...")
 
         metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
