@@ -438,6 +438,7 @@ def eval_run(config_dict=None):
         labels_true, labels_pred, raw_outputs = [], [], []
 
         for i, ex in enumerate(test_ds):
+            print(f"👉 [{i+1}/{len(test_ds)}] Traitement en cours...", flush=True)
             # Sélection DYNAMIQUE pour CE test_example
             dynamic_examples = select_dynamic_examples(
                 ex, 
@@ -466,9 +467,6 @@ def eval_run(config_dict=None):
                 "pred": predicted, 
                 "response": response
             })
-
-            if (i + 1) % 50 == 0:
-                print(f"  [{i+1}/{len(test_ds)}]...")
 
         metrics = compute_and_log_metrics(labels_true, labels_pred, target_num_labels)
 
