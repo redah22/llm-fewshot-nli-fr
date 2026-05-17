@@ -401,7 +401,8 @@ def eval_run(config_dict=None):
     try:
         if config_dict is not None:
             project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
-            run = wandb.init(project=project_name, config=config_dict)
+            entity_name = os.environ.get("WANDB_ENTITY")
+            run = wandb.init(entity=entity_name, project=project_name, config=config_dict)
         else:
             run = wandb.init()
             
@@ -532,9 +533,10 @@ def main():
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(_G_MODEL_CFG)
 
     project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
+    entity_name = os.environ.get("WANDB_ENTITY")
 
     if _G_ARGS.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, entity=entity_name, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
     else:
         config_single = {
