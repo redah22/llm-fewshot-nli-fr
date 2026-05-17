@@ -87,6 +87,16 @@ def parse_label(text: str, num_labels: int) -> int:
         text_low = text_low.split("<think>")[-1].strip()
         
     text_low = re.sub(r"\*+", "", text_low).strip()
+    
+    # Cherche le label dans les dernières lignes (DeepSeek conclut souvent à la fin)
+    lines = [l.strip() for l in text_low.split("\n") if l.strip()]
+    for line in reversed(lines[-5:]):  # on regarde les 5 dernières lignes
+        for alias, val in LABEL_ALIASES.items():
+            if line == alias or line.startswith(alias):
+                if num_labels == 2 and val == 2: return 1
+                if num_labels == 2 and val == 1: return 0
+                return val
+                
     for line in text_low.split("\n"):
         for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:"]:
             if kw in line:
@@ -515,7 +525,7 @@ def eval_run(config_dict=None):
             
             # Ajustement adaptatif des tokens pour permettre aux modèles de raisonnement (comme DeepSeek R1) de penser
             is_reasoning = "deepseek" in _G_MODEL_CFG["hf_name"].lower()
-            max_tokens = 512 if is_reasoning else 15
+            max_tokens = 1024 if is_reasoning else 15
             
             response  = generate_response(_G_MODEL, _G_TOKENIZER, messages, max_new_tokens=max_tokens)
             predicted = parse_label(response, target_num_labels)
