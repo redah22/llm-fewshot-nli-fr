@@ -2,7 +2,7 @@
 # Lance les sweeps Groq séquentiellement (llama3-70b → qwen3-32b → gpt-oss-120b)
 # Usage : bash launch_groq_sweeps.sh
 
-export GROQ_API_KEY="GROQ_API_KEY_REMOVED"
+export GROQ_API_KEY="${GROQ_API_KEY:?Erreur : GROQ_API_KEY non définie}"
 
 SCRIPT="experiments/fewshot_cot/run_fewshot_cot.py"
 FEWSHOT="experiments/fewshot_cot/fewshot_examples/gqnli.json"
