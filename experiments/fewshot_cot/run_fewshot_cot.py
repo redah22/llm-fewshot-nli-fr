@@ -1,22 +1,26 @@
 """
-Few-Shot + Chain-of-Thought NLI — Modèles génératifs (HuggingFace, OpenAI, Google)
+Few-Shot + Chain-of-Thought NLI — Modèles génératifs (HuggingFace, OpenAI, Groq)
 
 Pas de fine-tuning : inférence pure avec N exemples dans le prompt.
 
 Modèles supportés :
-  llama3      → meta-llama/Llama-3.1-8B-Instruct         (HuggingFace, 4-bit)
-  qwen2.5     → Qwen/Qwen2.5-7B-Instruct                 (HuggingFace, 4-bit)
-  deepseek-r1 → deepseek-ai/DeepSeek-R1-Distill-Llama-8B (HuggingFace, 4-bit)
-  mistral     → mistralai/Mistral-7B-Instruct-v0.3        (HuggingFace, 4-bit)
-  magistral   → mistralai/Magistral-Small-24B-Instruct-2506 (HuggingFace, 4-bit)
-  gpt-4o-mini → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
-  gpt-4o      → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
-  gemma       → google/gemma-4-E4B-it                    (HuggingFace, 4-bit)
-  lucie       → OpenLLM-France/Lucie-7B-Instruct-v1.1    (HuggingFace, 4-bit — français natif)
-  aya         → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
+  llama3           → meta-llama/Llama-3.1-8B-Instruct         (HuggingFace, 4-bit)
+  qwen2.5          → Qwen/Qwen2.5-7B-Instruct                 (HuggingFace, 4-bit)
+  deepseek-r1      → deepseek-ai/DeepSeek-R1-Distill-Llama-8B (HuggingFace, 4-bit)
+  mistral          → mistralai/Mistral-7B-Instruct-v0.3        (HuggingFace, 4-bit)
+  magistral        → mistralai/Magistral-Small-24B-Instruct-2506 (HuggingFace, 4-bit)
+  gpt-4o-mini      → gpt-4o-mini                              (OpenAI API — OPENAI_API_KEY)
+  gpt-4o           → gpt-4o                                   (OpenAI API — OPENAI_API_KEY)
+  gemma            → google/gemma-2-9b-it                     (HuggingFace, 4-bit)
+  lucie            → OpenLLM-France/Lucie-7B-Instruct-v1.1    (HuggingFace, 4-bit — français natif)
+  aya              → CohereForAI/aya-expanse-8b               (HuggingFace, 4-bit — multilingue)
+  llama3-70b       → llama-3.3-70b-versatile                  (Groq API — GROQ_API_KEY)
+  deepseek-r1-70b  → deepseek-r1-distill-llama-70b            (Groq API — GROQ_API_KEY)
+  gemma-groq       → gemma2-9b-it                             (Groq API — GROQ_API_KEY)
 
 Variables d'environnement :
   OPENAI_API_KEY   pour les modèles GPT
+  GROQ_API_KEY     pour les modèles Groq
 
 Datasets : fracas-gq | gqnli | sick | rte3 | daccord
 
@@ -62,7 +66,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 350,  # R1 génère un bloc <think> avant de répondre
+        "max_new_tokens": 200,  # R1 génère un bloc <think> avant de répondre (1 phrase CoT → 200 suffisant)
     },
     "mistral": {
         "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
@@ -119,6 +123,121 @@ MODEL_CONFIGS = {
         "use_4bit": False,
         "backend":  "openai",
     },
+    # ── Together AI (inférence rapide, $0.10-0.20/M tok) ─
+    "llama3-together": {
+        "hf_name":  "meta-llama/Meta-Llama-3.1-8B-Instruct-Turbo",
+        "short":    "llama3_8b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "qwen2.5-together": {
+        "hf_name":  "Qwen/Qwen2.5-7B-Instruct-Turbo",
+        "short":    "qwen25_7b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "mistral-together": {
+        "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
+        "short":    "mistral_7b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "deepseek-r1-together": {
+        "hf_name":        "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B",
+        "short":          "deepseek_r1_7b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,
+    },
+    "gemma-together": {
+        "hf_name":  "google/gemma-2-9b-it",
+        "short":    "gemma2_9b_together",
+        "use_4bit": False,
+        "backend":  "together",
+    },
+    "qwen3-together": {
+        "hf_name":        "Qwen/Qwen3-8B",
+        "short":          "qwen3_8b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,
+    },
+    "qwen3.5-together": {
+        "hf_name":        "Qwen/Qwen3.5-9B",
+        "short":          "qwen35_9b_together",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    # ── OpenRouter (agrégateur, modèles gratuits :free) ──
+    "llama3-70b-openrouter": {
+        "hf_name":  "meta-llama/llama-3.3-70b-instruct:free",
+        "short":    "llama33_70b_openrouter",
+        "use_4bit": False,
+        "backend":  "openrouter",
+    },
+    # ── Cerebras API (LPU ultra-rapide, gratuit) ─────────
+    "llama3-cerebras": {
+        "hf_name":  "llama3.1-8b",
+        "short":    "llama31_8b_cerebras",
+        "use_4bit": False,
+        "backend":  "cerebras",
+    },
+    "gpt-oss-120b-cerebras": {
+        "hf_name":        "gpt-oss-120b",
+        "short":          "gpt_oss_120b_cerebras",
+        "use_4bit":       False,
+        "backend":        "cerebras",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    "qwen3-235b": {
+        "hf_name":        "qwen-3-235b-a22b-instruct-2507",
+        "short":          "qwen3_235b_cerebras",
+        "use_4bit":       False,
+        "backend":        "cerebras",
+        "max_new_tokens": 350,  # Modèle de raisonnement (235B MoE)
+    },
+    # ── Groq API (inference rapide, gratuit) ─────────────
+    "llama3-70b": {
+        "hf_name":  "llama-3.3-70b-versatile",
+        "short":    "llama3_70b",
+        "use_4bit": False,
+        "backend":  "groq",
+    },
+    "deepseek-r1-70b": {
+        "hf_name":        "deepseek-r1-distill-llama-70b",
+        "short":          "deepseek_r1_70b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement
+    },
+    "gemma-groq": {
+        "hf_name":  "gemma2-9b-it",
+        "short":    "gemma2_9b_groq",
+        "use_4bit": False,
+        "backend":  "groq",
+    },
+    "qwen3-32b": {
+        "hf_name":        "qwen/qwen3-32b",
+        "short":          "qwen3_32b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement (même famille que Qwen3-8B)
+    },
+    "gpt-oss-120b": {
+        "hf_name":        "openai/gpt-oss-120b",
+        "short":          "gpt_oss_120b",
+        "use_4bit":       False,
+        "backend":        "groq",
+        "max_new_tokens": 350,  # Modèle de raisonnement — format <think> à vérifier au premier run
+    },
+    "gpt-oss-20b": {
+        "hf_name":        "openai/gpt-oss-20b",
+        "short":          "gpt_oss_20b",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 100,
+    },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
         "hf_name":        "google/gemma-2-9b-it",
@@ -145,7 +264,7 @@ MODEL_CONFIGS = {
         "short":          "qwen3_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 350,  # Modèle de raisonnement — génère un bloc <think> avant de répondre
+        "max_new_tokens": 200,  # Modèle de raisonnement — 1 phrase CoT → 200 suffisant
     },
 }
 
@@ -165,6 +284,8 @@ LABEL_ALIASES = {
 
 def parse_label(text: str, num_labels: int) -> int:
     """Extrait le label prédit depuis le texte généré."""
+    if not text:
+        return -1
     # DeepSeek-R1 : ignorer le bloc <think>...</think>, garder ce qui suit
     if "<think>" in text:
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
@@ -178,6 +299,13 @@ def parse_label(text: str, num_labels: int) -> int:
         for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:", "answer:", "relation :", "relation:"]:
             if kw in line:
                 remainder = line.split(kw, 1)[-1].strip()
+                # Chiffre direct après "Label :" (ex: "Label: 0")
+                m = re.match(r"^([012])\b", remainder)
+                if m:
+                    val = int(m.group(1))
+                    if num_labels == 2 and val == 2: return 1
+                    if num_labels == 2 and val == 1: return 0
+                    return val
                 for alias, val in LABEL_ALIASES.items():
                     if alias in remainder:
                         if num_labels == 2 and val == 2:
@@ -195,7 +323,6 @@ def parse_label(text: str, num_labels: int) -> int:
                 return 0
             return val
 
-    print(f"  [PARSE FAIL] {repr(text[:300])}")
     return -1  # Pas trouvé
 
 
@@ -294,11 +421,8 @@ def get_train_test(dataset_name: str):
     """Retourne (train_ds, test_ds, num_labels)."""
     if dataset_name == "fracas-gq":
         ds = load_fracas_gq()
-        # Split 80/20 par index
-        n = len(ds)
-        train_ds = ds.select(range(int(n * 0.8)))
-        test_ds  = ds.select(range(int(n * 0.8), n))
-        return train_ds, test_ds, 3
+        # Tout le dataset en test — few-shot viennent de --fewshot_file (ex: gqnli.json)
+        return ds.select([]), ds, 3
 
     elif dataset_name == "gqnli":
         ds = load_gqnli()
@@ -377,26 +501,34 @@ def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int =
 # 5. CONSTRUCTION DU PROMPT
 # ─────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """Tu es un expert en inférence de langue naturelle (NLI) en français.
+def get_system_prompt(cot_sentences: int = 1, binary: bool = False) -> str:
+    """Génère le SYSTEM_PROMPT avec la contrainte de longueur CoT souhaitée."""
+    limit = "une phrase maximum" if cot_sentences == 1 else f"{cot_sentences} phrases maximum"
+    if binary:
+        return f"""Tu es un expert en détection de contradictions en français.
+Ta tâche est de déterminer si une hypothèse contredit une prémisse.
+Les labels possibles sont :
+- non-contradiction : l'hypothèse ne contredit pas la prémisse
+- contradiction : l'hypothèse contredit la prémisse
+
+Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Label : <non-contradiction | contradiction>
+Raisonnement : <{limit} d'analyse>"""
+    else:
+        return f"""Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
 Les labels possibles sont :
 - entailment : l'hypothèse découle logiquement de la prémisse
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
+Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
 Label : <entailment | neutral | contradiction>
-Raisonnement : <une phrase d'analyse>"""
+Raisonnement : <{limit} d'analyse>"""
 
-SYSTEM_PROMPT_BINARY = """Tu es un expert en détection de contradictions en français.
-Ta tâche est de déterminer si une hypothèse contredit une prémisse.
-Les labels possibles sont :
-- non-contradiction : l'hypothèse ne contredit pas la prémisse
-- contradiction : l'hypothèse contredit la prémisse
-
-Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
-Label : <non-contradiction | contradiction>
-Raisonnement : <une phrase d'analyse>"""
+# Prompts statiques conservés pour compatibilité no_cot
+SYSTEM_PROMPT        = get_system_prompt(1, binary=False)
+SYSTEM_PROMPT_BINARY = get_system_prompt(1, binary=True)
 
 SYSTEM_PROMPT_LABEL_ONLY = """Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
@@ -429,10 +561,10 @@ def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot:
     return text
 
 
-def build_prompt(fewshot_examples: list, test_example: dict, num_labels: int, use_cot: bool) -> list:
+def build_prompt(fewshot_examples: list, test_example: dict, num_labels: int, use_cot: bool, cot_sentences: int = 1) -> list:
     """Construit le prompt au format chat (liste de messages)."""
     if use_cot:
-        system = SYSTEM_PROMPT_BINARY if num_labels == 2 else SYSTEM_PROMPT
+        system = get_system_prompt(cot_sentences, binary=(num_labels == 2))
     else:
         system = SYSTEM_PROMPT_LABEL_ONLY_BINARY if num_labels == 2 else SYSTEM_PROMPT_LABEL_ONLY
     messages = [{"role": "system", "content": system}]
@@ -472,6 +604,38 @@ def load_model_and_tokenizer(model_cfg: dict):
         import openai
         client = openai.OpenAI(api_key=os.environ["OPENAI_API_KEY"])
         return ("openai", client, model_name), None
+
+    if backend == "groq":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["GROQ_API_KEY"],
+            base_url="https://api.groq.com/openai/v1",
+        )
+        return ("groq", client, model_name), None
+
+    if backend == "together":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["TOGETHER_API_KEY"],
+            base_url="https://api.together.xyz/v1",
+        )
+        return ("together", client, model_name), None
+
+    if backend == "openrouter":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            base_url="https://openrouter.ai/api/v1",
+        )
+        return ("openrouter", client, model_name), None
+
+    if backend == "cerebras":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["CEREBRAS_API_KEY"],
+            base_url="https://api.cerebras.ai/v1",
+        )
+        return ("cerebras", client, model_name), None
 
     # ── HuggingFace ──────────────────────────────────────
     tokenizer = AutoTokenizer.from_pretrained(model_name)
@@ -515,25 +679,28 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
         backend, client, model_name = model
         results = []
         for messages in messages_list:
-            if backend == "openai":
+            if backend in ("openai", "groq", "together", "cerebras", "openrouter"):
                 import time
                 response = ""
                 for attempt in range(5):
                     try:
+                        temp = 0.1 if backend == "together" else 0
                         resp = client.chat.completions.create(
                             model=model_name, messages=messages,
-                            max_tokens=max_new_tokens, temperature=0,
+                            max_tokens=max_new_tokens, temperature=temp,
                         )
-                        response = resp.choices[0].message.content
+                        response = resp.choices[0].message.content or ""
+                        if backend == "openrouter":
+                            time.sleep(3)  # ~20 req/min max sur le free tier
                         break
                     except Exception as e:
                         err = str(e)
                         if "429" in err or "rate_limit" in err.lower():
-                            wait = 30 * (2 ** attempt)
-                            print(f"\n  [OpenAI] Rate limit — attente {wait}s...")
+                            wait = 20 * (2 ** attempt)
+                            print(f"\n  [{backend.upper()}] Rate limit — attente {wait}s...")
                             time.sleep(wait)
                         else:
-                            print(f"\n  [OpenAI] Erreur : {e}")
+                            print(f"\n  [{backend.upper()}] Erreur : {e}")
                             break
                 results.append(response)
         return results
@@ -630,13 +797,15 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 8. MAIN
 # ─────────────────────────────────────────────────────────
 
-SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
+SHOTS_SWEEP_VALUES    = [0, 1, 3, 5, 10]
+COT_SENTENCES_VALUES  = [1, 3, 5]
 
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "test/f1_macro", "goal": "maximize"},
     "parameters": {
-        "n_shots": {"values": SHOTS_SWEEP_VALUES},
+        "n_shots":       {"values": SHOTS_SWEEP_VALUES},
+        "cot_sentences": {"values": COT_SENTENCES_VALUES},
     },
 }
 
@@ -651,19 +820,32 @@ _G_ARGS        = None
 
 
 def eval_run():
-    """Fonction appelée par wandb.agent — lit n_shots depuis wandb.config."""
+    """Fonction appelée par wandb.agent — lit n_shots et cot_sentences depuis wandb.config."""
     run = wandb.init()
     config = wandb.config
-    n_shots = config.n_shots
-    use_cot = not _G_ARGS.no_cot
+    n_shots       = config.n_shots
+    cot_sentences = getattr(config, "cot_sentences", _G_ARGS.cot_sentences)
+    use_cot       = not _G_ARGS.no_cot
 
-    run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}"
+    # Ajuste max_new_tokens selon cot_sentences pour ce run
+    if not use_cot:
+        max_new_tokens = 20
+    elif _G_MODEL_CFG.get("max_new_tokens", 0) > 250:
+        # Modèles de raisonnement (<think>) : garder leur valeur élevée
+        max_new_tokens = _G_MODEL_CFG["max_new_tokens"]
+    else:
+        # Modèles instruction : adapte selon le nombre de phrases CoT
+        max_new_tokens = {1: 60, 3: 150, 5: 250}.get(cot_sentences, 60)
+
+    run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}{cot_sentences if use_cot else ''}"
     run.name = run_name
     run.config.update({
         "model":            _G_MODEL_CFG["hf_name"],
         "model_short":      _G_MODEL_CFG["short"],
         "dataset":          _G_ARGS.dataset,
         "use_cot":          use_cot,
+        "cot_sentences":    cot_sentences,
+        "max_new_tokens":   max_new_tokens,
         "num_labels":       _G_NUM_LABELS,
         "max_eval_samples": _G_ARGS.max_eval_samples,
         "seed":             _G_ARGS.seed,
@@ -686,9 +868,8 @@ def eval_run():
     print(f"\nInférence sur {total} exemples ({n_shots}-shot, batch_size={batch_size})...\n")
     for batch_start in range(0, total, batch_size):
         batch = examples[batch_start:batch_start + batch_size]
-        messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot) for ex in batch]
-        model_max_tokens = _G_ARGS.max_new_tokens if _G_ARGS.max_new_tokens != 60 else _G_MODEL_CFG.get("max_new_tokens", _G_ARGS.max_new_tokens)
-        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, model_max_tokens)
+        messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot, cot_sentences) for ex in batch]
+        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, max_new_tokens)
 
         for ex, response in zip(batch, responses):
             predicted = parse_label(response, _G_NUM_LABELS)
@@ -737,7 +918,10 @@ def parse_args():
     p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT")
     p.add_argument("--max_eval_samples",type=int, default=300,
                    help="Nb max d'exemples de test évalués (0 = tous)")
-    p.add_argument("--max_new_tokens",  type=int, default=60)
+    p.add_argument("--max_new_tokens",  type=int, default=0,
+                   help="0 = auto selon cot_sentences (1→60, 3→150, 5→250)")
+    p.add_argument("--cot_sentences",   type=int, default=1, choices=[1, 3, 5],
+                   help="Nombre de phrases max autorisées dans le raisonnement CoT (1/3/5)")
     p.add_argument("--batch_size",      type=int, default=4,
                    help="Nb d'exemples traités en parallèle sur le GPU")
     p.add_argument("--seed",            type=int, default=42)
@@ -752,9 +936,12 @@ def main():
 
     args = parse_args()
     random.seed(args.seed)
-    # En mode label-only, 20 tokens suffisent — ajustement automatique
-    if args.no_cot and args.max_new_tokens == 60:
-        args.max_new_tokens = 20
+    # Ajustement automatique de max_new_tokens selon cot_sentences
+    if args.max_new_tokens == 0:
+        if args.no_cot:
+            args.max_new_tokens = 20
+        else:
+            args.max_new_tokens = {1: 60, 3: 150, 5: 250}.get(args.cot_sentences, 60)
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
