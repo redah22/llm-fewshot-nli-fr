@@ -241,7 +241,7 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 5. MAIN SWEEP
 # ─────────────────────────────────────────────────────────
 
-SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
+SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10, 15, 20]
 SEEDS_VALUES = [42, 123, 999]
 DATASETS_LIST = list(DATASETS.keys())
 
