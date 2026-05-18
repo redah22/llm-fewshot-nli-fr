@@ -169,6 +169,13 @@ MODEL_CONFIGS = {
         "backend":        "together",
         "max_new_tokens": 350,  # Modèle de raisonnement
     },
+    # ── OpenRouter (agrégateur, modèles gratuits :free) ──
+    "llama3-70b-openrouter": {
+        "hf_name":  "meta-llama/llama-3.3-70b-instruct:free",
+        "short":    "llama33_70b_openrouter",
+        "use_4bit": False,
+        "backend":  "openrouter",
+    },
     # ── Cerebras API (LPU ultra-rapide, gratuit) ─────────
     "llama3-cerebras": {
         "hf_name":  "llama3.1-8b",
@@ -223,6 +230,13 @@ MODEL_CONFIGS = {
         "use_4bit":       False,
         "backend":        "groq",
         "max_new_tokens": 350,  # Modèle de raisonnement — format <think> à vérifier au premier run
+    },
+    "gpt-oss-20b": {
+        "hf_name":        "openai/gpt-oss-20b",
+        "short":          "gpt_oss_20b",
+        "use_4bit":       False,
+        "backend":        "together",
+        "max_new_tokens": 100,
     },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
@@ -285,6 +299,13 @@ def parse_label(text: str, num_labels: int) -> int:
         for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:", "answer:", "relation :", "relation:"]:
             if kw in line:
                 remainder = line.split(kw, 1)[-1].strip()
+                # Chiffre direct après "Label :" (ex: "Label: 0")
+                m = re.match(r"^([012])\b", remainder)
+                if m:
+                    val = int(m.group(1))
+                    if num_labels == 2 and val == 2: return 1
+                    if num_labels == 2 and val == 1: return 0
+                    return val
                 for alias, val in LABEL_ALIASES.items():
                     if alias in remainder:
                         if num_labels == 2 and val == 2:
@@ -480,26 +501,34 @@ def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int =
 # 5. CONSTRUCTION DU PROMPT
 # ─────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """Tu es un expert en inférence de langue naturelle (NLI) en français.
+def get_system_prompt(cot_sentences: int = 1, binary: bool = False) -> str:
+    """Génère le SYSTEM_PROMPT avec la contrainte de longueur CoT souhaitée."""
+    limit = "une phrase maximum" if cot_sentences == 1 else f"{cot_sentences} phrases maximum"
+    if binary:
+        return f"""Tu es un expert en détection de contradictions en français.
+Ta tâche est de déterminer si une hypothèse contredit une prémisse.
+Les labels possibles sont :
+- non-contradiction : l'hypothèse ne contredit pas la prémisse
+- contradiction : l'hypothèse contredit la prémisse
+
+Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Label : <non-contradiction | contradiction>
+Raisonnement : <{limit} d'analyse>"""
+    else:
+        return f"""Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
 Les labels possibles sont :
 - entailment : l'hypothèse découle logiquement de la prémisse
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
+Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
 Label : <entailment | neutral | contradiction>
-Raisonnement : <une phrase d'analyse>"""
+Raisonnement : <{limit} d'analyse>"""
 
-SYSTEM_PROMPT_BINARY = """Tu es un expert en détection de contradictions en français.
-Ta tâche est de déterminer si une hypothèse contredit une prémisse.
-Les labels possibles sont :
-- non-contradiction : l'hypothèse ne contredit pas la prémisse
-- contradiction : l'hypothèse contredit la prémisse
-
-Réponds toujours en suivant ce format (label en premier, raisonnement en une phrase maximum) :
-Label : <non-contradiction | contradiction>
-Raisonnement : <une phrase d'analyse>"""
+# Prompts statiques conservés pour compatibilité no_cot
+SYSTEM_PROMPT        = get_system_prompt(1, binary=False)
+SYSTEM_PROMPT_BINARY = get_system_prompt(1, binary=True)
 
 SYSTEM_PROMPT_LABEL_ONLY = """Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
@@ -532,10 +561,10 @@ def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot:
     return text
 
 
-def build_prompt(fewshot_examples: list, test_example: dict, num_labels: int, use_cot: bool) -> list:
+def build_prompt(fewshot_examples: list, test_example: dict, num_labels: int, use_cot: bool, cot_sentences: int = 1) -> list:
     """Construit le prompt au format chat (liste de messages)."""
     if use_cot:
-        system = SYSTEM_PROMPT_BINARY if num_labels == 2 else SYSTEM_PROMPT
+        system = get_system_prompt(cot_sentences, binary=(num_labels == 2))
     else:
         system = SYSTEM_PROMPT_LABEL_ONLY_BINARY if num_labels == 2 else SYSTEM_PROMPT_LABEL_ONLY
     messages = [{"role": "system", "content": system}]
@@ -592,6 +621,14 @@ def load_model_and_tokenizer(model_cfg: dict):
         )
         return ("together", client, model_name), None
 
+    if backend == "openrouter":
+        import openai
+        client = openai.OpenAI(
+            api_key=os.environ["OPENROUTER_API_KEY"],
+            base_url="https://openrouter.ai/api/v1",
+        )
+        return ("openrouter", client, model_name), None
+
     if backend == "cerebras":
         import openai
         client = openai.OpenAI(
@@ -642,16 +679,19 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
         backend, client, model_name = model
         results = []
         for messages in messages_list:
-            if backend in ("openai", "groq", "together", "cerebras"):
+            if backend in ("openai", "groq", "together", "cerebras", "openrouter"):
                 import time
                 response = ""
                 for attempt in range(5):
                     try:
+                        temp = 0.1 if backend == "together" else 0
                         resp = client.chat.completions.create(
                             model=model_name, messages=messages,
-                            max_tokens=max_new_tokens, temperature=0,
+                            max_tokens=max_new_tokens, temperature=temp,
                         )
-                        response = resp.choices[0].message.content
+                        response = resp.choices[0].message.content or ""
+                        if backend == "openrouter":
+                            time.sleep(3)  # ~20 req/min max sur le free tier
                         break
                     except Exception as e:
                         err = str(e)
@@ -757,13 +797,15 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 8. MAIN
 # ─────────────────────────────────────────────────────────
 
-SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
+SHOTS_SWEEP_VALUES    = [0, 1, 3, 5, 10]
+COT_SENTENCES_VALUES  = [1, 3, 5]
 
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "test/f1_macro", "goal": "maximize"},
     "parameters": {
-        "n_shots": {"values": SHOTS_SWEEP_VALUES},
+        "n_shots":       {"values": SHOTS_SWEEP_VALUES},
+        "cot_sentences": {"values": COT_SENTENCES_VALUES},
     },
 }
 
@@ -778,19 +820,32 @@ _G_ARGS        = None
 
 
 def eval_run():
-    """Fonction appelée par wandb.agent — lit n_shots depuis wandb.config."""
+    """Fonction appelée par wandb.agent — lit n_shots et cot_sentences depuis wandb.config."""
     run = wandb.init()
     config = wandb.config
-    n_shots = config.n_shots
-    use_cot = not _G_ARGS.no_cot
+    n_shots       = config.n_shots
+    cot_sentences = getattr(config, "cot_sentences", _G_ARGS.cot_sentences)
+    use_cot       = not _G_ARGS.no_cot
 
-    run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}"
+    # Ajuste max_new_tokens selon cot_sentences pour ce run
+    if not use_cot:
+        max_new_tokens = 20
+    elif _G_MODEL_CFG.get("max_new_tokens", 0) > 250:
+        # Modèles de raisonnement (<think>) : garder leur valeur élevée
+        max_new_tokens = _G_MODEL_CFG["max_new_tokens"]
+    else:
+        # Modèles instruction : adapte selon le nombre de phrases CoT
+        max_new_tokens = {1: 60, 3: 150, 5: 250}.get(cot_sentences, 60)
+
+    run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}{cot_sentences if use_cot else ''}"
     run.name = run_name
     run.config.update({
         "model":            _G_MODEL_CFG["hf_name"],
         "model_short":      _G_MODEL_CFG["short"],
         "dataset":          _G_ARGS.dataset,
         "use_cot":          use_cot,
+        "cot_sentences":    cot_sentences,
+        "max_new_tokens":   max_new_tokens,
         "num_labels":       _G_NUM_LABELS,
         "max_eval_samples": _G_ARGS.max_eval_samples,
         "seed":             _G_ARGS.seed,
@@ -813,9 +868,8 @@ def eval_run():
     print(f"\nInférence sur {total} exemples ({n_shots}-shot, batch_size={batch_size})...\n")
     for batch_start in range(0, total, batch_size):
         batch = examples[batch_start:batch_start + batch_size]
-        messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot) for ex in batch]
-        model_max_tokens = _G_ARGS.max_new_tokens if _G_ARGS.max_new_tokens != 60 else _G_MODEL_CFG.get("max_new_tokens", _G_ARGS.max_new_tokens)
-        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, model_max_tokens)
+        messages_batch = [build_prompt(fewshot_examples, ex, _G_NUM_LABELS, use_cot, cot_sentences) for ex in batch]
+        responses = batch_generate_responses(_G_MODEL, _G_TOKENIZER, messages_batch, max_new_tokens)
 
         for ex, response in zip(batch, responses):
             predicted = parse_label(response, _G_NUM_LABELS)
@@ -864,7 +918,10 @@ def parse_args():
     p.add_argument("--no_cot",          action="store_true", help="Désactive le CoT")
     p.add_argument("--max_eval_samples",type=int, default=300,
                    help="Nb max d'exemples de test évalués (0 = tous)")
-    p.add_argument("--max_new_tokens",  type=int, default=60)
+    p.add_argument("--max_new_tokens",  type=int, default=0,
+                   help="0 = auto selon cot_sentences (1→60, 3→150, 5→250)")
+    p.add_argument("--cot_sentences",   type=int, default=1, choices=[1, 3, 5],
+                   help="Nombre de phrases max autorisées dans le raisonnement CoT (1/3/5)")
     p.add_argument("--batch_size",      type=int, default=4,
                    help="Nb d'exemples traités en parallèle sur le GPU")
     p.add_argument("--seed",            type=int, default=42)
@@ -879,9 +936,12 @@ def main():
 
     args = parse_args()
     random.seed(args.seed)
-    # En mode label-only, 20 tokens suffisent — ajustement automatique
-    if args.no_cot and args.max_new_tokens == 60:
-        args.max_new_tokens = 20
+    # Ajustement automatique de max_new_tokens selon cot_sentences
+    if args.max_new_tokens == 0:
+        if args.no_cot:
+            args.max_new_tokens = 20
+        else:
+            args.max_new_tokens = {1: 60, 3: 150, 5: 250}.get(args.cot_sentences, 60)
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
