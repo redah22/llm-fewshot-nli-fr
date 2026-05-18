@@ -649,6 +649,7 @@ def load_model_and_tokenizer(model_cfg: dict):
             model_name,
             quantization_config=bnb_config,
             device_map="auto",
+            low_cpu_mem_usage=True,
             trust_remote_code=True,
         )
     elif model_cfg["use_4bit"]:
@@ -662,13 +663,14 @@ def load_model_and_tokenizer(model_cfg: dict):
             model_name,
             quantization_config=bnb_config,
             device_map="auto",
+            low_cpu_mem_usage=True,
             dtype=torch.float16,
             trust_remote_code=True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, device_map="auto", dtype=torch.float16,
-            trust_remote_code=True,
+            model_name, device_map="auto", low_cpu_mem_usage=True,
+            dtype=torch.float16, trust_remote_code=True,
         )
 
     model.eval()
