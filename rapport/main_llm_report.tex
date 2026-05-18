@@ -1,0 +1,66 @@
+\documentclass[12pt,a4paper]{article}
+
+% ─── Encodage & Langue ───────────────────────────────────────────
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[french]{babel}
+
+% ─── Mise en page ────────────────────────────────────────────────
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% ─── Typographie ─────────────────────────────────────────────────
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% ─── Figures & Tableaux ──────────────────────────────────────────
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{subcaption}
+
+% ─── Maths ───────────────────────────────────────────────────────
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+% ─── Code & Verbatim ─────────────────────────────────────────────
+\usepackage{listings}
+\usepackage{xcolor}
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  backgroundcolor=\color{gray!10},
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+}
+
+% ─── Hyperliens ──────────────────────────────────────────────────
+\usepackage[hidelinks]{hyperref}
+
+% ─── Bibliographie ───────────────────────────────────────────────
+\usepackage{natbib}
+\bibliographystyle{plainnat}
+
+% ─────────────────────────────────────────────────────────────────
+\title{\textbf{Few-Shot Learning pour l'Inférence en Langue Naturelle en Français}\\[0.5em]
+{\large Évaluation de LLMs génératifs par l'approche Label-Only}\\[1em]
+{\normalsize TER M1 -- Rapport d'expériences}}
+
+\author{Reda Ammari}
+\date{Mai 2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+% ─────────────────────────────────────────────────────────────────
+\input{sections/llm_fewshot_analysis.tex}
+% ─────────────────────────────────────────────────────────────────
+
+\end{document}
