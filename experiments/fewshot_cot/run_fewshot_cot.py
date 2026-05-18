@@ -642,7 +642,16 @@ def load_model_and_tokenizer(model_cfg: dict):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    if model_cfg["use_4bit"]:
+    use_8bit = getattr(_G_ARGS, "load_8bit", False)
+    if use_8bit:
+        bnb_config = BitsAndBytesConfig(load_in_8bit=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            device_map="auto",
+            trust_remote_code=True,
+        )
+    elif model_cfg["use_4bit"]:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -927,6 +936,8 @@ def parse_args():
     p.add_argument("--seed",            type=int, default=42)
     p.add_argument("--fewshot_file",    type=str, default=None,
                    help="JSON d'exemples few-shot manuels (fewshot_examples/<dataset>.json)")
+    p.add_argument("--load_8bit",       action="store_true",
+                   help="Charger le modèle en 8-bit (LLM.int8) — pour GPU CC<7.5 (V100)")
     p.add_argument("--auto",            action="store_true", help="Pas de confirmation interactive")
     return p.parse_args()
 
