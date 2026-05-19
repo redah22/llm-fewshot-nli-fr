@@ -746,6 +746,8 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
             max_new_tokens=max_new_tokens,
             do_sample=False,
             pad_token_id=tokenizer.pad_token_id,
+            repetition_penalty=1.3,
+            no_repeat_ngram_size=8,
         )
 
     return [
