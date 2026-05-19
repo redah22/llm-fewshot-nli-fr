@@ -66,7 +66,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 200,  # R1 génère un bloc <think> avant de répondre (1 phrase CoT → 200 suffisant)
+        "max_new_tokens": 2048,
     },
     "mistral": {
         "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
@@ -147,7 +147,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_7b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,
+        "max_new_tokens": 2048,
     },
     "gemma-together": {
         "hf_name":  "google/gemma-2-9b-it",
@@ -160,14 +160,14 @@ MODEL_CONFIGS = {
         "short":          "qwen3_8b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,
+        "max_new_tokens": 2048,
     },
     "qwen3.5-together": {
         "hf_name":        "Qwen/Qwen3.5-9B",
         "short":          "qwen35_9b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     # ── OpenRouter (agrégateur, modèles gratuits :free) ──
     "llama3-70b-openrouter": {
@@ -188,14 +188,14 @@ MODEL_CONFIGS = {
         "short":          "gpt_oss_120b_cerebras",
         "use_4bit":       False,
         "backend":        "cerebras",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     "qwen3-235b": {
         "hf_name":        "qwen-3-235b-a22b-instruct-2507",
         "short":          "qwen3_235b_cerebras",
         "use_4bit":       False,
         "backend":        "cerebras",
-        "max_new_tokens": 350,  # Modèle de raisonnement (235B MoE)
+        "max_new_tokens": 2048,  # Modèle de raisonnement (235B MoE)
     },
     # ── Groq API (inference rapide, gratuit) ─────────────
     "llama3-70b": {
@@ -209,7 +209,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_70b",
         "use_4bit":       False,
         "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     "gemma-groq": {
         "hf_name":  "gemma2-9b-it",
@@ -217,34 +217,13 @@ MODEL_CONFIGS = {
         "use_4bit": False,
         "backend":  "groq",
     },
-    "qwen3-32b": {
-        "hf_name":        "qwen/qwen3-32b",
-        "short":          "qwen3_32b",
-        "use_4bit":       False,
-        "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement (même famille que Qwen3-8B)
-    },
-    "gpt-oss-120b": {
-        "hf_name":        "openai/gpt-oss-120b",
-        "short":          "gpt_oss_120b",
-        "use_4bit":       False,
-        "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement — format <think> à vérifier au premier run
-    },
-    "gpt-oss-20b": {
-        "hf_name":        "openai/gpt-oss-20b",
-        "short":          "gpt_oss_20b",
-        "use_4bit":       False,
-        "backend":        "together",
-        "max_new_tokens": 100,
-    },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
         "hf_name":        "google/gemma-2-9b-it",
         "short":          "gemma2_9b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 100,  # Gemma génère du markdown bold et du raisonnement avant le label
+        "max_new_tokens": 2048,  # Gemma génère du markdown bold et du raisonnement avant le label
     },
     # ── Français / Multilingue ────────────────────────────
     "lucie": {
@@ -264,7 +243,7 @@ MODEL_CONFIGS = {
         "short":          "qwen3_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 200,  # Modèle de raisonnement — 1 phrase CoT → 200 suffisant
+        "max_new_tokens": 2048,
     },
 }
 
@@ -502,29 +481,28 @@ def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int =
 # ─────────────────────────────────────────────────────────
 
 def get_system_prompt(cot_sentences: int = 1, binary: bool = False) -> str:
-    """Génère le SYSTEM_PROMPT avec la contrainte de longueur CoT souhaitée."""
-    limit = "une phrase maximum" if cot_sentences == 1 else f"{cot_sentences} phrases maximum"
+    """Génère le SYSTEM_PROMPT. cot_sentences ignoré : le modèle raisonne librement."""
     if binary:
-        return f"""Tu es un expert en détection de contradictions en français.
+        return """Tu es un expert en détection de contradictions en français.
 Ta tâche est de déterminer si une hypothèse contredit une prémisse.
 Les labels possibles sont :
 - non-contradiction : l'hypothèse ne contredit pas la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Réponds toujours en suivant ce format (label en premier, puis ton raisonnement) :
 Label : <non-contradiction | contradiction>
-Raisonnement : <{limit} d'analyse>"""
+Raisonnement : <ton analyse>"""
     else:
-        return f"""Tu es un expert en inférence de langue naturelle (NLI) en français.
+        return """Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
 Les labels possibles sont :
 - entailment : l'hypothèse découle logiquement de la prémisse
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Réponds toujours en suivant ce format (label en premier, puis ton raisonnement) :
 Label : <entailment | neutral | contradiction>
-Raisonnement : <{limit} d'analyse>"""
+Raisonnement : <ton analyse>"""
 
 # Prompts statiques conservés pour compatibilité no_cot
 SYSTEM_PROMPT        = get_system_prompt(1, binary=False)
@@ -840,15 +818,11 @@ def eval_run():
     cot_sentences = getattr(config, "cot_sentences", _G_ARGS.cot_sentences)
     use_cot       = not _G_ARGS.no_cot
 
-    # Ajuste max_new_tokens selon cot_sentences pour ce run
+    # max_new_tokens : 20 pour no_cot, sinon libre (modèle s'arrête sur EOS)
     if not use_cot:
         max_new_tokens = 20
-    elif _G_MODEL_CFG.get("max_new_tokens", 0) > 250:
-        # Modèles de raisonnement (<think>) : garder leur valeur élevée
-        max_new_tokens = _G_MODEL_CFG["max_new_tokens"]
     else:
-        # Modèles instruction : adapte selon le nombre de phrases CoT
-        max_new_tokens = {1: 60, 3: 150, 5: 250}.get(cot_sentences, 60)
+        max_new_tokens = _G_MODEL_CFG.get("max_new_tokens", 2048)
 
     run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}{cot_sentences if use_cot else ''}"
     run.name = run_name
@@ -956,7 +930,7 @@ def main():
         if args.no_cot:
             args.max_new_tokens = 20
         else:
-            args.max_new_tokens = {1: 60, 3: 150, 5: 250}.get(args.cot_sentences, 60)
+            args.max_new_tokens = 2048
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
