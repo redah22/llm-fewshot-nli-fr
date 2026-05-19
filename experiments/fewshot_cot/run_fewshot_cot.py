@@ -961,7 +961,7 @@ def main():
     _G_MODEL_CFG = model_cfg
     use_cot = not args.no_cot
 
-    n_runs = len(SHOTS_SWEEP_VALUES) if args.sweep else 1
+    n_runs = len(SHOTS_SWEEP_VALUES) * len(COT_SENTENCES_VALUES) if args.sweep else 1
     shots_display = SHOTS_SWEEP_VALUES if args.sweep else [args.n_shots]
 
     print(f"\n{'='*60}")
@@ -989,7 +989,7 @@ def main():
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(model_cfg)
 
     if args.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr", entity="colin-dievart-facult-des-sciences-montpellier")
         print(f"Sweep ID : {sweep_id}")
         wandb.agent(sweep_id, function=eval_run, count=n_runs)
     else:
@@ -999,7 +999,7 @@ def main():
             "metric": {"name": "test/f1_macro", "goal": "maximize"},
             "parameters": {"n_shots": {"values": [args.n_shots]}},
         }
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr", entity="colin-dievart-facult-des-sciences-montpellier")
         wandb.agent(sweep_id, function=eval_run, count=1)
 
     print("\nTerminé !")
