@@ -809,7 +809,7 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # ─────────────────────────────────────────────────────────
 
 SHOTS_SWEEP_VALUES    = [0, 1, 3, 5, 10]
-COT_SENTENCES_VALUES  = [1, 3, 5]
+COT_SENTENCES_VALUES  = [3, 5]
 
 SWEEP_CONFIG = {
     "method": "grid",
