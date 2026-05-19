@@ -50,16 +50,18 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precisio
 MODEL_CONFIGS = {
     # ── HuggingFace (local, 4-bit) ────────────────────────
     "llama3": {
-        "hf_name":  "meta-llama/Llama-3.1-8B-Instruct",
-        "short":    "llama3_8b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "meta-llama/Llama-3.1-8B-Instruct",
+        "short":          "llama3_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "qwen2.5": {
-        "hf_name":  "Qwen/Qwen2.5-7B-Instruct",
-        "short":    "qwen25_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "Qwen/Qwen2.5-7B-Instruct",
+        "short":          "qwen25_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "deepseek-r1": {
         "hf_name":        "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
@@ -69,10 +71,11 @@ MODEL_CONFIGS = {
         "max_new_tokens": 2048,
     },
     "mistral": {
-        "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
-        "short":    "mistral_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "mistralai/Mistral-7B-Instruct-v0.3",
+        "short":          "mistral_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "mistral-nemo": {
         "hf_name":  "mistralai/Mistral-Nemo-Instruct-2407",
@@ -223,20 +226,22 @@ MODEL_CONFIGS = {
         "short":          "gemma2_9b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 2048,  # Gemma génère du markdown bold et du raisonnement avant le label
+        "max_new_tokens": 256,  # Gemma génère du markdown bold et du raisonnement avant le label
     },
     # ── Français / Multilingue ────────────────────────────
     "lucie": {
-        "hf_name":  "OpenLLM-France/Lucie-7B-Instruct-v1.1",
-        "short":    "lucie_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "OpenLLM-France/Lucie-7B-Instruct-v1.1",
+        "short":          "lucie_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "aya": {
-        "hf_name":  "CohereForAI/aya-expanse-8b",
-        "short":    "aya_expanse_8b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "CohereForAI/aya-expanse-8b",
+        "short":          "aya_expanse_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "qwen3": {
         "hf_name":        "Qwen/Qwen3-8B",
@@ -928,7 +933,8 @@ def main():
         if args.no_cot:
             args.max_new_tokens = 20
         else:
-            args.max_new_tokens = 2048
+            # Utiliser la valeur définie dans MODEL_CONFIGS si disponible, sinon 256 par défaut
+            args.max_new_tokens = MODEL_CONFIGS.get(args.model, {}).get("max_new_tokens", 256)
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
