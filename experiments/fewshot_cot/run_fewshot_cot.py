@@ -788,15 +788,13 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 8. MAIN
 # ─────────────────────────────────────────────────────────
 
-SHOTS_SWEEP_VALUES    = [0, 1, 3, 5, 10]
-COT_SENTENCES_VALUES  = [3, 5]
+SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
 
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "test/f1_macro", "goal": "maximize"},
     "parameters": {
-        "n_shots":       {"values": SHOTS_SWEEP_VALUES},
-        "cot_sentences": {"values": COT_SENTENCES_VALUES},
+        "n_shots": {"values": SHOTS_SWEEP_VALUES},
     },
 }
 
@@ -937,7 +935,7 @@ def main():
     _G_MODEL_CFG = model_cfg
     use_cot = not args.no_cot
 
-    n_runs = len(SHOTS_SWEEP_VALUES) * len(COT_SENTENCES_VALUES) if args.sweep else 1
+    n_runs = len(SHOTS_SWEEP_VALUES) if args.sweep else 1
     shots_display = SHOTS_SWEEP_VALUES if args.sweep else [args.n_shots]
 
     print(f"\n{'='*60}")
