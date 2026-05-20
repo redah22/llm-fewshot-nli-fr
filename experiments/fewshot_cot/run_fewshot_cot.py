@@ -50,29 +50,32 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precisio
 MODEL_CONFIGS = {
     # ── HuggingFace (local, 4-bit) ────────────────────────
     "llama3": {
-        "hf_name":  "meta-llama/Llama-3.1-8B-Instruct",
-        "short":    "llama3_8b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "meta-llama/Llama-3.1-8B-Instruct",
+        "short":          "llama3_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "qwen2.5": {
-        "hf_name":  "Qwen/Qwen2.5-7B-Instruct",
-        "short":    "qwen25_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "Qwen/Qwen2.5-7B-Instruct",
+        "short":          "qwen25_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "deepseek-r1": {
         "hf_name":        "deepseek-ai/DeepSeek-R1-Distill-Llama-8B",
         "short":          "deepseek_r1_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 200,  # R1 génère un bloc <think> avant de répondre (1 phrase CoT → 200 suffisant)
+        "max_new_tokens": 2048,
     },
     "mistral": {
-        "hf_name":  "mistralai/Mistral-7B-Instruct-v0.3",
-        "short":    "mistral_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "mistralai/Mistral-7B-Instruct-v0.3",
+        "short":          "mistral_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "mistral-nemo": {
         "hf_name":  "mistralai/Mistral-Nemo-Instruct-2407",
@@ -147,7 +150,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_7b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,
+        "max_new_tokens": 2048,
     },
     "gemma-together": {
         "hf_name":  "google/gemma-2-9b-it",
@@ -160,14 +163,14 @@ MODEL_CONFIGS = {
         "short":          "qwen3_8b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,
+        "max_new_tokens": 2048,
     },
     "qwen3.5-together": {
         "hf_name":        "Qwen/Qwen3.5-9B",
         "short":          "qwen35_9b_together",
         "use_4bit":       False,
         "backend":        "together",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     # ── OpenRouter (agrégateur, modèles gratuits :free) ──
     "llama3-70b-openrouter": {
@@ -188,14 +191,14 @@ MODEL_CONFIGS = {
         "short":          "gpt_oss_120b_cerebras",
         "use_4bit":       False,
         "backend":        "cerebras",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     "qwen3-235b": {
         "hf_name":        "qwen-3-235b-a22b-instruct-2507",
         "short":          "qwen3_235b_cerebras",
         "use_4bit":       False,
         "backend":        "cerebras",
-        "max_new_tokens": 350,  # Modèle de raisonnement (235B MoE)
+        "max_new_tokens": 2048,  # Modèle de raisonnement (235B MoE)
     },
     # ── Groq API (inference rapide, gratuit) ─────────────
     "llama3-70b": {
@@ -209,7 +212,7 @@ MODEL_CONFIGS = {
         "short":          "deepseek_r1_70b",
         "use_4bit":       False,
         "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement
+        "max_new_tokens": 2048,  # Modèle de raisonnement
     },
     "gemma-groq": {
         "hf_name":  "gemma2-9b-it",
@@ -217,54 +220,35 @@ MODEL_CONFIGS = {
         "use_4bit": False,
         "backend":  "groq",
     },
-    "qwen3-32b": {
-        "hf_name":        "qwen/qwen3-32b",
-        "short":          "qwen3_32b",
-        "use_4bit":       False,
-        "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement (même famille que Qwen3-8B)
-    },
-    "gpt-oss-120b": {
-        "hf_name":        "openai/gpt-oss-120b",
-        "short":          "gpt_oss_120b",
-        "use_4bit":       False,
-        "backend":        "groq",
-        "max_new_tokens": 350,  # Modèle de raisonnement — format <think> à vérifier au premier run
-    },
-    "gpt-oss-20b": {
-        "hf_name":        "openai/gpt-oss-20b",
-        "short":          "gpt_oss_20b",
-        "use_4bit":       False,
-        "backend":        "together",
-        "max_new_tokens": 100,
-    },
     # ── Google (open-weights, HuggingFace) ───────────────
     "gemma": {
         "hf_name":        "google/gemma-2-9b-it",
         "short":          "gemma2_9b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 100,  # Gemma génère du markdown bold et du raisonnement avant le label
+        "max_new_tokens": 256,  # Gemma génère du markdown bold et du raisonnement avant le label
     },
     # ── Français / Multilingue ────────────────────────────
     "lucie": {
-        "hf_name":  "OpenLLM-France/Lucie-7B-Instruct-v1.1",
-        "short":    "lucie_7b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "OpenLLM-France/Lucie-7B-Instruct-v1.1",
+        "short":          "lucie_7b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "aya": {
-        "hf_name":  "CohereForAI/aya-expanse-8b",
-        "short":    "aya_expanse_8b",
-        "use_4bit": True,
-        "backend":  "hf",
+        "hf_name":        "CohereForAI/aya-expanse-8b",
+        "short":          "aya_expanse_8b",
+        "use_4bit":       True,
+        "backend":        "hf",
+        "max_new_tokens": 256,
     },
     "qwen3": {
         "hf_name":        "Qwen/Qwen3-8B",
         "short":          "qwen3_8b",
         "use_4bit":       True,
         "backend":        "hf",
-        "max_new_tokens": 200,  # Modèle de raisonnement — 1 phrase CoT → 200 suffisant
+        "max_new_tokens": 2048,
     },
 }
 
@@ -502,29 +486,28 @@ def balanced_eval_sample(test_ds, max_samples: int, num_labels: int, seed: int =
 # ─────────────────────────────────────────────────────────
 
 def get_system_prompt(cot_sentences: int = 1, binary: bool = False) -> str:
-    """Génère le SYSTEM_PROMPT avec la contrainte de longueur CoT souhaitée."""
-    limit = "une phrase maximum" if cot_sentences == 1 else f"{cot_sentences} phrases maximum"
+    """Génère le SYSTEM_PROMPT. cot_sentences ignoré : le modèle raisonne librement."""
     if binary:
-        return f"""Tu es un expert en détection de contradictions en français.
+        return """Tu es un expert en détection de contradictions en français.
 Ta tâche est de déterminer si une hypothèse contredit une prémisse.
 Les labels possibles sont :
 - non-contradiction : l'hypothèse ne contredit pas la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Réponds toujours en suivant ce format (label en premier, puis ton raisonnement) :
 Label : <non-contradiction | contradiction>
-Raisonnement : <{limit} d'analyse>"""
+Raisonnement : <ton analyse>"""
     else:
-        return f"""Tu es un expert en inférence de langue naturelle (NLI) en français.
+        return """Tu es un expert en inférence de langue naturelle (NLI) en français.
 Ta tâche est de déterminer la relation logique entre une prémisse et une hypothèse.
 Les labels possibles sont :
 - entailment : l'hypothèse découle logiquement de la prémisse
 - neutral : l'hypothèse n'est ni confirmée ni contredite par la prémisse
 - contradiction : l'hypothèse contredit la prémisse
 
-Réponds toujours en suivant ce format (label en premier, raisonnement en {limit}) :
+Réponds toujours en suivant ce format (label en premier, puis ton raisonnement) :
 Label : <entailment | neutral | contradiction>
-Raisonnement : <{limit} d'analyse>"""
+Raisonnement : <ton analyse>"""
 
 # Prompts statiques conservés pour compatibilité no_cot
 SYSTEM_PROMPT        = get_system_prompt(1, binary=False)
@@ -642,7 +625,17 @@ def load_model_and_tokenizer(model_cfg: dict):
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    if model_cfg["use_4bit"]:
+    use_8bit = getattr(_G_ARGS, "load_8bit", False)
+    if use_8bit:
+        bnb_config = BitsAndBytesConfig(load_in_8bit=True)
+        model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            quantization_config=bnb_config,
+            device_map="auto",
+            low_cpu_mem_usage=True,
+            trust_remote_code=True,
+        )
+    elif model_cfg["use_4bit"]:
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_quant_type="nf4",
@@ -653,13 +646,14 @@ def load_model_and_tokenizer(model_cfg: dict):
             model_name,
             quantization_config=bnb_config,
             device_map="auto",
+            low_cpu_mem_usage=True,
             dtype=torch.float16,
             trust_remote_code=True,
         )
     else:
         model = AutoModelForCausalLM.from_pretrained(
-            model_name, device_map="auto", dtype=torch.float16,
-            trust_remote_code=True,
+            model_name, device_map="auto", low_cpu_mem_usage=True,
+            dtype=torch.float16, trust_remote_code=True,
         )
 
     model.eval()
@@ -735,6 +729,8 @@ def batch_generate_responses(model, tokenizer, messages_list: list, max_new_toke
             max_new_tokens=max_new_tokens,
             do_sample=False,
             pad_token_id=tokenizer.pad_token_id,
+            repetition_penalty=1.3,
+            no_repeat_ngram_size=8,
         )
 
     return [
@@ -797,15 +793,13 @@ def compute_and_log_metrics(labels_true, labels_pred, num_labels, prefix="test")
 # 8. MAIN
 # ─────────────────────────────────────────────────────────
 
-SHOTS_SWEEP_VALUES    = [0, 1, 3, 5, 10]
-COT_SENTENCES_VALUES  = [1, 3, 5]
+SHOTS_SWEEP_VALUES = [0, 1, 3, 5, 10]
 
 SWEEP_CONFIG = {
     "method": "grid",
     "metric": {"name": "test/f1_macro", "goal": "maximize"},
     "parameters": {
-        "n_shots":       {"values": SHOTS_SWEEP_VALUES},
-        "cot_sentences": {"values": COT_SENTENCES_VALUES},
+        "n_shots": {"values": SHOTS_SWEEP_VALUES},
     },
 }
 
@@ -827,15 +821,11 @@ def eval_run():
     cot_sentences = getattr(config, "cot_sentences", _G_ARGS.cot_sentences)
     use_cot       = not _G_ARGS.no_cot
 
-    # Ajuste max_new_tokens selon cot_sentences pour ce run
+    # max_new_tokens : 20 pour no_cot, sinon libre (modèle s'arrête sur EOS)
     if not use_cot:
         max_new_tokens = 20
-    elif _G_MODEL_CFG.get("max_new_tokens", 0) > 250:
-        # Modèles de raisonnement (<think>) : garder leur valeur élevée
-        max_new_tokens = _G_MODEL_CFG["max_new_tokens"]
     else:
-        # Modèles instruction : adapte selon le nombre de phrases CoT
-        max_new_tokens = {1: 60, 3: 150, 5: 250}.get(cot_sentences, 60)
+        max_new_tokens = _G_MODEL_CFG.get("max_new_tokens", 2048)
 
     run_name = f"{_G_MODEL_CFG['short']}_{DATASETS[_G_ARGS.dataset]}_n{n_shots}_{'cot' if use_cot else 'nocot'}{cot_sentences if use_cot else ''}"
     run.name = run_name
@@ -927,6 +917,8 @@ def parse_args():
     p.add_argument("--seed",            type=int, default=42)
     p.add_argument("--fewshot_file",    type=str, default=None,
                    help="JSON d'exemples few-shot manuels (fewshot_examples/<dataset>.json)")
+    p.add_argument("--load_8bit",       action="store_true",
+                   help="Charger le modèle en 8-bit (LLM.int8) — pour GPU CC<7.5 (V100)")
     p.add_argument("--auto",            action="store_true", help="Pas de confirmation interactive")
     return p.parse_args()
 
@@ -941,7 +933,8 @@ def main():
         if args.no_cot:
             args.max_new_tokens = 20
         else:
-            args.max_new_tokens = {1: 60, 3: 150, 5: 250}.get(args.cot_sentences, 60)
+            # Utiliser la valeur définie dans MODEL_CONFIGS si disponible, sinon 256 par défaut
+            args.max_new_tokens = MODEL_CONFIGS.get(args.model, {}).get("max_new_tokens", 256)
     _G_ARGS = args
 
     model_cfg = MODEL_CONFIGS[args.model]
@@ -976,7 +969,7 @@ def main():
     _G_MODEL, _G_TOKENIZER = load_model_and_tokenizer(model_cfg)
 
     if args.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project="fewshot-nli-fr", entity="colin-dievart-facult-des-sciences-montpellier")
         print(f"Sweep ID : {sweep_id}")
         wandb.agent(sweep_id, function=eval_run, count=n_runs)
     else:
@@ -986,7 +979,7 @@ def main():
             "metric": {"name": "test/f1_macro", "goal": "maximize"},
             "parameters": {"n_shots": {"values": [args.n_shots]}},
         }
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr")
+        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG_SINGLE, project="fewshot-nli-fr", entity="colin-dievart-facult-des-sciences-montpellier")
         wandb.agent(sweep_id, function=eval_run, count=1)
 
     print("\nTerminé !")
