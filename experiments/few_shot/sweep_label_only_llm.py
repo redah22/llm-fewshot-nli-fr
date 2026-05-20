@@ -375,6 +375,9 @@ def parse_args():
     p.add_argument("--n_shots",          type=int,      default=5)
     p.add_argument("--seed",             type=int,      default=42)
     p.add_argument("--sweep",            action="store_true")
+    p.add_argument("--resume_sweep",     type=str,      default=None,
+                   help="ID d'un sweep WandB existant à reprendre (ex: abc12345). "
+                        "Évite de recréer un sweep et donc des doublons lors des relances Kaggle.")
     p.add_argument("--max_eval_samples", type=int,      default=300)
     p.add_argument("--auto",             action="store_true")
     return p.parse_args()
@@ -389,8 +392,23 @@ def main():
 
     project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
 
-    if _G_ARGS.sweep:
-        sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
+    if _G_ARGS.sweep or _G_ARGS.resume_sweep:
+        if _G_ARGS.resume_sweep:
+            # ─── REPRISE D'UN SWEEP EXISTANT ───────────────────────────────
+            # On attache un agent à l'ID existant : WandB distribue uniquement
+            # les combinaisons non encore terminées → zéro doublon.
+            sweep_id = _G_ARGS.resume_sweep
+            entity   = os.environ.get("WANDB_ENTITY", None)
+            sweep_path = f"{entity}/{project_name}/{sweep_id}" if entity else f"{project_name}/{sweep_id}"
+            print(f"[RESUME] Reprise du sweep existant : {sweep_path}")
+        else:
+            # ─── NOUVEAU SWEEP ─────────────────────────────────────────────
+            # À n'utiliser QUE pour le premier lancement.
+            # Pour toute relance, passer --resume_sweep <ID> à la place.
+            sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, project=project_name)
+            print(f"[NEW SWEEP] ID créé : {sweep_id}")
+            print(f"  ⚠️  Pour les prochaines relances Kaggle, utilise :")
+            print(f"      --resume_sweep {sweep_id}")
         wandb.agent(sweep_id, function=eval_run)
     else:
         sweep_config_single = {
