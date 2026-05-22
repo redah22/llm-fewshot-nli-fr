@@ -598,6 +598,7 @@ def eval_run(config_dict=None):
         except Exception:
             pass
         wandb.finish()
+        return metrics
 
     except Exception as e:
         print(f"❌ CRASH dans eval_run: {str(e)}\n{traceback.format_exc()}")
@@ -611,6 +612,7 @@ def parse_args():
     p.add_argument("--train_dataset",    type=str,      choices=DATASETS_LIST)
     p.add_argument("--eval_dataset",     type=str,      choices=DATASETS_LIST)
     p.add_argument("--n_shots",          type=int,      default=5)
+    p.add_argument("--n_shots_list",     type=str,      default=None, help="Liste de shots séparés par des virgules (ex: 0,1,3,5,10)")
     p.add_argument("--seed",             type=int,      default=42)
     p.add_argument("--sweep",            action="store_true")
     p.add_argument("--max_eval_samples", type=int,      default=300)
@@ -634,6 +636,37 @@ def main():
     if _G_ARGS.sweep:
         sweep_id = wandb.sweep(sweep=SWEEP_CONFIG, entity=entity_name, project=project_name)
         wandb.agent(sweep_id, function=eval_run)
+    elif _G_ARGS.n_shots_list:
+        shots = [int(s.strip()) for s in _G_ARGS.n_shots_list.split(",")]
+        results = []
+        for shot in shots:
+            print(f"\n==========================================")
+            print(f"🚀 RUNNING DYNAMIC FEW-SHOT WITH {shot} SHOTS")
+            print(f"==========================================")
+            config_single = {
+                "n_shots":       shot,
+                "train_dataset": _G_ARGS.train_dataset,
+                "eval_dataset":  _G_ARGS.eval_dataset,
+                "seed":          _G_ARGS.seed,
+            }
+            metrics = eval_run(config_single)
+            results.append({
+                "n_shots": shot,
+                "accuracy": metrics.get("test/accuracy", 0.0),
+                "f1_macro": metrics.get("test/f1_macro", 0.0),
+                "parse_rate": metrics.get("test/parse_rate", 0.0),
+            })
+            
+        print("\n" + "="*55)
+        print("📊 TABLEAU RÉCAPITULATIF DE L'ÉVOLUTION DES SHOTS")
+        print("="*55)
+        print(f"Modèle: {_G_MODEL_CFG['short']} | Train: {_G_ARGS.train_dataset} | Eval: {_G_ARGS.eval_dataset}")
+        print("-"*55)
+        print(f"| {'Shots':<8} | {'Accuracy':<10} | {'F1-Macro':<10} | {'Parse Rate':<10} |")
+        print("|" + "-"*10 + "|" + "-"*12 + "|" + "-"*12 + "|" + "-"*12 + "|")
+        for r in results:
+            print(f"| {r['n_shots']:<8} | {r['accuracy']:.2%} | {r['f1_macro']:.4f} | {r['parse_rate']:.2%} |")
+        print("="*55 + "\n")
     else:
         config_single = {
             "n_shots":       _G_ARGS.n_shots,
