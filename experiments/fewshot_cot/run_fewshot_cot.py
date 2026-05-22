@@ -266,48 +266,46 @@ LABEL_ALIASES = {
     "non-contradiction": 0,
 }
 
+def _remap_binary(val, num_labels):
+    if num_labels == 2:
+        if val == 2: return 1
+        if val == 1: return 0
+    return val
+
 def parse_label(text: str, num_labels: int) -> int:
-    """Extrait le label prédit depuis le texte généré."""
     if not text:
         return -1
-    # DeepSeek-R1 : ignorer le bloc <think>...</think>, garder ce qui suit
     if "<think>" in text:
         text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     text_low = text.lower()
-
-    # Supprimer le markdown bold/italic qui peut entourer les mots-clés (ex: **Label:**)
     text_low = re.sub(r"\*+", "", text_low).strip()
 
-    # Chercher la ligne "Label :" ou "Étiquette :" ou "Réponse :"
+    last_found = -1
     for line in text_low.split("\n"):
         for kw in ["label :", "label:", "étiquette :", "étiquette:", "réponse :", "réponse:", "answer:", "relation :", "relation:"]:
             if kw in line:
                 remainder = line.split(kw, 1)[-1].strip()
-                # Chiffre direct après "Label :" (ex: "Label: 0")
                 m = re.match(r"^([012])\b", remainder)
                 if m:
-                    val = int(m.group(1))
-                    if num_labels == 2 and val == 2: return 1
-                    if num_labels == 2 and val == 1: return 0
-                    return val
+                    last_found = _remap_binary(int(m.group(1)), num_labels)
+                    continue
                 for alias, val in LABEL_ALIASES.items():
                     if alias in remainder:
-                        if num_labels == 2 and val == 2:
-                            return 1  # contradiction → 1 en mode binaire
-                        if num_labels == 2 and val == 1:
-                            return 0  # neutral → 0 en mode binaire
-                        return val
+                        last_found = _remap_binary(val, num_labels)
+                        break
 
-    # Fallback : chercher le premier mot-clé dans tout le texte
+    if last_found != -1:
+        return last_found
+
+    last_found_fb = -1
     for alias, val in LABEL_ALIASES.items():
-        if alias in text_low:
-            if num_labels == 2 and val == 2:
-                return 1
-            if num_labels == 2 and val == 1:
-                return 0
-            return val
+        pos = text_low.rfind(alias)
+        if pos != -1:
+            if last_found_fb == -1 or pos > last_found_fb_pos:
+                last_found_fb = _remap_binary(val, num_labels)
+                last_found_fb_pos = pos
 
-    return -1  # Pas trouvé
+    return last_found_fb if last_found_fb != -1 else -1
 
 
 # ─────────────────────────────────────────────────────────
