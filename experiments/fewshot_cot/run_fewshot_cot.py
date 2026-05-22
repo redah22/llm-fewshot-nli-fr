@@ -535,7 +535,7 @@ def format_example(ex: dict, num_labels: int, with_answer: bool = True, use_cot:
             cot = ex.get("chain_of_thought", "").strip()
             reasoning = cot if cot and cot != "À remplir" \
                 else f"Cette relation est de type {label_str} car la prémisse et l'hypothèse sont analysées ensemble."
-            text += f"\nLabel : {label_str}\nRaisonnement : {reasoning}"
+            text += f"\nRaisonnement : {reasoning}\nLabel : {label_str}"
         else:
             text += f"\nLabel : {label_str}"
     # Pour l'exemple test (without_answer), on n'ajoute pas "Label :" pour laisser
