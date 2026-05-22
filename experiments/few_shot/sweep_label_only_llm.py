@@ -172,17 +172,34 @@ def load_model_and_tokenizer(model_cfg: dict):
     return model, tokenizer
 
 def generate_response(model, tokenizer, messages: list, max_new_tokens: int = 15) -> str:
+    import torch as _torch
+    device = model.device
+
+    def _to_tensor(x):
+        """Convertit x en LongTensor sur le bon device, quelle que soit sa forme."""
+        if isinstance(x, _torch.Tensor):
+            return x.to(device)
+        # Liste ou autre itérable (BatchEncoding peut renvoyer une liste)
+        return _torch.tensor(x, dtype=_torch.long, device=device)
+
     try:
-        # On essaie le template de chat
-        inputs = tokenizer.apply_chat_template(
-            messages, add_generation_prompt=True, return_tensors="pt", return_dict=True
-        ).to(model.device)
-        input_ids = inputs["input_ids"]
+        # apply_chat_template avec return_tensors='pt' retourne directement un tenseur
+        # (pas un dict) — on utilise return_dict=False pour être sûr
+        input_ids = tokenizer.apply_chat_template(
+            messages, add_generation_prompt=True,
+            return_tensors="pt", return_dict=False
+        ).to(device)  # shape: (1, seq_len)
     except Exception:
-        # Fallback si le template échoue
+        # Fallback : concatène les messages et tokenise manuellement
         prompt = "\n".join(m["content"] for m in messages) + "\n"
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-        input_ids = inputs["input_ids"]
+        enc = tokenizer(prompt, return_tensors="pt")
+        input_ids = _to_tensor(enc["input_ids"])
+
+    # Sécurité : garantit que c'est bien un tensor 2-D
+    if not isinstance(input_ids, _torch.Tensor):
+        input_ids = _to_tensor(input_ids)
+    if input_ids.dim() == 1:
+        input_ids = input_ids.unsqueeze(0)
 
     with torch.no_grad():
         output = model.generate(
