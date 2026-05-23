@@ -396,6 +396,9 @@ def parse_args():
                    help="ID d'un sweep WandB existant à reprendre (ex: abc12345). "
                         "Évite de recréer un sweep et donc des doublons lors des relances Kaggle.")
     p.add_argument("--max_eval_samples", type=int,      default=300)
+    p.add_argument("--count",            type=int,      default=1,
+                   help="Nombre de configs à exécuter par session Kaggle (défaut=1). "
+                        "Chaque config prend ~6-9h → mettre 1 pour rester dans la limite Kaggle.")
     p.add_argument("--auto",             action="store_true")
     return p.parse_args()
 
@@ -410,6 +413,9 @@ def main():
     project_name = os.environ.get("WANDB_PROJECT", "fewshot-nli-fr")
 
     if _G_ARGS.sweep or _G_ARGS.resume_sweep:
+        # Empêche WandB de tuer le sweep après 3 erreurs rapides
+        os.environ.setdefault("WANDB_AGENT_DISABLE_FLAPPING", "true")
+
         if _G_ARGS.resume_sweep:
             # ─── REPRISE D'UN SWEEP EXISTANT ───────────────────────────────
             # On attache un agent à l'ID existant : WandB distribue uniquement
@@ -426,7 +432,10 @@ def main():
             print(f"[NEW SWEEP] ID créé : {sweep_id}")
             print(f"  ⚠️  Pour les prochaines relances Kaggle, utilise :")
             print(f"      --resume_sweep {sweep_id}")
-        wandb.agent(sweep_id, function=eval_run)
+
+        count = _G_ARGS.count if _G_ARGS.count > 0 else None
+        print(f"[AGENT] Lancement avec count={count} (None = infini)")
+        wandb.agent(sweep_id, function=eval_run, count=count)
     else:
         sweep_config_single = {
             "method": "grid",
