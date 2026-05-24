@@ -396,9 +396,9 @@ def parse_args():
                    help="ID d'un sweep WandB existant à reprendre (ex: abc12345). "
                         "Évite de recréer un sweep et donc des doublons lors des relances Kaggle.")
     p.add_argument("--max_eval_samples", type=int,      default=300)
-    p.add_argument("--count",            type=int,      default=1,
-                   help="Nombre de configs à exécuter par session Kaggle (défaut=1). "
-                        "Chaque config prend ~6-9h → mettre 1 pour rester dans la limite Kaggle.")
+    p.add_argument("--count",            type=int,      default=0,
+                   help="Nombre de configs à exécuter (défaut=0 = illimité). "
+                        "0 = l'agent tourne jusqu'à épuisement du sweep ou fin de session.")
     p.add_argument("--auto",             action="store_true")
     return p.parse_args()
 
