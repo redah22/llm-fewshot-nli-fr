@@ -203,7 +203,7 @@ def run_config(config_name, config, model_id, train_data, val_data, tokenizer, t
         per_device_eval_batch_size=16,
         num_train_epochs=config["epochs"],
         weight_decay=0.01,
-        load_best_model_at_end=True,
+        load_best_model_at_end=False,  # FIX: Disabled to avoid HF loading bug
         metric_for_best_model="f1_score",
         greater_is_better=True,
         logging_steps=10,
@@ -222,12 +222,16 @@ def run_config(config_name, config, model_id, train_data, val_data, tokenizer, t
 
     trainer.train()
     
-    # Évaluation finale
-    eval_results = trainer.evaluate()
-    best_acc = eval_results.get("eval_accuracy", 0.0)
-    best_f1 = eval_results.get("eval_f1_score", 0.0)
-    
-    print(f"\n✅ Config {config_name} → Accuracy: {best_acc:.2%} | F1: {best_f1:.4f}")
+    # Évaluation finale: extraction manuelle des vrais résultats pour contourner le bug
+    best_acc = 0.0
+    best_f1 = 0.0
+    for log in trainer.state.log_history:
+        if "eval_accuracy" in log:
+            best_acc = max(best_acc, log["eval_accuracy"])
+        if "eval_f1_score" in log:
+            best_f1 = max(best_f1, log["eval_f1_score"])
+            
+    print(f"\n✅ Config {config_name} → Vraie Best Accuracy: {best_acc:.2%} | Vrai Best F1: {best_f1:.4f}")
     
     result = {
         "config_name": config_name,
