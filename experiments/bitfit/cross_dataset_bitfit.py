@@ -264,6 +264,8 @@ def main():
 
     if args.model == "flaubert":
         model_id = "flaubert/flaubert_base_cased"
+    elif args.model == "camembert_xnli":
+        model_id = "BaptisteDoyen/camembert-base-xnli"
     else:
         model_id = "camembert-base"
 
