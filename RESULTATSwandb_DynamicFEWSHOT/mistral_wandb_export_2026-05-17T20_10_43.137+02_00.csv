@@ -1,0 +1,913 @@
+"test_premise","test_hypothesis","dynamic_examples_used","true_label","pred_label","response"
+"Le jeu de basket-ball se compose d'une balle étant trempée par un homme avec un maillot","Un homme avec un maillot trempe le ballon lors d'un match de basket-ball","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 2:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 3:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0","0","0","entailment"
+"Il n'y a pas d'homme qui trempe la balle dans un match de basket-ball","Le joueur plonge le basket dans le filet et une foule est en arrière-plan","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 2:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 3:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0","2","2","contradiction"
+"Une petite fille regarde une femme en costume","Une jeune fille regarde une femme en costume","Ex 1:
+P: Une petite fille regarde une femme en costume
+H: Les gens regardent des costumes rassemblés dans les environs de la forêt
+L: 1
+
+Ex 2:
+P: Les enfants sont habillés en costumes et jouent à un jeu
+H: Les enfants sont habillés en costumes et jouent à un jeu
+L: 0
+
+Ex 3:
+P: Une femme en robe blanche et une femme en robe bleue sont debout sur une scène
+H: Deux filles dans leur adolescence portent des robes de fantaisie lors d'un événement
+L: 1
+
+Ex 4:
+P: Une petite fille regarde une femme en costume
+H: Les gens portant des costumes se dispersent dans une forêt et regardent dans différentes directions
+L: 1
+
+Ex 5:
+P: Une fille entoure des enfants habillés en brun qui ferment les yeux
+H: Une fille en robe brune est entourée d'enfants et ferme les yeux
+L: 1","0","0","entailment"
+"Un joueur court avec la balle","Le football est joué par deux équipes en compétition","Ex 1:
+P: Un joueur court avec la balle
+H: Deux équipes participent à un match de football
+L: 1
+
+Ex 2:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0
+
+Ex 3:
+P: Deux groupes de personnes jouent au football
+H: Un joueur court avec la balle
+L: 1
+
+Ex 4:
+P: Deux équipes jouent au football
+H: Différents joueurs de football font équipe sur un terrain
+L: 1
+
+Ex 5:
+P: Un ballon de football est en train de rouler dans un filet de but
+H: Un joueur de football jette une balle hors du but
+L: 1","1","1","neutral"
+"Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle","Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle","Ex 1:
+P: Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle
+H: Plusieurs personnes sont devant un bâtiment coloré
+L: 0
+
+Ex 2:
+P: Les gens marchent à l'intérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+L: 1
+
+Ex 3:
+P: Plusieurs personnes sont devant un bâtiment coloré
+H: Personne n'est devant le bâtiment coloré
+L: 2
+
+Ex 4:
+P: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Personne n'est devant le bâtiment coloré
+L: 1
+
+Ex 5:
+P: Certaines personnes marchent
+H: Les gens marchent
+L: 0","0","1","neutral"
+"Peu de gens mangent à des tables rouges dans un restaurant sans lumières","Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes","Ex 1:
+P: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+H: Un petit groupe de personnes attend pour manger dans un restaurant
+L: 1
+
+Ex 2:
+P: Les gens sont assis à des tables carrées dans une salle rouge
+H: Les gens sont assis à table dans une salle rouge
+L: 0
+
+Ex 3:
+P: Un homme et deux femmes dans une pièce sombre sont assis à une table avec des bougies
+H: Le groupe de personnes n'est pas assis dans une pièce sombre
+L: 2
+
+Ex 4:
+P: Une foule violette de gens mange sur diverses tables de restaurant allumées rouges
+H: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+L: 1
+
+Ex 5:
+P: Un groupe d'Asiatiques mange dans un restaurant
+H: Différents clients mangent dans un restaurant bondé avec des lumières violettes
+L: 1","1","2","contradiction"
+"Quelqu'un est sur une moto en noir et blanc et est debout sur le siège","Un coureur est sur un vélo noir et blanc et est debout sur le siège","Ex 1:
+P: Une personne sur une moto noire fait des tours avec une veste
+H: Une personne fait du vélo sur une roue
+L: 1
+
+Ex 2:
+P: Personne n'est sur une moto et est debout sur le siège
+H: Quelqu'un est sur une moto en noir et blanc et est debout sur le siège
+L: 2
+
+Ex 3:
+P: Un homme sur une moto est monté sur une roue
+H: Une personne effectue des acrobaties sur une moto
+L: 0
+
+Ex 4:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Un homme est appuyé sur une moto de course
+L: 1
+
+Ex 5:
+P: Une personne fait du vélo sur une roue
+H: Un homme dans une veste noire fait des tours sur une moto
+L: 1","0","2","contradiction"
+"Il n'y a pas de motocycliste à moto le long d'une chaussée","Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Ex 1:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 2:
+P: Il n'y a pas de motocycliste à moto le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 2
+
+Ex 3:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 4:
+P: Il n'y a pas de personne à moto dans l'événement lié au motocross
+H: La personne monte une moto sur une piste sablonneuse
+L: 1
+
+Ex 5:
+P: Une personne conduit une moto dans l'événement lié au motocross
+H: La personne ne conduit pas une moto sur une piste sablonneuse
+L: 1","2","2","contradiction"
+"Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Un motocycliste conduit une moto le long d'une chaussée","Ex 1:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 2:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 3:
+P: Une personne conduit une moto
+H: Une personne se tient près d'une moto
+L: 2
+
+Ex 4:
+P: Un motocycliste conduit une moto dangereusement le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 0
+
+Ex 5:
+P: Un coureur en pleine vitesse porte un casque avec des logos de sponsor et conduit une moto sport rouge
+H: Une personne en uniforme de motocross porte un casque et conduit une moto rouge
+L: 1","0","0","entailment"
+"Il n'y a pas de chien qui saute dans l'air","Un chien saute haut dans les airs et un autre regarde","Ex 1:
+P: Il n'y a pas de chien brun sautant dans l'air
+H: Le chien brun saute dans l'air
+L: 2
+
+Ex 2:
+P: Un chien saute haut dans l'air dans le pays
+H: Aucun chien ne saute à l'ombre de certains arbres
+L: 1
+
+Ex 3:
+P: Le chien brun saute dans l'air
+H: Un chien brun saute dans l'air
+L: 0
+
+Ex 4:
+P: Un chien brun saute dans l'air
+H: Il n'y a pas de chien brun sautant dans l'air
+L: 2
+
+Ex 5:
+P: Il n'y a pas de chien qui rebondit sur un trampoline
+H: Un chien saute sur un trampoline
+L: 2","2","2","contradiction"
+"Une femme porte une coiffe égyptienne","Un Egyptien porte la coiffure d'une femme","Ex 1:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 2:
+P: Une femme porte un chapeau égyptien sur la tête
+H: Une femme porte une coiffe égyptienne
+L: 0
+
+Ex 3:
+P: Une femme se maquille
+H: La femme enlève le maquillage
+L: 2
+
+Ex 4:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 5:
+P: Une femme porte un chapeau égyptien sur la tête
+H: La femme porte des lunettes et une coiffe noire
+L: 1","1","2","contradiction"
+"La femme ne porte pas de lunettes ou une coiffe","Une femme porte une coiffe égyptienne","Ex 1:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 2:
+P: La femme danse
+H: La femme ne danse pas
+L: 2
+
+Ex 3:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 4:
+P: Il n'y a pas de femme crayonnant sur l'ombre à paupières
+H: Une femme met des cosmétiques sur sa paupière
+L: 1
+
+Ex 5:
+P: Les femmes ne portent pas d’oreilles de lapin ni de numéros de course et ne pointent pas du doigt quelque chose au loin.
+H: Les femmes portent des oreilles de lapin et des numéros de course et pointent quelque chose au loin.
+L: 2","2","1","neutral"
+"Il n'y a pas de chien qui en poursuit un autre ou qui tient un bâton dans sa bouche","Deux chiens courent et portent un objet dans leur bouche","Ex 1:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 0
+
+Ex 2:
+P: Deux chiens courent et portent un objet dans leur bouche
+H: Un chien chasse un bâton et tient un autre chien dans sa bouche
+L: 1
+
+Ex 3:
+P: Un chien chasse une balle
+H: Il n'y a pas de chien chassant une balle
+L: 2
+
+Ex 4:
+P: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 1
+
+Ex 5:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+L: 0","1","2","contradiction"
+"Une personne qui joue au football donne un coup de pied dans le but","Un joueur de football donne un coup de pied dans le but","Ex 1:
+P: Un joueur de football marque un but
+H: Un joueur de football marque un but
+L: 0
+
+Ex 2:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne frappe un ballon de football entre ses pieds
+L: 1
+
+Ex 3:
+P: Un joueur de football marque un but
+H: Il n'y a pas de joueurs de football qui frappent un ballon de football dans le but
+L: 2
+
+Ex 4:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne donne un coup de pied à un ballon pour un match de football entre les pieds de quelqu'un
+L: 0
+
+Ex 5:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0","0","0","entailment"
+"Certaines personnes sont debout","Un groupe d'éclaireurs marchent à travers l'herbe","Ex 1:
+P: Un groupe d'éclaireurs marchent à travers l'herbe
+H: Certaines personnes marchent
+L: 0
+
+Ex 2:
+P: Certaines personnes marchent
+H: Un groupe d'éclaireurs campent dans l'herbe
+L: 1
+
+Ex 3:
+P: Cinq personnes debout dans l'herbe sans chiens
+H: Cinq personnes sont debout avec trois chiens dans le champ vert à côté de la route
+L: 2
+
+Ex 4:
+P: Un groupe d'éclaireurs campent dans l'herbe
+H: Un groupe d'éclaireurs marchent à travers l'herbe
+L: 1
+
+Ex 5:
+P: Un groupe de personnes marchent
+H: Un groupe de personnes est debout
+L: 1","1","2","contradiction"
+"Trois personnes sont debout à côté d'un membre d'arbre","Deux enfants sont suspendus à une grande branche","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un homme ramasse un arbre
+H: Un arbre est ramassé par un homme
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Un homme ramasse un arbre
+H: Un homme fait tomber un arbre
+L: 1","1","1","neutral"
+"Deux enfants sont suspendus à une grande branche","Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un garçon est en train de descendre une pente raide
+H: Un enfant est en train de descendre une pente raide
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Deux garçons portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+H: Deux filles portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+L: 1","1","2","contradiction"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant tient une arme à feu","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 3:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 4:
+P: Cinq enfants sont debout ensemble et un enfant a une arme à feu
+H: Cinq enfants sont debout près l'un de l'autre et aucun des enfants n'a une arme à feu
+L: 2
+
+Ex 5:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0","2","2","contradiction"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 3:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 4:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 5:
+P: Il n'y a pas d'enfant jouant avec un bec d'eau à l'extérieur avec le reste de sa famille qui regarde
+H: Un garçon tient un tuyau à côté d'un homme et un autre garçon regarde
+L: 1","2","2","contradiction"
+"Deux daschunds jouent avec une boule rouge","Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe","Ex 1:
+P: Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 2:
+P: Deux chiens courent et essaient d'attraper un ballon de football
+H: Deux chiens courent et essaient d'attraper une balle
+L: 0
+
+Ex 3:
+P: Deux daschunds jouent avec une boule rouge
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 4:
+P: Un chien chasse une balle sur l'herbe
+H: Un chien chasse une balle dans l'herbe
+L: 0
+
+Ex 5:
+P: Un chien chasse une balle sur l'herbe
+H: Une balle est poursuivie par un chien sur l'herbe
+L: 0","1","2","contradiction"
+"Trois personnes sont debout à côté d'un membre d'arbre","Deux enfants sont suspendus à une grande branche","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un homme ramasse un arbre
+H: Un arbre est ramassé par un homme
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Un homme ramasse un arbre
+H: Un homme fait tomber un arbre
+L: 1","1","1","neutral"
+"Trois jeunes hommes courent furieusement, sautent et donnent des coups de pied près d'un distributeur automatique","Trois jeunes hommes courent, sautent et donnent des coups de pied près d'un distributeur automatique","Ex 1:
+P: Trois jeunes hommes courent, sautent et donnent des coups de pied près d'un distributeur automatique
+H: Trois hommes sautent sur un mur
+L: 1
+
+Ex 2:
+P: Un garçon saute d'une plate-forme et deux autres garçons sont debout et regardent
+H: Un garçon saute d'une plate-forme et deux autres garçons sont debout et le regardent
+L: 0
+
+Ex 3:
+P: Un garçon saute d'une plate-forme et deux autres garçons sont debout et regardent
+H: Personne ne saute d'une plate-forme
+L: 2
+
+Ex 4:
+P: Trois hommes sautent d'un mur
+H: Trois jeunes hommes courent, sautent et donnent des coups de pied près d'un distributeur automatique
+L: 1
+
+Ex 5:
+P: Trois garçons sautent d'une plate-forme
+H: Un garçon saute d'une plate-forme et deux autres garçons sont debout et le regardent
+L: 1","0","0","entailment"
+"La dame orientale coupe une carotte en morceaux minces","La dame orientale coupe une carotte en morceaux minces","Ex 1:
+P: La dame orientale coupe une carotte en morceaux minces
+H: La dame orientale ne coupe pas une carotte en morceaux minces
+L: 2
+
+Ex 2:
+P: Une mince dame est en train de reconstituer des coupes de carottes orientales
+H: La dame orientale coupe une carotte en morceaux minces
+L: 1
+
+Ex 3:
+P: La dame orientale coupe une carotte en morceaux minces
+H: Une femme tranche une carotte
+L: 0
+
+Ex 4:
+P: Une femme tranche une carotte
+H: Une femme coupe une carotte
+L: 0
+
+Ex 5:
+P: Une femme range une carotte
+H: Une femme tranche une carotte
+L: 1","0","0","entailment"
+"L'homme joue du piano avec son nez","Il n'y a pas d'homme qui joue du piano avec son nez","Ex 1:
+P: Il n'y a pas d'homme qui joue du piano avec son nez
+H: Un homme joue du clavier avec son nez
+L: 2
+
+Ex 2:
+P: L'homme joue du piano avec son nez
+H: Un homme joue du clavier avec son nez
+L: 0
+
+Ex 3:
+P: Quelqu'un joue du piano
+H: Une personne ne joue pas du clavier
+L: 1
+
+Ex 4:
+P: L'homme joue drôlement du piano avec son nez
+H: L'homme joue du piano avec son nez
+L: 0
+
+Ex 5:
+P: L'homme joue drôlement du piano avec son nez
+H: Un homme joue du clavier avec son nez
+L: 0","2","2","contradiction"
+"Un homme danse avec un chapeau dur usé","Un homme porte un chapeau dur et danse","Ex 1:
+P: L'homme avec un chapeau dur danse
+H: Un homme porte un chapeau dur et danse
+L: 0
+
+Ex 2:
+P: Un homme porte un chapeau dur et danse
+H: Il n'y a pas d'homme avec un chapeau dur dansant
+L: 2
+
+Ex 3:
+P: Un homme porte un chapeau dur et danse
+H: Un homme est nu et se tient immobile
+L: 1
+
+Ex 4:
+P: Un homme porte un chapeau dur et danse
+H: Un homme avec un chapeau dur danse
+L: 0
+
+Ex 5:
+P: Un homme avec un chapeau dur danse
+H: L'homme avec un chapeau dur danse
+L: 0","1","0","entailment"
+"Un homme danse avec un chapeau dur usé","Un homme avec un chapeau dur danse","Ex 1:
+P: Un homme avec un chapeau dur danse
+H: L'homme avec un chapeau dur danse
+L: 0
+
+Ex 2:
+P: Un homme porte un chapeau dur et danse
+H: Il n'y a pas d'homme avec un chapeau dur dansant
+L: 2
+
+Ex 3:
+P: Un homme porte un chapeau dur et danse
+H: Un homme est nu et se tient immobile
+L: 1
+
+Ex 4:
+P: Un homme porte un chapeau dur et danse
+H: Un homme avec un chapeau dur danse
+L: 0
+
+Ex 5:
+P: L'homme avec un chapeau dur danse
+H: Un homme porte un chapeau dur et danse
+L: 0","0","0","entailment"
+"Un train jouet frappe une voiture jouet","Il n'y a pas de train jouet frappant une voiture jouet","Ex 1:
+P: Un train jouet frappe une voiture jouet
+H: Un train de jouets heurte une voiture jouet
+L: 0
+
+Ex 2:
+P: Un enfant est assis dans une voiture jouet rouge et jaune
+H: Il n'y a pas d'enfant assis dans une voiture jouet rouge et jaune
+L: 2
+
+Ex 3:
+P: Quelqu'un joue avec un crapaud
+H: Quelqu'un joue avec une grenouille
+L: 1
+
+Ex 4:
+P: Un bébé ne joue pas avec une poupée
+H: Un bébé joue avec une poupée
+L: 2
+
+Ex 5:
+P: Il n'y a pas d'homme chevauchant un taureau mécanique
+H: L'homme chevauche un taureau mécanique
+L: 2","2","2","contradiction"
+"La femme ne verse pas d'huile dans la casserole","La femme verse de l'huile dans la casserole","Ex 1:
+P: La femme verse de l'huile dans la casserole
+H: L'huile est versée dans la casserole par la femme
+L: 0
+
+Ex 2:
+P: Une femme ne fait pas frire de la nourriture
+H: Une femme fait frire de la nourriture
+L: 2
+
+Ex 3:
+P: Une femme ne fait pas frire de la viande
+H: Une femme met de la nourriture dans une casserole d'eau chaude
+L: 1
+
+Ex 4:
+P: Une personne verse de l'huile de cuisson dans une casserole
+H: Une personne verse de l'huile d'olive dans le poêle à partir d'une casserole
+L: 1
+
+Ex 5:
+P: Il n'y a pas de femme qui fait frire la nourriture
+H: Une femme fait frire la nourriture
+L: 2","2","2","contradiction"
+"Un homme sur une moto est monté sur une roue","Une personne exécute des tours sur une moto","Ex 1:
+P: Un homme sur une moto est monté sur une roue
+H: Une personne effectue des acrobaties sur une moto
+L: 0
+
+Ex 2:
+P: Une personne exécute des tours sur une moto
+H: Un homme sur une moto ne roule pas sur une seule roue
+L: 1
+
+Ex 3:
+P: Un homme sur une moto fait un tour
+H: Une personne exécute des tours sur une moto
+L: 0
+
+Ex 4:
+P: La personne monte une moto sur une piste sablonneuse
+H: Un homme est à moto dans l'événement lié au motocross
+L: 1
+
+Ex 5:
+P: La personne monte une moto sur une piste sablonneuse
+H: Un homme soulève des haltères
+L: 1","0","0","entailment"
+"Une grande ville supplie les hommes et les détenteurs d'argent","Un sans-abri brandit une pancarte et demande de l'argent","Ex 1:
+P: Un sans-abri brandit une pancarte et demande de l'argent
+H: Un homme dans une petite ville fait un travail de charité
+L: 1
+
+Ex 2:
+P: Un sans-abri brandit une pancarte et demande de l'argent
+H: Un sans-abri brandit un panneau et implore pitoyablement de l'argent
+L: 0
+
+Ex 3:
+P: Un homme dans une grande ville tient une pancarte et demande de l'argent
+H: Un sans-abri pose un signe et refuse une charité
+L: 1
+
+Ex 4:
+P: Un sans-abri brandit une pancarte et demande de l'argent
+H: La femme et l'homme voyagent en voiture
+L: 1
+
+Ex 5:
+P: Un homme dans une grande ville tient une pancarte et demande de l'argent
+H: Un homme dans une petite ville fait un travail de charité
+L: 1","1","0","entailment"
+"Trois hommes et une femme posent pour une photo","Une femme et trois hommes posent pour une photo","Ex 1:
+P: Une femme et trois hommes posent pour une photo
+H: Une femme pose pour trois hommes pour une photo
+L: 1
+
+Ex 2:
+P: Une femme et trois hommes posent sans bouger pour une photo
+H: Trois hommes et une femme posent pour une photo
+L: 0
+
+Ex 3:
+P: Un homme oriental et deux femmes font face à une caméra
+H: Il n'y a pas de groupe de personnes debout ensemble et regardant la caméra.
+L: 2
+
+Ex 4:
+P: Une femme et trois hommes nient une photo
+H: Trois hommes et une femme posent pour une photo
+L: 1
+
+Ex 5:
+P: Un homme oriental et deux femmes font face à une caméra
+H: Le groupe de personnes est debout ensemble et regarde la caméra
+L: 0","0","1","neutral"
+"Le chien brun à fourrure traverse la zone herbeuse","Le chien brun poilu ne traverse pas la zone herbeuse","Ex 1:
+P: Un chien brun à fourrure parcourt la zone herbeuse
+H: Le chien brun à fourrure traverse la zone herbeuse
+L: 0
+
+Ex 2:
+P: Le chien brun poilu ne traverse pas la zone herbeuse
+H: Le chien brun joue dehors
+L: 1
+
+Ex 3:
+P: Le chien brun ne joue pas dehors
+H: Le chien brun joue dehors
+L: 2
+
+Ex 4:
+P: Un chien brun parcourt un sentier enneigé
+H: Un chien court sur un sentier enneigé
+L: 0
+
+Ex 5:
+P: Le chien avec le manteau brun joue à l'extérieur
+H: Le chien brun à fourrure traverse la zone herbeuse
+L: 1","2","2","contradiction"
+"Trois hommes regardent les grandes collines vertes au loin","Trois hommes ne regardent pas les grandes collines vertes au loin","Ex 1:
+P: Trois hommes ne regardent pas les grandes collines vertes au loin
+H: Trois hommes regardent au loin
+L: 1
+
+Ex 2:
+P: Trois hommes regardent les grandes collines vertes au loin
+H: Trois hommes regardent au loin
+L: 0
+
+Ex 3:
+P: Trois hommes dansent
+H: Les hommes ne dansent pas
+L: 2
+
+Ex 4:
+P: Trois hommes sont couchés sur une colline et regardent les montagnes et le ciel
+H: Trois hommes sont assis sur une colline et regardent les montagnes et le ciel
+L: 1
+
+Ex 5:
+P: Trois randonneurs sont debout sur un flanc de montagne et regardent la vue avec une paire de jumelles
+H: Trois hommes sont assis sur une colline et regardent les montagnes et le ciel
+L: 1","2","2","contradiction"
+"Un homme escalade un mur de pierre et un autre homme tient une corde","Un grimpeur tient un rocher et un autre homme roule un mur","Ex 1:
+P: Un homme escalade un mur de pierre et un autre homme tient une corde
+H: Les hommes n'escaladent pas une montagne
+L: 1
+
+Ex 2:
+P: Un rocher est escaladé par une personne avec une corde, qui est rose
+H: Un homme grimpe une falaise avec une corde
+L: 0
+
+Ex 3:
+P: Les hommes escaladent une montagne
+H: Un homme escalade un mur fait de roche et un autre homme tient une corde
+L: 1
+
+Ex 4:
+P: Une montagne est escaladée par deux hommes
+H: Un homme escalade un mur de pierre et un autre homme tient une corde
+L: 1
+
+Ex 5:
+P: Un grimpeur social attache un homme à une falaise avec une corde
+H: Un homme grimpe une falaise avec une corde
+L: 1","1","2","contradiction"
+"La personne qui fait du vélo regarde un accident d'un autre cycliste","Le motard regarde un accident d'un autre motard","Ex 1:
+P: Le motard regarde un accident d'un autre motard
+H: Une personne regarde un vélo de motocross qui est couché sur le côté et un autre est en course par
+L: 1
+
+Ex 2:
+P: Un homme sur un vélo de sport jaune fait un wheelie et un ami sur un vélo noir rattrape
+H: Un motard sur un vélo de sport jaune fait un wheelie et un ami sur un vélo noir rattrape
+L: 0
+
+Ex 3:
+P: Une personne fait du vélo
+H: Une personne qui fait du vélo, dans un uniforme noir et rouge, est debout sur un vélo de terre
+L: 1
+
+Ex 4:
+P: Un homme sur un vélo de sport jaune fait un wheelie et un ami sur un vélo blanc rattrape
+H: Un homme sur un vélo de sport jaune fait un wheelie et un ami sur un vélo noir rattrape
+L: 1
+
+Ex 5:
+P: Une personne qui fait du vélo, dans un uniforme noir et rouge, est debout sur un vélo de terre
+H: Un coureur de vélo dans un uniforme noir et rouge est debout sur un vélo de saleté
+L: 0","0","0","entailment"
+"Le grand surfeur chevauche et agite","Le surfeur surfe sur une grosse vague","Ex 1:
+P: Un surfeur surfe sur une grosse vague
+H: Le surfeur surfe sur une grosse vague
+L: 0
+
+Ex 2:
+P: Un surfeur surfe sur la vague
+H: Un cavalier agite un surfeur
+L: 1
+
+Ex 3:
+P: Le surfeur surfe sur une petite vague
+H: Le surfeur surfe sur une grosse vague
+L: 2
+
+Ex 4:
+P: Un surfeur en combinaison noire chevauche une vague mousseuse
+H: Un surfeur surfe sur une grosse vague
+L: 1
+
+Ex 5:
+P: Un surfeur surfe sur la vague
+H: Un rider surfe sur la vague
+L: 0","1","0","entailment"
+"Il n'y a pas de vétéran qui montre des choses d'une guerre à certaines personnes","Un vétéran montre des choses différentes d'une guerre à certaines personnes","Ex 1:
+P: Il n'y a pas de vétéran qui montre des choses d'une guerre à certaines personnes
+H: Un grand homme est assis dans un magasin d'accessoires militaires
+L: 1
+
+Ex 2:
+P: Il n'y a pas d'homme qui fixe un silencieux à une arme à feu
+H: Un homme fixe un silencieux à une arme à feu
+L: 2
+
+Ex 3:
+P: Différentes choses d'une guerre sont montrées à certaines personnes par un vétéran
+H: Trois amis font des visages pour la caméra
+L: 1
+
+Ex 4:
+P: Un officier parle aux recrues
+H: Un officier parle aux soldats
+L: 1
+
+Ex 5:
+P: Certains hommes scient
+H: Il n'y a pas d'hommes qui scient
+L: 2","2","0","entailment"
+"Une femme en jean bleu se tient devant un groupe d'enfants à côté d'une maison en pierre","Une dame se tient dans la rue et est entourée d'écoliers.","Ex 1:
+P: Une femme en jean bleu se tient devant un groupe d'enfants à côté d'une maison en pierre
+H: Une femme en jean bleu se tient devant un groupe d'enfants à côté d'une maison en pierre
+L: 0
+
+Ex 2:
+P: Un homme en jean bleu se tient devant un groupe d'enfants à côté d'une maison en pierre
+H: Une femme en jean bleu se tient devant un groupe d'enfants à côté d'une maison en pierre
+L: 1
+
+Ex 3:
+P: Une dame se tient dans la rue et est entourée d'écoliers.
+H: Aucune dame n'est debout dans la rue et est entourée d'écoliers
+L: 2
+
+Ex 4:
+P: Une dame est debout près de trois enfants
+H: Une femme est debout près de trois enfants
+L: 0
+
+Ex 5:
+P: Adultes et enfants debout et jouant devant des marches près d'une zone boisée
+H: Adultes et enfants debout et jouant devant un escalier près d'une zone boisée
+L: 0","1","1","neutral"

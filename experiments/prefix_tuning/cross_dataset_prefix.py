@@ -52,12 +52,38 @@ def get_dataset(name):
         
     elif name == "daccord":
         data = load_dataset('maximoss/daccord-contradictions')['train'].shuffle(seed=42)
+        # Convertir label 1 -> 2 (faux/contradiction) pour le format 3-class standard
+        data = data.map(lambda ex: {"label": 2 if ex["label"] == 1 else 0})
         total = len(data)
         train_size, val_size = int(total * 0.6), int(total * 0.2)
         return DatasetDict({
             'train': data.select(range(0, train_size)),
             'validation': data.select(range(train_size, train_size + val_size)),
             'test': data.select(range(train_size + val_size, total))
+        }), "premise"
+
+    elif name == "sick":
+        ds = load_dataset("maximoss/sick-fr")
+        def convert(ex):
+            lbl = str(ex["entailment_label"]).strip().upper()
+            l_val = 0 if lbl == "ENTAILMENT" else (1 if lbl == "NEUTRAL" else 2)
+            return {"premise": ex["sentence_A"], "hypothesis": ex["sentence_B"], "label": l_val}
+        return DatasetDict({
+            "train": ds["train"].map(convert),
+            "validation": ds["validation"].map(convert),
+            "test": ds["test"].map(convert)
+        }), "premise"
+
+    elif name == "rte3":
+        ds = load_dataset("maximoss/rte3-french")
+        # Mapper les splits de RTE3 qui sont validation et test
+        # On crée un split train factice si on veut l'utiliser comme train_ds
+        # RTE3-french sur HF a "validation" et "test"
+        # Utilisons validation comme train et test comme test/validation
+        return DatasetDict({
+            "train": ds["validation"],
+            "validation": ds["test"],
+            "test": ds["test"]
         }), "premise"
 
     raise ValueError(f"Dataset {name} inconnu.")

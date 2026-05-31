@@ -81,9 +81,9 @@ logs/
 wandb/
 runs/
 *.md
-!README.  
+*.md
+!README.md
 !RAPPORT_RESULTATS.md
-
 # macOS
 .DS_Store
 .AppleDouble
@@ -123,3 +123,5 @@ ruvector.db
 TOGETHER_API_KEY*
 *_API_KEY*
 RAPPORT_RESULTATS.md
+
+# Ignorer les résultats WandB locaux de Tala

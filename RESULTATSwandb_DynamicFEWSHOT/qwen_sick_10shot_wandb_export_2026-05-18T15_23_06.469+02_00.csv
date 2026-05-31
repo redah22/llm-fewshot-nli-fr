@@ -1,0 +1,981 @@
+"test_premise","test_hypothesis","dynamic_examples_used","true_label","pred_label","response"
+"Le jeu de basket-ball se compose d'une balle étant trempée par un homme avec un maillot","Un homme avec un maillot trempe le ballon lors d'un match de basket-ball","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 2:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 3:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0
+
+Ex 6:
+P: Un homme qui joue court avec la balle dans ses mains
+H: Un joueur court avec la balle
+L: 0
+
+Ex 7:
+P: Deux joueurs de football se bousculent pour le ballon sur le terrain
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 1
+
+Ex 8:
+P: Deux joueurs de football se bousculent pour le ballon sur le terrain
+H: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+L: 1
+
+Ex 9:
+P: Un homme frappe un ballon de football
+H: Un homme donne un coup de pied à un ballon de football
+L: 1
+
+Ex 10:
+P: Un homme joue des tours avec un ballon de football
+H: Un homme frappe puissamment un ballon de football
+L: 1","0","0","entailment"
+"Il n'y a pas d'homme qui trempe la balle dans un match de basket-ball","Le joueur plonge le basket dans le filet et une foule est en arrière-plan","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 2:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 3:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0
+
+Ex 6:
+P: Un homme qui joue court avec la balle dans ses mains
+H: Un joueur court avec la balle
+L: 0
+
+Ex 7:
+P: Deux joueurs de football se bousculent pour le ballon sur le terrain
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 1
+
+Ex 8:
+P: Deux joueurs de football se bousculent pour le ballon sur le terrain
+H: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+L: 1
+
+Ex 9:
+P: Un homme est debout au milieu d'un gymnase et porte un maillot
+H: Il n'y a pas d'homme debout au milieu d'un gymnase et porte un maillot
+L: 2
+
+Ex 10:
+P: Il n'y a pas d'homme debout au milieu d'un gymnase et porte un maillot
+H: Un homme en maillot noir est debout dans un gymnase
+L: 1","2","2","contradiction"
+"Une petite fille regarde une femme en costume","Une jeune fille regarde une femme en costume","Ex 1:
+P: Une petite fille regarde une femme en costume
+H: Les gens regardent des costumes rassemblés dans les environs de la forêt
+L: 1
+
+Ex 2:
+P: Les enfants sont habillés en costumes et jouent à un jeu
+H: Les enfants sont habillés en costumes et jouent à un jeu
+L: 0
+
+Ex 3:
+P: La petite fille ne se balance pas et la femme ne se tient pas derrière elle
+H: La petite fille se balance et la femme se tient derrière elle
+L: 2
+
+Ex 4:
+P: Une femme en robe blanche et une femme en robe bleue sont debout sur une scène
+H: Deux filles dans leur adolescence portent des robes de fantaisie lors d'un événement
+L: 1
+
+Ex 5:
+P: Une petite fille regarde une femme en costume
+H: Les gens portant des costumes se dispersent dans une forêt et regardent dans différentes directions
+L: 1
+
+Ex 6:
+P: Une fille entoure des enfants habillés en brun qui ferment les yeux
+H: Une fille en robe brune est entourée d'enfants et ferme les yeux
+L: 1
+
+Ex 7:
+P: Une femme en robe blanche et une femme en robe bleue sont debout sur une scène
+H: Deux adolescentes portent des robes de fantaisie lors d'un événement
+L: 1
+
+Ex 8:
+P: Une jeune fille regarde une femme en costume
+H: Les gens portant des costumes se rassemblent dans une forêt et regardent dans la même direction
+L: 1
+
+Ex 9:
+P: Une femme blanche se tient sur une femme vêtue de bleu sur une scène
+H: Deux adolescentes portent des robes de fantaisie lors d'un événement
+L: 1
+
+Ex 10:
+P: Une jeune fille au visage peint se tient à côté d'autres enfants
+H: Les enfants ne sont pas habillés en costumes et jouent à un jeu.
+L: 1","0","0","entailment"
+"Un joueur court avec la balle","Le football est joué par deux équipes en compétition","Ex 1:
+P: Un joueur court avec la balle
+H: Deux équipes participent à un match de football
+L: 1
+
+Ex 2:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0
+
+Ex 3:
+P: Un joueur de football marque un but
+H: Il n'y a pas de joueurs de football qui frappent un ballon de football dans le but
+L: 2
+
+Ex 4:
+P: Deux groupes de personnes jouent au football
+H: Un joueur court avec la balle
+L: 1
+
+Ex 5:
+P: Deux équipes jouent au football
+H: Différents joueurs de football font équipe sur un terrain
+L: 1
+
+Ex 6:
+P: Un ballon de football est en train de rouler dans un filet de but
+H: Un joueur de football jette une balle hors du but
+L: 1
+
+Ex 7:
+P: Un ballon de football est en train de rouler dans un filet de but
+H: Un joueur de football donne un coup de pied dans le but
+L: 1
+
+Ex 8:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne frappe un ballon de football entre ses pieds
+L: 1
+
+Ex 9:
+P: Une personne qui joue au football donne un coup de pied dans le but
+H: Un ballon de football est en train de rouler dans un filet de but
+L: 1
+
+Ex 10:
+P: Deux équipes jouent au football avec enthousiasme
+H: Différentes équipes jouent au football sur un terrain
+L: 0","1","1","neutral"
+"Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle","Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle","Ex 1:
+P: Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle
+H: Plusieurs personnes sont devant un bâtiment coloré
+L: 0
+
+Ex 2:
+P: Les gens marchent à l'intérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+L: 1
+
+Ex 3:
+P: Plusieurs personnes sont devant un bâtiment coloré
+H: Personne n'est devant le bâtiment coloré
+L: 2
+
+Ex 4:
+P: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Personne n'est devant le bâtiment coloré
+L: 1
+
+Ex 5:
+P: Certaines personnes marchent
+H: Les gens marchent
+L: 0
+
+Ex 6:
+P: Un homme noir marche à côté d'un bâtiment dans une grande ville
+H: Un homme regarde au loin et les gens marchent entre les bâtiments derrière
+L: 1
+
+Ex 7:
+P: Un groupe de personnes marchent
+H: Un groupe de personnes est debout
+L: 1
+
+Ex 8:
+P: Les gens marchent dans une rue bondée
+H: Les gens marchent à travers une rue qui est bondée
+L: 0
+
+Ex 9:
+P: Des hommes en costumes se promènent dans la rue
+H: Les gens en costumes se promènent dans la rue
+L: 0
+
+Ex 10:
+P: Deux personnes portent des paniers colorés et des couvertures et marchent près d'un bâtiment
+H: Deux personnes marchent avec des paniers chargés et des couvertures colorées
+L: 1","0","0","entailment"
+"Peu de gens mangent à des tables rouges dans un restaurant sans lumières","Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes","Ex 1:
+P: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+H: Un petit groupe de personnes attend pour manger dans un restaurant
+L: 1
+
+Ex 2:
+P: Les gens sont assis à des tables carrées dans une salle rouge
+H: Les gens sont assis à table dans une salle rouge
+L: 0
+
+Ex 3:
+P: Un homme et deux femmes dans une pièce sombre sont assis à une table avec des bougies
+H: Le groupe de personnes n'est pas assis dans une pièce sombre
+L: 2
+
+Ex 4:
+P: Une foule violette de gens mange sur diverses tables de restaurant allumées rouges
+H: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+L: 1
+
+Ex 5:
+P: Un groupe d'Asiatiques mange dans un restaurant
+H: Différents clients mangent dans un restaurant bondé avec des lumières violettes
+L: 1
+
+Ex 6:
+P: Une foule violette de gens mange sur diverses tables de restaurant allumées rouges
+H: Un groupe d'Asiatiques mange dans un restaurant
+L: 1
+
+Ex 7:
+P: Les gens sont assis à des tables carrées dans une salle rouge
+H: Plusieurs personnes sont assises à de petites tables dans une pièce sombre.
+L: 1
+
+Ex 8:
+P: Plusieurs personnes sont assises à de petites tables dans une salle lumineuse
+H: Plusieurs personnes sont assises à de petites tables dans une pièce sombre.
+L: 1
+
+Ex 9:
+P: Plusieurs personnes sont assises à de petites tables dans une pièce sombre.
+H: Les gens sont assis à des tables carrées dans une salle rouge
+L: 1
+
+Ex 10:
+P: Plusieurs personnes sont assises à de petites tables dans une pièce sombre.
+H: Les gens sont assis à table dans une salle rouge
+L: 1","1","1","neutral"
+"Quelqu'un est sur une moto en noir et blanc et est debout sur le siège","Un coureur est sur un vélo noir et blanc et est debout sur le siège","Ex 1:
+P: Une personne sur une moto noire fait des tours avec une veste
+H: Une personne fait du vélo sur une roue
+L: 1
+
+Ex 2:
+P: Personne n'est sur une moto et est debout sur le siège
+H: Quelqu'un est sur une moto en noir et blanc et est debout sur le siège
+L: 2
+
+Ex 3:
+P: Un homme sur une moto est monté sur une roue
+H: Une personne effectue des acrobaties sur une moto
+L: 0
+
+Ex 4:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Un homme est appuyé sur une moto de course
+L: 1
+
+Ex 5:
+P: Une personne fait du vélo sur une roue
+H: Un homme dans une veste noire fait des tours sur une moto
+L: 1
+
+Ex 6:
+P: La personne monte une moto sur une piste sablonneuse
+H: Un homme est à moto dans l'événement lié au motocross
+L: 1
+
+Ex 7:
+P: La personne monte une moto sur une piste sablonneuse
+H: Un homme soulève des haltères
+L: 1
+
+Ex 8:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Aucun coureur de moto ne conduit un vélo rouge et noir
+L: 2
+
+Ex 9:
+P: Une personne conduit une moto
+H: Une personne se tient près d'une moto
+L: 2
+
+Ex 10:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Une femme est appuyée sur une moto de course
+L: 1","0","2","contradiction"
+"Il n'y a pas de motocycliste à moto le long d'une chaussée","Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Ex 1:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 2:
+P: Il n'y a pas de motocycliste à moto le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 2
+
+Ex 3:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 4:
+P: Il n'y a pas de personne à moto dans l'événement lié au motocross
+H: La personne monte une moto sur une piste sablonneuse
+L: 1
+
+Ex 5:
+P: Une personne conduit une moto dans l'événement lié au motocross
+H: La personne ne conduit pas une moto sur une piste sablonneuse
+L: 1
+
+Ex 6:
+P: Un homme sur une moto tourne autour d'un coin
+H: Il n'y a pas de motocycliste sur un vélo penché dans un coin pointu
+L: 2
+
+Ex 7:
+P: Un motocycliste sur un vélo se penche dans un coin pointu
+H: Il n'y a pas de motocycliste sur un vélo penché dans un coin pointu
+L: 2
+
+Ex 8:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Aucun coureur de moto ne conduit un vélo rouge et noir
+L: 2
+
+Ex 9:
+P: Une personne ne fait pas de tours sur une moto
+H: Un homme sur une moto est monté sur une roue
+L: 1
+
+Ex 10:
+P: Un motocycliste conduit une moto dangereusement le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 0","2","2","contradiction"
+"Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Un motocycliste conduit une moto le long d'une chaussée","Ex 1:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 2:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 3:
+P: Une personne conduit une moto
+H: Une personne se tient près d'une moto
+L: 2
+
+Ex 4:
+P: Un motocycliste conduit une moto dangereusement le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 0
+
+Ex 5:
+P: Un coureur en pleine vitesse porte un casque avec des logos de sponsor et conduit une moto sport rouge
+H: Une personne en uniforme de motocross porte un casque et conduit une moto rouge
+L: 1
+
+Ex 6:
+P: Un homme conduit une moto
+H: Une moto est conduite par un homme
+L: 0
+
+Ex 7:
+P: Un coureur en pleine vitesse porte un casque avec des logos de sponsor et conduit une moto sport rouge
+H: Un homme en uniforme de motocross porte un casque et conduit une moto rouge
+L: 0
+
+Ex 8:
+P: La personne monte une moto sur une piste sablonneuse
+H: Un homme est à moto dans l'événement lié au motocross
+L: 1
+
+Ex 9:
+P: Un homme sur une moto fait un tour
+H: Une personne exécute des tours sur une moto
+L: 0
+
+Ex 10:
+P: Un homme est en train de garer une moto
+H: Un homme conduit une moto
+L: 1","0","0","entailment"
+"Il n'y a pas de chien qui saute dans l'air","Un chien saute haut dans les airs et un autre regarde","Ex 1:
+P: Il n'y a pas de chien brun sautant dans l'air
+H: Le chien brun saute dans l'air
+L: 2
+
+Ex 2:
+P: Un chien saute haut dans l'air dans le pays
+H: Aucun chien ne saute à l'ombre de certains arbres
+L: 1
+
+Ex 3:
+P: Le chien brun saute dans l'air
+H: Un chien brun saute dans l'air
+L: 0
+
+Ex 4:
+P: Un chien brun saute dans l'air
+H: Il n'y a pas de chien brun sautant dans l'air
+L: 2
+
+Ex 5:
+P: Il n'y a pas de chien qui rebondit sur un trampoline
+H: Un chien saute sur un trampoline
+L: 2
+
+Ex 6:
+P: Aucun chien ne saute à l'ombre de certains arbres
+H: Un chien saute à l'ombre de certains arbres
+L: 2
+
+Ex 7:
+P: Un chien saute haut dans l'air dans le pays
+H: Un chien saute à l'ombre de certains arbres
+L: 1
+
+Ex 8:
+P: Il n'y a pas de chien roulant d'un côté à l'autre
+H: Un chien roule d'un côté à l'autre
+L: 2
+
+Ex 9:
+P: Un chien roule d'un côté à l'autre
+H: Il n'y a pas de chiot qui roule
+L: 1
+
+Ex 10:
+P: Il n'y a pas de chien tournant sur l'herbe et poursuivant une balle volante
+H: Un chien se retourne sur l'herbe et poursuit une balle volante
+L: 2","2","2","contradiction"
+"Une femme porte une coiffe égyptienne","Un Egyptien porte la coiffure d'une femme","Ex 1:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 2:
+P: Une femme porte un chapeau égyptien sur la tête
+H: Une femme porte une coiffe égyptienne
+L: 0
+
+Ex 3:
+P: Une femme se maquille
+H: La femme enlève le maquillage
+L: 2
+
+Ex 4:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 5:
+P: Une femme porte un chapeau égyptien sur la tête
+H: La femme porte des lunettes et une coiffe noire
+L: 1
+
+Ex 6:
+P: Un Arabe ne porte pas de chapeau blanc
+H: Un homme avec un chapeau blanc et une chemise brune est derrière une femme en rouge et regarde vers la gauche
+L: 1
+
+Ex 7:
+P: Une écharpe en fourrure est tenue par une femme asiatique
+H: Une femme asiatique tient une écharpe en fourrure
+L: 0
+
+Ex 8:
+P: Une femme met des ombres à paupières
+H: Les ombres à paupières sont mises par une femme
+L: 0
+
+Ex 9:
+P: Les ombres à paupières sont mises par une femme
+H: Une femme se maquille
+L: 0
+
+Ex 10:
+P: Une femme met des ombres à paupières
+H: Une femme se maquille
+L: 0","1","1","neutral"
+"La femme ne porte pas de lunettes ou une coiffe","Une femme porte une coiffe égyptienne","Ex 1:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 2:
+P: La femme danse
+H: La femme ne danse pas
+L: 2
+
+Ex 3:
+P: Une femme porte un chapeau égyptien sur la tête
+H: Une femme porte une coiffe égyptienne
+L: 0
+
+Ex 4:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 5:
+P: Il n'y a pas de femme crayonnant sur l'ombre à paupières
+H: Une femme met des cosmétiques sur sa paupière
+L: 1
+
+Ex 6:
+P: Les femmes ne portent pas d’oreilles de lapin ni de numéros de course et ne pointent pas du doigt quelque chose au loin.
+H: Les femmes portent des oreilles de lapin et des numéros de course et pointent quelque chose au loin.
+L: 2
+
+Ex 7:
+P: Une personne ne tient pas une mouffette
+H: Une personne tient une mouffette
+L: 2
+
+Ex 8:
+P: Une femme asiatique tient une écharpe en fourrure
+H: Il n'y a pas de femme asiatique tenant une écharpe de fourrure
+L: 2
+
+Ex 9:
+P: Les femmes ne chantent pas et ne dansent pas
+H: Les femmes chantent et dansent
+L: 2
+
+Ex 10:
+P: Les femmes ne chantent pas et ne dansent pas
+H: Deux femmes dansent et chantent devant une foule
+L: 1","2","1","neutral"
+"Il n'y a pas de chien qui en poursuit un autre ou qui tient un bâton dans sa bouche","Deux chiens courent et portent un objet dans leur bouche","Ex 1:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 0
+
+Ex 2:
+P: Deux chiens courent et portent un objet dans leur bouche
+H: Un chien chasse un bâton et tient un autre chien dans sa bouche
+L: 1
+
+Ex 3:
+P: Un chien chasse une balle
+H: Il n'y a pas de chien chassant une balle
+L: 2
+
+Ex 4:
+P: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 1
+
+Ex 5:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+L: 0
+
+Ex 6:
+P: Deux chiens courent et portent un jouet dans leur bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 0
+
+Ex 7:
+P: Un chien roule d'un côté à l'autre
+H: Il n'y a pas de chiot qui roule
+L: 1
+
+Ex 8:
+P: Il n'y a pas de chien roulant d'un côté à l'autre
+H: Un chien roule d'un côté à l'autre
+L: 2
+
+Ex 9:
+P: Un chien aboie sur une balle
+H: Il n'y a pas de chien qui aboie à une balle
+L: 2
+
+Ex 10:
+P: Il n'y a pas de chien chassant une balle dans l'herbe
+H: Un chien chasse une balle dans l'herbe
+L: 2","1","2","contradiction"
+"Une personne qui joue au football donne un coup de pied dans le but","Un joueur de football donne un coup de pied dans le but","Ex 1:
+P: Un joueur de football marque un but
+H: Un joueur de football marque un but
+L: 0
+
+Ex 2:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne frappe un ballon de football entre ses pieds
+L: 1
+
+Ex 3:
+P: Un joueur de football marque un but
+H: Il n'y a pas de joueurs de football qui frappent un ballon de football dans le but
+L: 2
+
+Ex 4:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne donne un coup de pied à un ballon pour un match de football entre les pieds de quelqu'un
+L: 0
+
+Ex 5:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0
+
+Ex 6:
+P: Une personne qui joue au football donne un coup de pied dans le but
+H: Un ballon de football est en train de rouler dans un filet de but
+L: 1
+
+Ex 7:
+P: Un ballon de football est en train de rouler dans un filet de but
+H: Un joueur de football donne un coup de pied dans le but
+L: 1
+
+Ex 8:
+P: Un joueur de football marque un but
+H: Un joueur de football manque un but
+L: 1
+
+Ex 9:
+P: Certaines personnes qui jouent au football frappent un ballon de football dans le but
+H: Un joueur de football marque un but
+L: 1
+
+Ex 10:
+P: Les joueurs de football frappent un ballon de football dans le but
+H: Un joueur de football manque un but
+L: 1","0","0","entailment"
+"Certaines personnes sont debout","Un groupe d'éclaireurs marchent à travers l'herbe","Ex 1:
+P: Un groupe d'éclaireurs marchent à travers l'herbe
+H: Certaines personnes marchent
+L: 0
+
+Ex 2:
+P: Certaines personnes marchent
+H: Un groupe d'éclaireurs campent dans l'herbe
+L: 1
+
+Ex 3:
+P: Cinq personnes debout dans l'herbe sans chiens
+H: Cinq personnes sont debout avec trois chiens dans le champ vert à côté de la route
+L: 2
+
+Ex 4:
+P: Un groupe d'éclaireurs campent dans l'herbe
+H: Un groupe d'éclaireurs marchent à travers l'herbe
+L: 1
+
+Ex 5:
+P: Un groupe de personnes marchent
+H: Un groupe de personnes est debout
+L: 1
+
+Ex 6:
+P: Cinq personnes sont debout dans l'herbe avec trois chiens
+H: Cinq personnes sont debout dans l'herbe avec des chiens
+L: 0
+
+Ex 7:
+P: Certaines personnes marchent
+H: Les gens marchent
+L: 0
+
+Ex 8:
+P: Le courant est monté par un groupe d'amis dans un radeau
+H: Ce groupe de personnes pratique la sécurité de l'eau et porte des conservateurs
+L: 1
+
+Ex 9:
+P: Cinq personnes sont debout avec trois chiens dans le champ vert à côté de la route
+H: Cinq personnes sont debout dans l'herbe avec des chiens
+L: 0
+
+Ex 10:
+P: Un groupe d'amis chevauchent le courant dans un radeau
+H: Ce groupe de personnes pratique la sécurité de l'eau et porte des conservateurs
+L: 1","1","1","neutral"
+"Trois personnes sont debout à côté d'un membre d'arbre","Deux enfants sont suspendus à une grande branche","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un homme ramasse un arbre
+H: Un arbre est ramassé par un homme
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Un homme ramasse un arbre
+H: Un homme fait tomber un arbre
+L: 1
+
+Ex 6:
+P: Un homme plante un arbre
+H: Un homme ramasse un arbre
+L: 1
+
+Ex 7:
+P: Un arbre est coupé par un homme avec une hache
+H: Un homme abat un arbre avec une hache
+L: 0
+
+Ex 8:
+P: L'homme coupe le tronc d'un arbre avec une hache
+H: L'homme coupe un tronc d'arbre avec une hache
+L: 0
+
+Ex 9:
+P: Un homme fait tomber un arbre
+H: Un homme porte un arbre
+L: 1
+
+Ex 10:
+P: Trois enfants sont assis dans les feuilles
+H: Trois enfants sautent dans les feuilles
+L: 1","1","1","neutral"
+"Deux enfants sont suspendus à une grande branche","Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un garçon est en train de descendre une pente raide
+H: Un enfant est en train de descendre une pente raide
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Deux garçons portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+H: Deux filles portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+L: 1
+
+Ex 6:
+P: Trois enfants sont assis dans les feuilles
+H: Trois enfants sautent dans les feuilles
+L: 1
+
+Ex 7:
+P: Deux enfants sont accroupis sous des barres de métal
+H: Deux enfants s'appuient sur un rebord rouillé
+L: 1
+
+Ex 8:
+P: Les enfants en chemises rouges jouent dans les feuilles
+H: Trois enfants sautent dans les feuilles
+L: 1
+
+Ex 9:
+P: Le petit garçon est debout dans la forêt
+H: Un petit garçon est debout dans la forêt
+L: 0
+
+Ex 10:
+P: Un petit garçon est debout dans la forêt
+H: Un jeune enfant est debout devant quelques arbres
+L: 1","1","1","neutral"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant tient une arme à feu","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 3:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 4:
+P: Cinq enfants sont debout ensemble et un enfant a une arme à feu
+H: Cinq enfants sont debout près l'un de l'autre et aucun des enfants n'a une arme à feu
+L: 2
+
+Ex 5:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 6:
+P: Un homme tire un fusil de chasse
+H: Il n'y a pas d'homme tirant un fusil de chasse
+L: 2
+
+Ex 7:
+P: Un homme pose un silencieux sur un pistolet
+H: Il n'y a pas d'homme qui fixe un silencieux à une arme à feu
+L: 2
+
+Ex 8:
+P: Il n'y a pas d'homme qui fixe un silencieux à une arme à feu
+H: Un homme fixe un silencieux à une arme à feu
+L: 2
+
+Ex 9:
+P: Il n'y a pas d'enfant à la peau bronzée regardant la caméra
+H: Un enfant à la peau bronzée regarde la caméra
+L: 2
+
+Ex 10:
+P: Un homme pose un silencieux sur un pistolet
+H: Il n'y a pas d'homme qui adapte un silencieux à un pistolet
+L: 2","2","2","contradiction"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 3:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 4:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 5:
+P: Il n'y a pas d'enfant jouant avec un bec d'eau à l'extérieur avec le reste de sa famille qui regarde
+H: Un garçon tient un tuyau à côté d'un homme et un autre garçon regarde
+L: 1
+
+Ex 6:
+P: Il n'y a pas de garçon remplissant un pichet d'eau
+H: Un garçon remplit un pichet d'eau
+L: 2
+
+Ex 7:
+P: Cinq enfants sont debout ensemble et un enfant a une arme à feu
+H: Cinq enfants sont debout près l'un de l'autre et aucun des enfants n'a une arme à feu
+L: 2
+
+Ex 8:
+P: Il n'y a pas d'enfant jouant avec un bec d'eau à l'extérieur avec le reste de sa famille qui regarde
+H: Un enfant joue avec un bec d'eau à l'extérieur et le reste de sa famille regarde
+L: 2
+
+Ex 9:
+P: Un jeune enfant éclabousse dans l'eau
+H: Il n'y a pas de jeune enfant qui éclabousse dans l'eau
+L: 2
+
+Ex 10:
+P: Un jeune enfant est pieds nus et passe devant une flaque d'eau pleine de boue
+H: Un jeune enfant porte des bottes vertes et joue dans une flaque d'eau pleine de boue
+L: 1","2","1","neutral"
+"Deux daschunds jouent avec une boule rouge","Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe","Ex 1:
+P: Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 2:
+P: Deux chiens courent et essaient d'attraper un ballon de football
+H: Deux chiens courent et essaient d'attraper une balle
+L: 0
+
+Ex 3:
+P: Un chien gris rebondit un ballon de football sur la tête dans un champ d'herbe
+H: Un chien gris rebondit une balle de tennis sur sa tête dans un champ d'herbe
+L: 2
+
+Ex 4:
+P: Deux daschunds jouent avec une boule rouge
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 5:
+P: Un chien chasse une balle sur l'herbe
+H: Un chien chasse une balle dans l'herbe
+L: 0
+
+Ex 6:
+P: Un chien chasse une balle sur l'herbe
+H: Une balle est poursuivie par un chien sur l'herbe
+L: 0
+
+Ex 7:
+P: Deux chiens sur une pelouse jouent avec un jouet en plastique
+H: Deux chiens courent et essaient d'attraper une balle
+L: 1
+
+Ex 8:
+P: Un chien avec une balle est pourchassé dans l'herbe
+H: Un chien chasse une balle sur l'herbe
+L: 1
+
+Ex 9:
+P: Un chien chasse une balle dans l'herbe
+H: Une balle est poursuivie par un chien sur l'herbe
+L: 0
+
+Ex 10:
+P: Un chien est près de la boule rouge dans l'air
+H: Un chien, qui est petit, joue sur l'herbe verte
+L: 1","1","2","contradiction"
