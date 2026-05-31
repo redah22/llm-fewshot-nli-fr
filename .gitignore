@@ -81,9 +81,9 @@ logs/
 wandb/
 runs/
 *.md
-!README.  
+*.md
+!README.md
 !RAPPORT_RESULTATS.md
-
 # macOS
 .DS_Store
 .AppleDouble
@@ -119,4 +119,3 @@ ProjetNLI/
 .mcp.json
 
 # Ignorer les résultats WandB locaux de Tala
-RESULTATSwandB/
