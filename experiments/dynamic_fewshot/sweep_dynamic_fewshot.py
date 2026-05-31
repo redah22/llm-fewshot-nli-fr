@@ -72,6 +72,12 @@ MODEL_CONFIGS = {
         "short": "magistral_24b",
         "use_4bit": True,
         "backend": "hf",
+    },
+    "lucie": {
+        "hf_name": "OpenLLM-France/Lucie-7B-Instruct-v1.1",
+        "short": "lucie_7b",
+        "use_4bit": True,
+        "backend": "hf",
     }
 }
 
