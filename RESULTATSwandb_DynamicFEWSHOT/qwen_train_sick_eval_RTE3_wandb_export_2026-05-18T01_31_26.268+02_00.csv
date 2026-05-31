@@ -1,0 +1,481 @@
+"test_premise","test_hypothesis","dynamic_examples_used","true_label","pred_label","response"
+"Claude Chabrol a divorcé d'Agnès, sa première femme, pour épouser l'actrice Stéphane Audran. Sa troisième épouse est Aurore Paquiss.","Aurore Paquiss a épousé Chabrol.","Ex 1:
+P: Un couple marié marche dans l'allée
+H: La mariée et le marié partent après le mariage
+L: 1
+
+Ex 2:
+P: Une mariée avec un voile noir regarde vers le bas
+H: Une femme regarde en bas et porte un voile de mariage
+L: 0
+
+Ex 3:
+P: Une vieille femme serre la main d'un homme
+H: Un homme et une femme ne se serrent pas la main
+L: 2
+
+Ex 4:
+P: Une mariée avec un voile noir regarde vers le bas
+H: Une mariée avec un voile blanc regarde vers le bas
+L: 1
+
+Ex 5:
+P: Un couple marié marche dans l'allée
+H: La mariée quitte le marié après le mariage
+L: 1","0","1","neutral"
+"Le Parti communiste américain était un petit parti politique maoïste qui a été fondé en 1965 par des membres du Parti communiste autour de Michael Laski qui a pris le parti de la Chine dans la scission sino-soviétique.","Michael Laski était un opposant à la Chine.","Ex 1:
+P: Quelques personnes dansent
+H: Un groupe de personnes danse
+L: 0
+
+Ex 2:
+P: Le skateur saute dans l'air
+H: Un homme en chemise rouge fait un tour avec le skateboard
+L: 1
+
+Ex 3:
+P: Trois enfants asiatiques dansent et un homme regarde
+H: Trois enfants asiatiques dansent et il n'y a pas d'homme qui regarde
+L: 2
+
+Ex 4:
+P: Trois enfants asiatiques dansent et un homme regarde
+H: Un homme asiatique danse et trois enfants regardent
+L: 1
+
+Ex 5:
+P: Un homme danse
+H: Une personne danse
+L: 0","2","2","contradiction"
+"Sandra Goudie a été élue pour la première fois au Parlement lors des élections de 2002, remportant de justesse le siège de Coromandel en battant le candidat travailliste Max Purnell et en poussant la députée verte sortante Jeanette Fitzsimons à la troisième place.","Sandra Goudie a été battue par Max Purnell.","Ex 1:
+P: Les pom-pom girls défilent et portent des uniformes noirs, roses et blancs.
+H: Les pom-pom girls défilent et portent des uniformes noirs, roses et blancs
+L: 0
+
+Ex 2:
+P: Il n'y a pas un grand groupe de pom-pom girls marchant dans un défilé
+H: Les pom-pom girls défilent et portent des uniformes noirs, roses et blancs
+L: 1
+
+Ex 3:
+P: Un grand groupe de pom-pom girls marche dans un défilé
+H: Il n'y a pas un grand groupe de pom-pom girls marchant dans un défilé
+L: 2
+
+Ex 4:
+P: Certains coureurs participent à une course
+H: Les coureurs participent à une course
+L: 0
+
+Ex 5:
+P: Beaucoup de pom-pom girls marchent dans un défilé
+H: Les pom-pom girls défilent et portent des uniformes noirs, roses et blancs
+L: 1","2","2","contradiction"
+"Le premier grand rôle de Minton en Angleterre fut celui de Maggie Dempster dans la première du One Man Show de Nicholas Maw. Peu de temps après, elle est devenue un membre régulier de la compagnie de l'Opéra royal de Covent Garden.","Maggie Dempster était un membre de la compagnie du Royal Opera House Covent Garden.","Ex 1:
+P: L'homme vêtu de chaps en cuir et d'une chemise violette se tient devant certains spectateurs
+H: L'homme vêtu de chapeaux en cuir et d'une chemise violette se tient devant quelqu'un qui regarde
+L: 0
+
+Ex 2:
+P: La fille dans la combinaison bleue peint
+H: Il n'y a pas de dame tenant le pinceau à côté du chevalet de l'artiste
+L: 1
+
+Ex 3:
+P: Les ombres à paupières sont mises par une femme
+H: Une femme se maquille
+L: 0
+
+Ex 4:
+P: Il n'y a pas de femme crayonnant sur l'ombre à paupières
+H: Une femme met des cosmétiques sur sa paupière
+L: 1
+
+Ex 5:
+P: La vieille dame attend sur le trottoir
+H: Une dame dans un chapeau de fourrure et un manteau de fourrure se tient à l'extérieur d'un bâtiment
+L: 1","2","0","entailment"
+"Marcel Beaubien a tenté sans succès de se faire élire à la Chambre des communes du Canada comme candidat conservateur dans la circonscription fédérale de Sarnia-Lambton en 2004.","Marcel Beaubien a été élu à la Chambre des communes du Canada.","Ex 1:
+P: Un cycliste sur un vélo jaune est dans l'air
+H: Il n'y a pas de cycliste sur un vélo jaune
+L: 2
+
+Ex 2:
+P: Un cycliste effectue un tour sur un mur fortement graphitisé
+H: Un cycliste fait un saut sur un vélo
+L: 1
+
+Ex 3:
+P: Un homme sur un vélo de terre jaune fait un saut
+H: Un cycliste sur un vélo jaune est dans l'air
+L: 0
+
+Ex 4:
+P: Il n'y a pas de cycliste sur un vélo jaune
+H: Une personne sur un vélo de terre jaune fait un saut
+L: 2
+
+Ex 5:
+P: Il n'y a pas de cycliste effectuant un saut sur un vélo
+H: Un cycliste effectue un tour sur un mur fortement graphitisé
+L: 1","2","2","contradiction"
+"En 1956, Accardo a remporté le concours de Genève et en 1958 est devenu le premier lauréat du concours Paganini à Gênes. Il a enregistré les célèbres 24 Caprices de Paganini (réenregistrés en 1999) pour violon seul et a été le premier à enregistrer tous les six Concertos pour violon de Paganini.","Accardo a composé 24 Caprices.","Ex 1:
+P: Le violon est joué par une femme
+H: Un homme joue du piano
+L: 1
+
+Ex 2:
+P: Une femme joue du violon
+H: Il n'y a pas de femme qui joue du violon
+L: 2
+
+Ex 3:
+P: Un homme joue de la harpe
+H: Une harpe est jouée par un homme
+L: 0
+
+Ex 4:
+P: Un homme joue du violon
+H: Le bébé rit et rampe
+L: 1
+
+Ex 5:
+P: L'homme joue de la harpe
+H: Un homme joue du violon
+L: 1","1","1","neutral"
+"En 1956, Accardo a remporté le concours de Genève et en 1958 est devenu le premier lauréat du concours Paganini à Gênes.","Accardo a remporté le concours Paganini de Gênes.","Ex 1:
+P: Un cheval sans cavalier tombe par-dessus un obstacle
+H: Un cheval et son cavalier sautent par-dessus une barrière
+L: 1
+
+Ex 2:
+P: Un obstacle est bondi par un cheval qui a un cavalier sur le dos
+H: Un cheval saute un obstacle et a un cavalier sur le dos
+L: 0
+
+Ex 3:
+P: Un cheval saute un obstacle et a un cavalier sur le dos
+H: Le cheval saute par-dessus le cavalier à la barrière
+L: 1
+
+Ex 4:
+P: Un cheval et son cavalier sautent par-dessus une barrière
+H: Le cheval saute par-dessus le cavalier à la barrière
+L: 1
+
+Ex 5:
+P: Un cheval fait la course
+H: Il n'y a pas de course de chien sur une piste
+L: 1","0","0","entailment"
+"David Golinkin est l'éditeur ou l'auteur de dix-huit livres, et de plus de 150 responsa, articles, sermons et ouvrages.","Golinkin a écrit dix-huit livres.","Ex 1:
+P: Il n'y a personne assis sur des chaises longues et lisant des livres
+H: Deux personnes sur deux chaises lisent
+L: 1
+
+Ex 2:
+P: Il n'y a personne assis sur des chaises longues et lisant des livres
+H: Deux personnes sont assises sur des chaises de jardin et lisent des livres.
+L: 2
+
+Ex 3:
+P: Certains hommes scient
+H: Les hommes scient
+L: 0
+
+Ex 4:
+P: Un homme joue du clavier
+H: Un pianiste joue du clavier
+L: 1
+
+Ex 5:
+P: Un garçon joue joyeusement du piano
+H: Le pianiste est un homme dur
+L: 1","1","0","entailment"
+"David Golinkin est à lui seul responsable de la découverte et de la republication de dizaines de responsa du Comité sur la loi et les normes juives de l'Assemblée rabbinique, les mettant à la disposition du grand public dans un ensemble de trois volumes.","David Golinkin est l'auteur de dizaines de responsa du Comité sur la loi et les normes juives de l'Assemblée rabbinique.","Ex 1:
+P: Certains hommes scient
+H: Les hommes scient
+L: 0
+
+Ex 2:
+P: Un homme joue du clavier
+H: Un pianiste joue du clavier
+L: 1
+
+Ex 3:
+P: Un homme parle sur un podium
+H: Un podium est l'endroit où un homme parle
+L: 0
+
+Ex 4:
+P: Un homme vêtu d'une robe élégante est entouré de photographes
+H: L'homme entouré de photographes porte un costume gris et des lunettes
+L: 1
+
+Ex 5:
+P: Le prêtre marche dans l'allée pour épouser un couple
+H: La mariée et le marié partent après le mariage
+L: 1","2","1","neutral"
+"Au cours des 24 saisons de Reinsdorf en tant que président des White Sox, l'équipe a remporté trois fois le championnat de division de la Ligue américaine, dont un titre AL Central en 2000.","Les White Sox ont remporté 24 championnats.","Ex 1:
+P: Deux équipes participent à un match de baseball
+H: Un joueur court avec la balle
+L: 1
+
+Ex 2:
+P: La fille en bleu court après le coureur de base avec un numéro sur le maillot
+H: La fille en bleu poursuit le joueur avec un numéro sur le maillot
+L: 0
+
+Ex 3:
+P: La fille en bleu court après le coureur de base avec un numéro sur le maillot
+H: Un homme en bleu a une boule jaune dans la mitaine
+L: 1
+
+Ex 4:
+P: Quatre athlètes sont avec un homme dans un stade bondé
+H: Quatre athlètes sont avec une personne dans un stade bondé
+L: 0
+
+Ex 5:
+P: Un chien blanc porte un bandeau de renne de Noël et joue avec un chien brun dans l'herbe
+H: Un chien blanc porte un bandeau de renne de Noël et joue avec un chien avec un manteau brun dans l'herbe
+L: 0","2","2","contradiction"
+"La Major League Baseball et ses clubs ont acheté pour plus de 260 millions de dollars de biens et de services à des entreprises appartenant à des minorités et à des femmes.","La Major League Baseball et ses clubs ont acheté des entreprises appartenant à des minorités et à des femmes.","Ex 1:
+P: Deux équipes participent à un match de baseball
+H: Un joueur court avec la balle
+L: 1
+
+Ex 2:
+P: Les gens jouent au cricket
+H: Certains jouent au cricket
+L: 0
+
+Ex 3:
+P: Un chien noir et blanc tient une balle de baseball dans sa bouche
+H: Un chien brun et blanc tient une balle de baseball dans sa bouche
+L: 1
+
+Ex 4:
+P: Un chien noir et blanc tient une balle de baseball dans sa bouche
+H: Un chien noir et blanc fait tomber une balle de baseball de sa bouche
+L: 1
+
+Ex 5:
+P: Un chien, qui a un pelage brun et blanc, tient une balle de baseball dans sa bouche
+H: Un chien noir et blanc tient une balle de baseball dans sa bouche
+L: 1","1","0","entailment"
+"Kepa a été marié pendant de nombreuses années à Ro Teimumu Kepa, une Adi (cheffe fidjienne) et femme politique à part entière. Ils ont eu quatre enfants : Filipe, Sailosi, Jr, Asenaca et Tupoutu'a.","Kepa était le père de quatre enfants.","Ex 1:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 2:
+P: Une femme porte un chapeau égyptien sur la tête
+H: Une femme porte une coiffe égyptienne
+L: 0
+
+Ex 3:
+P: Une femme est debout près de trois enfants
+H: Il n'y a pas de femme debout près de trois enfants
+L: 2
+
+Ex 4:
+P: Une dame est debout près de trois enfants
+H: Une femme est debout près de trois enfants
+L: 0
+
+Ex 5:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1","0","0","entailment"
+"Sean Brown (né le 5 novembre 1976 à Oshawa, Ontario, Canada) est un joueur d'utilité et homme fort de la Ligue nationale de hockey.","Sean Brown joue dans la Ligue nationale de hockey.","Ex 1:
+P: Le but est gardé par un joueur de hockey en maillot jaune
+H: Le gardien de but de hockey sur glace porte un maillot jaune et défend le but
+L: 0
+
+Ex 2:
+P: Le gardien de but de hockey sur glace porte un maillot jaune et défend le but
+H: Le gardien de but de hockey sur glace ne porte pas de maillot jaune et ne défend pas le but
+L: 2
+
+Ex 3:
+P: Une personne en veste rose court sur le terrain
+H: Quatre athlètes sont avec un homme dans un stade bondé
+L: 1
+
+Ex 4:
+P: Un homme porte un uniforme sportif et court sur le terrain
+H: Un uniforme de sport est porté par un homme qui court sur le terrain
+L: 0
+
+Ex 5:
+P: Quatre athlètes sont avec un homme dans un stade bondé
+H: Quatre athlètes sont avec une personne dans un stade bondé
+L: 0","0","0","entailment"
+"Né à Kingston-upon-Thames, dans le Surrey, Brockwell a joué son cricket de comté pour la très forte équipe du Surrey des dernières années du 19e siècle.","Brockwell est né dans le Surrey.","Ex 1:
+P: Un petit garçon porte une bande de football verte et court sur l'herbe
+H: Un enfant en uniforme de sport vert et blanc se repose sur l'herbe
+L: 1
+
+Ex 2:
+P: Un enfant en uniforme de sport vert et blanc se repose sur l'herbe
+H: Un enfant en uniforme de sport vert et blanc court sur l'herbe
+L: 2
+
+Ex 3:
+P: Les gens jouent au cricket
+H: Certains jouent au cricket
+L: 0
+
+Ex 4:
+P: Un enfant en uniforme de sport vert et blanc court sur l'herbe
+H: Un petit garçon porte une bande de football verte et court sur l'herbe
+L: 1
+
+Ex 5:
+P: Un enfant en uniforme vert et blanc pour le sport court sur l'herbe
+H: Un petit garçon porte une bande de football verte et court sur l'herbe
+L: 1","0","0","entailment"
+"Né à Kingston-upon-Thames, dans le Surrey, Brockwell a joué son cricket de comté pour la très forte équipe du Surrey dans les dernières années du 19e siècle.","Brockwell est né dans les dernières années du 19ème siècle.","Ex 1:
+P: Un petit garçon porte une bande de football verte et court sur l'herbe
+H: Un enfant en uniforme de sport vert et blanc se repose sur l'herbe
+L: 1
+
+Ex 2:
+P: Les gens jouent au cricket
+H: Certains jouent au cricket
+L: 0
+
+Ex 3:
+P: Un enfant en uniforme de sport vert et blanc se repose sur l'herbe
+H: Un enfant en uniforme de sport vert et blanc court sur l'herbe
+L: 2
+
+Ex 4:
+P: Un enfant en uniforme de sport vert et blanc court sur l'herbe
+H: Un petit garçon porte une bande de football verte et court sur l'herbe
+L: 1
+
+Ex 5:
+P: Un enfant en uniforme vert et blanc pour le sport court sur l'herbe
+H: Un petit garçon porte une bande de football verte et court sur l'herbe
+L: 1","2","1","neutral"
+"Crime in Choir est un groupe de rock progressif instrumental originaire de San Francisco. La formation fondatrice à l'automne 2000 était composée de Kenny Hopper, un des premiers membres d'At the Drive-In, de Jeff Hunt et de Zach Hill de Hella.","Jeff Hunt était un membre d'At the Drive-In.","Ex 1:
+P: Certaines personnes chantent
+H: Un groupe de personnes chante
+L: 0
+
+Ex 2:
+P: Un homme chante et marche sur la route
+H: Un homme chante et marche sur le trottoir
+L: 1
+
+Ex 3:
+P: Un homme danse sous la pluie
+H: Un homme chante dans un vieux micro
+L: 1
+
+Ex 4:
+P: Certains chantent
+H: Quelques personnes chantent
+L: 0
+
+Ex 5:
+P: Deux femmes dansent
+H: Un couple de policiers chantent karaoké
+L: 1","2","0","entailment"
+"Natta, avec Cossutta, s'est fortement opposé à la proposition d'Occhetto, lors de la scission historique ""de Bolognina"", de changer le nom du parti.","Cossutta était un adversaire d'Occhetto.","Ex 1:
+P: La femme ne met pas de pâtes dans un plat
+H: La femme met des pâtes dans un plat
+L: 2
+
+Ex 2:
+P: Un homme verse une assiette de fromage râpé dans une casserole de sauce
+H: La femme retire le fromage de la sauce
+L: 1
+
+Ex 3:
+P: Un bébé éternue et fait peur à un autre bébé
+H: Un bébé éternue et fait peur à un autre bébé
+L: 0
+
+Ex 4:
+P: Les coureurs courent autour d'une piste
+H: Les coureurs ne participent pas à la course
+L: 2
+
+Ex 5:
+P: La dame ajoute du fromage à la sauce
+H: La femme retire le fromage de la sauce
+L: 2","1","0","entailment"
+"KOOG a été le premier affilié à Pax dans l'Utah, et a changé ses lettres d'appel en KUPX en février 1998.","KUPX était une filiale de KOOG.","Ex 1:
+P: Un homme vêtu d'une veste rouge et d'un pantalon kaki marche dans un État américain
+H: Une personne vêtue d'une veste rouge et d'un pantalon kaki marche dans un État américain
+L: 0
+
+Ex 2:
+P: Le chien rouge et brun creuse son nez dans un sac cadeau de vacances
+H: Le chien a la tête à l'intérieur d'un sac cadeau rouge et vert
+L: 1
+
+Ex 3:
+P: Un homme en tenue complète porte un casque avec des logos de sponsor et conduit une moto sport rouge
+H: Une personne en uniforme de motocross porte un casque et conduit une moto rouge
+L: 1
+
+Ex 4:
+P: Un chien a la tête à l'extérieur d'un sac cadeau rouge et vert
+H: Le chien rouge et brun creuse son nez dans un sac cadeau de vacances
+L: 1
+
+Ex 5:
+P: Un chien a la tête à l'extérieur d'un sac cadeau rouge et vert
+H: Un chien a la tête à l'intérieur d'un sac cadeau rouge et vert
+L: 1","2","1","neutral"
+"Prenant sa source dans les Blackdown Hills, juste à l'intérieur de la frontière du Somerset, la rivière Otter coule sur quelque 32 kilomètres pour finalement atteindre la mer à Budleigh Salterton.","Budleigh Salterton est situé dans le Somerset.","Ex 1:
+P: Le chien noir marche le long d'un pont de tronc d'arbre au-dessus de l'eau
+H: Un arbre tombe sur un pont fait sur la rivière qu'un chien traverse
+L: 0
+
+Ex 2:
+P: Le chien noir marche le long d'un pont de tronc d'arbre au-dessus de l'eau
+H: Il n'y a pas de chien traversant une rivière sur un pont fait à partir d'un arbre tombé
+L: 2
+
+Ex 3:
+P: Le chien au manteau noir marche le long d'un pont de tronc d'arbre au-dessus de l'eau
+H: Un chien traverse une rivière sur un pont fait à partir d'un arbre tombé
+L: 1
+
+Ex 4:
+P: Un arbre tombe sur un pont fait sur la rivière qu'un chien traverse
+H: Un chien traverse une rivière sur un pont fait à partir d'un arbre tombé
+L: 0
+
+Ex 5:
+P: Trois garçons bercent la promenade le long de la rivière
+H: Trois garçons marchent sur des rochers le long d'une rivière
+L: 1","1","1","neutral"
+"Landowska est à l'origine de la composition de plusieurs autres nouvelles pièces de musique pour l'instrument, notamment le concerto pour clavecin de Manuel de Falla et son El retablo de Maese Pedro (à la création duquel, au salon de Winnaretta Singer, Poulenc et Landowska se sont rencontrés pour la première fois).","Landowska est l'inventeur du clavecin.","Ex 1:
+P: Un homme joue du violon
+H: Le bébé rit et rampe
+L: 1
+
+Ex 2:
+P: Le violon est joué par une femme
+H: Un homme joue du piano
+L: 1
+
+Ex 3:
+P: Le piano est joué par un homme
+H: Une femme joue du violon
+L: 1
+
+Ex 4:
+P: Quelqu'un joue du piano
+H: Un clavier est joué par une personne
+L: 1
+
+Ex 5:
+P: Un homme joue du violon
+H: Une femme coupe un oignon blanc
+L: 1","1","1","neutral"

@@ -1,0 +1,701 @@
+"test_premise","test_hypothesis","dynamic_examples_used","true_label","pred_label","response"
+"Le jeu de basket-ball se compose d'une balle étant trempée par un homme avec un maillot","Un homme avec un maillot trempe le ballon lors d'un match de basket-ball","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 2:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 3:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0","0","1","Okay, let's try to figure out the label for this example. The premise is ""Le jeu de basket-ball se compose d'une balle étant trempée par un homme avec un maillot."" So, it's saying that the basketball game consists of a ball that's wet because a man is wearing a shirt. The hypothesis is ""Un homme avec un maillot trempe le ballon lors d'un match de basket-ball."" That translates to ""A man wearing a shirt wets the ball during a basketball match.""
+
+Hmm, so the premise is talking about the ball being wet because of someone wearing a shirt, but the hypothesis is saying that the man wearing a shirt is the one who wets the ball. Are these two statements logically related?
+
+Well, the premise doesn't specify who is wetting the ball. It could be any man wearing a shirt, not necessarily the player. The hypothesis, on the other hand, specifically mentions that the man is the one who wets the ball. So, the premise is a general statement, while the hypothesis is a specific case. 
+
+In terms of logical relationship, the premise doesn't confirm or deny the hypothesis because the premise could be true even if the specific man in the hypothesis isn't the one wetting the ball. Conversely, if the hypothesis is true, it would make the premise true as well because the man in the hypothesis is wearing a shirt and wetting the ball. But since the premise is broader, it doesn't necessarily lead to the hypothesis being true or false.
+
+So, is there a contradiction? No, because the premise doesn't say anything that would make the hypothesis false. The premise could still be true even if the hypothesis isn't, or vice versa. Therefore, they are neutral because neither statement confirms nor contradicts the other definitively.
+
+I think the label should be ""neutral"" because the premise doesn't provide enough information to confirm or deny the hypothesis. They are separate statements that don't necessarily support or oppose each other.
+</think>
+
+neutral"
+"Il n'y a pas d'homme qui trempe la balle dans un match de basket-ball","Le joueur plonge le basket dans le filet et une foule est en arrière-plan","Ex 1:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: Un homme qui joue dunks le basket dans le filet et une foule est en arrière-plan
+L: 1
+
+Ex 2:
+P: Il n'y a pas de basketteur sur le terrain et personne ne saisit la balle
+H: Deux joueurs de basket-ball se bousculent pour le ballon sur le terrain
+L: 2
+
+Ex 3:
+P: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+H: La balle est trempée par un homme avec un maillot lors d'un match de basket-ball
+L: 0
+
+Ex 4:
+P: Le joueur plonge le basket dans le filet et une foule est en arrière-plan
+H: Un homme avec un maillot trempe le ballon lors d'un match de basket-ball
+L: 1
+
+Ex 5:
+P: Un joueur de basket-ball est sur le terrain et un autre attrape la balle
+H: Un joueur de basket-ball est sur le terrain et le ballon est saisi par un autre.
+L: 0","2","2","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas d'homme qui trempe la balle dans un match de basket-ball."" So, in English, that means ""There is no one who wets the ball during a basketball match."" The hypothesis is ""Le joueur plonge le basket dans le filet et une foule est en arrière-plan,"" which translates to ""The player dunks the basket and there is a crowd in the background.""
+
+First, I need to understand what each part means. The premise is saying that no one is wetting the ball during the game. The hypothesis is describing a scenario where a player is dunking the ball, which would involve wetting the ball. So, if the premise is true, then the hypothesis would be impossible because if someone is dunking the ball, they must be wetting it.
+
+Wait, but the premise says no one is wetting the ball. So if the hypothesis is happening, that would contradict the premise because the act of dunking would require wetting the ball. Therefore, the hypothesis can't happen if the premise is true. That means the hypothesis contradicts the premise.
+
+Looking at the labels, contradiction is when the hypothesis contradicts the premise. So, the label should be contradiction because the premise states that no one is wetting the ball, but the hypothesis suggests someone is doing it, which can't happen.
+</think>
+
+contradiction"
+"Une petite fille regarde une femme en costume","Une jeune fille regarde une femme en costume","Ex 1:
+P: Une petite fille regarde une femme en costume
+H: Les gens regardent des costumes rassemblés dans les environs de la forêt
+L: 1
+
+Ex 2:
+P: Les enfants sont habillés en costumes et jouent à un jeu
+H: Les enfants sont habillés en costumes et jouent à un jeu
+L: 0
+
+Ex 3:
+P: Une femme en robe blanche et une femme en robe bleue sont debout sur une scène
+H: Deux filles dans leur adolescence portent des robes de fantaisie lors d'un événement
+L: 1
+
+Ex 4:
+P: Une petite fille regarde une femme en costume
+H: Les gens portant des costumes se dispersent dans une forêt et regardent dans différentes directions
+L: 1
+
+Ex 5:
+P: Une fille entoure des enfants habillés en brun qui ferment les yeux
+H: Une fille en robe brune est entourée d'enfants et ferme les yeux
+L: 1","0","1","Okay, let me try to figure out the label for this example. So, the premise is ""Une petite fille regarde une femme en costume"" and the hypothesis is ""Une jeune fille regarde une femme en costume."" 
+
+First, I need to understand what each term means. ""Petite fille"" translates to ""little girl"" or ""young girl,"" and ""jeune fille"" means ""young girl."" So, both are referring to a girl, just using slightly different terms. 
+
+The premise says a little girl is looking at a woman in a costume. The hypothesis is almost the same, just using ""young"" instead of ""little."" So, the content is very similar. 
+
+I remember the labels: entailment means the hypothesis logically follows from the premise, contradiction means it directly opposes, and neutral is when there's no clear relationship. 
+
+In this case, both statements are about a girl looking at a woman in a costume. The only difference is the adjective used for the girl. Since the meaning is the same, the hypothesis doesn't add or contradict anything new. It's just a slight variation in description. 
+
+So, I think this should be labeled as neutral because there's no logical entailment or contradiction; it's just a minor wording change without altering the meaning.
+</think>
+
+neutral"
+"Un joueur court avec la balle","Le football est joué par deux équipes en compétition","Ex 1:
+P: Un joueur court avec la balle
+H: Deux équipes participent à un match de football
+L: 1
+
+Ex 2:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0
+
+Ex 3:
+P: Deux groupes de personnes jouent au football
+H: Un joueur court avec la balle
+L: 1
+
+Ex 4:
+P: Deux équipes jouent au football
+H: Différents joueurs de football font équipe sur un terrain
+L: 1
+
+Ex 5:
+P: Un ballon de football est en train de rouler dans un filet de but
+H: Un joueur de football jette une balle hors du but
+L: 1","1","1","Okay, let's see. I need to determine the relationship between the premise and the hypothesis. The premise is ""Un joueur court avec la balle,"" which translates to ""A player is running with the ball."" The hypothesis is ""Le football est joué par deux équipes en compétition,"" meaning ""Football is played by two teams in competition.""
+
+First, I should understand what each part means. The premise is about a player running with the ball, which is a specific action happening in a football game. The hypothesis is a general statement about how football is played, involving two competing teams.
+
+Now, I need to see if the hypothesis is entailed by the premise, if it's neutral, or if it's a contradiction. Entailed would mean that the hypothesis must be true if the premise is true. Neutral means the premise neither confirms nor contradicts the hypothesis. A contradiction would mean the hypothesis is false if the premise is true.
+
+In this case, the premise describes a situation within a football game, but it doesn't specify whether it's a competition between two teams or not. The hypothesis is a general statement about football being played by two competing teams. So, the premise doesn't confirm that football is being played between two teams; it just describes an action happening in a football context.
+
+Therefore, the premise doesn't confirm or deny the hypothesis. It's possible that the football game is a training session or a match, but the premise doesn't give enough information to confirm that it's a competition between two teams. So, the relationship is neutral because the premise doesn't support or contradict the hypothesis.
+</think>
+
+neutral"
+"Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle","Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle","Ex 1:
+P: Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle
+H: Plusieurs personnes sont devant un bâtiment coloré
+L: 0
+
+Ex 2:
+P: Les gens marchent à l'intérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+L: 1
+
+Ex 3:
+P: Plusieurs personnes sont devant un bâtiment coloré
+H: Personne n'est devant le bâtiment coloré
+L: 2
+
+Ex 4:
+P: Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle
+H: Personne n'est devant le bâtiment coloré
+L: 1
+
+Ex 5:
+P: Certaines personnes marchent
+H: Les gens marchent
+L: 0","0","1","Okay, let's see. I need to determine the label for this example. The premise is ""Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle."" The hypothesis is ""Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle."" 
+
+Hmm, so the premise says ""many"" murals on the building, and the hypothesis says ""several."" Are these considered the same? Well, ""many"" and ""several"" are both quantifiers, but they might not be exactly the same. ""Many"" usually implies a large number, while ""several"" is a smaller but still plural number. 
+
+But in this context, the main point is that the people are walking outside regardless of the number of murals. The premise and hypothesis both state that people are walking outside, just with different quantifiers for the murals. So, does the hypothesis confirm or contradict the premise? 
+
+I think since the number of murals is different but the main action (people walking outside) is the same, the hypothesis doesn't contradict the premise. It's still supporting the same action, just with a different detail. So, it's not a contradiction because the main point isn't negated. It's also not neutral because it's adding more specific information, but it's not changing the logical relationship. 
+
+Wait, but in the examples given, when the hypothesis was about the same action but a different detail, it was labeled as neutral. For example, in the first example, the premise was about people walking outside with many murals, and the hypothesis was about people walking outside with several murals, which was labeled as neutral. So, maybe in this case, it's the same situation. 
+
+So, the label should be neutral because the hypothesis doesn't contradict the premise, and it's not fully entailed either. It's just providing more specific information without changing the logical relationship. Therefore, the label is neutral.
+</think>
+
+neutral"
+"Peu de gens mangent à des tables rouges dans un restaurant sans lumières","Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes","Ex 1:
+P: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+H: Un petit groupe de personnes attend pour manger dans un restaurant
+L: 1
+
+Ex 2:
+P: Les gens sont assis à des tables carrées dans une salle rouge
+H: Les gens sont assis à table dans une salle rouge
+L: 0
+
+Ex 3:
+P: Un homme et deux femmes dans une pièce sombre sont assis à une table avec des bougies
+H: Le groupe de personnes n'est pas assis dans une pièce sombre
+L: 2
+
+Ex 4:
+P: Une foule violette de gens mange sur diverses tables de restaurant allumées rouges
+H: Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes
+L: 1
+
+Ex 5:
+P: Un groupe d'Asiatiques mange dans un restaurant
+H: Différents clients mangent dans un restaurant bondé avec des lumières violettes
+L: 1","1","1","Okay, let's try to figure out the label for this example. The premise says that not many people eat at red tables in a restaurant without lights. The hypothesis claims that various people eat at red tables in a well-lit restaurant. 
+
+Hmm, so the premise is talking about a situation where there are few people eating at red tables without lights. The hypothesis is about a different scenario where there are many people eating at red tables with lights. 
+
+I need to determine if the hypothesis is entailing, neutral, or contradictory. Entailment would mean the hypothesis must be true if the premise is true. But here, the premise doesn't say anything about the number of people or the presence of lights in the hypothesis. It just says that in a place without lights, few people eat at red tables. The hypothesis is about a place with lights where many eat at red tables. These are two different scenarios that don't necessarily contradict each other because the premise doesn't restrict the number of people or the lighting in the hypothesis. 
+
+So, since the premise doesn't confirm or deny the hypothesis, it's neutral. The two statements are about different conditions and don't influence each other's truth.
+</think>
+
+neutral"
+"Quelqu'un est sur une moto en noir et blanc et est debout sur le siège","Un coureur est sur un vélo noir et blanc et est debout sur le siège","Ex 1:
+P: Une personne sur une moto noire fait des tours avec une veste
+H: Une personne fait du vélo sur une roue
+L: 1
+
+Ex 2:
+P: Personne n'est sur une moto et est debout sur le siège
+H: Quelqu'un est sur une moto en noir et blanc et est debout sur le siège
+L: 2
+
+Ex 3:
+P: Un homme sur une moto est monté sur une roue
+H: Une personne effectue des acrobaties sur une moto
+L: 0
+
+Ex 4:
+P: Le coureur de moto est monté sur un vélo rouge et noir
+H: Un homme est appuyé sur une moto de course
+L: 1
+
+Ex 5:
+P: Une personne fait du vélo sur une roue
+H: Un homme dans une veste noire fait des tours sur une moto
+L: 1","0","1","Okay, let's try to figure out the label for this example. So, the premise is ""Quelqu'un est sur une moto en noir et blanc et est debout sur le siège."" The hypothesis is ""Un coureur est sur un vélo noir et blanc et est debout sur le siège."" 
+
+First, I need to understand what each part means. The premise is saying someone is on a black and white bike and is standing on the seat. The hypothesis is saying a runner is on a black and white bike and is standing on the seat.
+
+Hmm, so both are about someone on a black and white bike standing on the seat. The only difference is that the premise refers to ""quelqu'un"" which means ""someone"" in French, and the hypothesis uses ""un coureur"" meaning ""a runner."" 
+
+So, the premise is a general statement about someone on a bike, while the hypothesis specifies that it's a runner. The question is whether the hypothesis is entailed, neutral, or contradictory.
+
+Entailment would mean the hypothesis must be true if the premise is true. But here, the premise doesn't specify that it's a runner, just that someone is on a black and white bike standing. The hypothesis adds more detail about the runner, but it's not necessarily entailed because the premise could be about any person, not just a runner.
+
+On the other hand, the hypothesis doesn't contradict the premise either because it's possible that the person on the bike is a runner. So, the relationship isn't a clear contradiction because the premise doesn't say it's not a runner. It's more about whether the hypothesis is supported by the premise.
+
+Wait, but the premise doesn't specify the context of the person, so the hypothesis could be true or not, but it's not necessarily entailed. So, the label would be neutral because the premise doesn't confirm or deny the hypothesis beyond the fact that it's possible.
+</think>
+
+neutral"
+"Il n'y a pas de motocycliste à moto le long d'une chaussée","Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Ex 1:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 2:
+P: Il n'y a pas de motocycliste à moto le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 2
+
+Ex 3:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 4:
+P: Il n'y a pas de personne à moto dans l'événement lié au motocross
+H: La personne monte une moto sur une piste sablonneuse
+L: 1
+
+Ex 5:
+P: Une personne conduit une moto dans l'événement lié au motocross
+H: La personne ne conduit pas une moto sur une piste sablonneuse
+L: 1","2","2","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas de motocycliste à moto le long d'une chaussée,"" which translates to ""There are no motorcyclists with bikes on the side of the road."" The hypothesis is ""Un motocycliste avec un casque rouge conduit une moto bleue sur la route,"" meaning ""A motorcyclist with a red helmet is driving a blue bike on the route.""
+
+So, the premise is saying that there are no motorcyclists with bikes on the road. The hypothesis is describing a scenario where such motorcyclists do exist. Since the premise is stating that it's impossible for motorcyclists to have bikes on the road, the hypothesis contradicts that because it's describing a situation where they do have bikes. Therefore, the relationship is a contradiction because the hypothesis is directly opposing the premise.
+</think>
+
+contradiction"
+"Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Un motocycliste conduit une moto le long d'une chaussée","Ex 1:
+P: Un homme avec un casque peint en rouge conduit une moto bleue sur la route
+H: Un motocycliste avec un casque rouge conduit une moto bleue sur la route
+L: 0
+
+Ex 2:
+P: Un motocycliste sans casque attend sur une moto bleue près de la route
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 1
+
+Ex 3:
+P: Une personne conduit une moto
+H: Une personne se tient près d'une moto
+L: 2
+
+Ex 4:
+P: Un motocycliste conduit une moto dangereusement le long d'une chaussée
+H: Un motocycliste conduit une moto le long d'une chaussée
+L: 0
+
+Ex 5:
+P: Un coureur en pleine vitesse porte un casque avec des logos de sponsor et conduit une moto sport rouge
+H: Une personne en uniforme de motocross porte un casque et conduit une moto rouge
+L: 1","0","1","Okay, let's try to figure out the label for this example. So, the premise is ""Un motocycliste avec un casque rouge conduit une moto bleue sur la route."" The hypothesis is ""Un motocycliste conduit une moto le long d'une chaussée."" 
+
+First, I need to understand what each part means. The premise says a motorcyclist with a red cap is riding a blue bike on the road. The hypothesis says a motorcyclist is riding a bike on a highway. 
+
+Now, I have to determine if the hypothesis is entailed, neutral, or contradictory to the premise. Entailed means the hypothesis must be true if the premise is true. Neutral means it's neither supported nor contradicted. Contradictory means the hypothesis is the opposite.
+
+Looking at the premise, the motorcyclist is on a road, but it's not specified if it's a highway. The hypothesis says it's on a highway. So, the premise doesn't confirm that it's on a highway; it could be any road. Therefore, the hypothesis isn't necessarily true based on the premise. It's possible, but not guaranteed. 
+
+So, the relationship isn't a clear entailment because the premise doesn't specify a highway. It's also not a contradiction because the hypothesis isn't the opposite; it's just a more specific scenario. Therefore, the label should be neutral.
+</think>
+
+neutral"
+"Il n'y a pas de chien qui saute dans l'air","Un chien saute haut dans les airs et un autre regarde","Ex 1:
+P: Il n'y a pas de chien brun sautant dans l'air
+H: Le chien brun saute dans l'air
+L: 2
+
+Ex 2:
+P: Un chien saute haut dans l'air dans le pays
+H: Aucun chien ne saute à l'ombre de certains arbres
+L: 1
+
+Ex 3:
+P: Le chien brun saute dans l'air
+H: Un chien brun saute dans l'air
+L: 0
+
+Ex 4:
+P: Un chien brun saute dans l'air
+H: Il n'y a pas de chien brun sautant dans l'air
+L: 2
+
+Ex 5:
+P: Il n'y a pas de chien qui rebondit sur un trampoline
+H: Un chien saute sur un trampoline
+L: 2","2","2","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas de chien qui saute dans l'air,"" which translates to ""There are no dogs that jump in the air."" The hypothesis is ""Un chien saute haut dans les airs et un autre regarde,"" meaning ""A dog jumps in the air and another one watches.""
+
+So, the premise is saying that no dogs jump in the air. The hypothesis is suggesting that a dog does jump in the air, which directly contradicts the premise. Therefore, the relationship here is a contradiction because the hypothesis is the opposite of what the premise states.
+</think>
+
+contradiction"
+"Une femme porte une coiffe égyptienne","Un Egyptien porte la coiffure d'une femme","Ex 1:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 2:
+P: Une femme porte un chapeau égyptien sur la tête
+H: Une femme porte une coiffe égyptienne
+L: 0
+
+Ex 3:
+P: Une femme se maquille
+H: La femme enlève le maquillage
+L: 2
+
+Ex 4:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 5:
+P: Une femme porte un chapeau égyptien sur la tête
+H: La femme porte des lunettes et une coiffe noire
+L: 1","1","1","Okay, let's try to figure out the label for this example. The premise is ""Une femme porte une coiffe égyptienne,"" which translates to ""A woman is wearing an Egyptian hat."" The hypothesis is ""Un Egyptien porte la coiffure d'une femme,"" which means ""An Egyptian wears the hairstyle of a woman."" 
+
+Hmm, so the premise is about a woman wearing an Egyptian hat. The hypothesis is about an Egyptian person wearing a woman's hairstyle. Are these related? Well, both involve an Egyptian and a woman, but in different contexts. The first is about wearing a hat, and the second is about wearing someone's hairstyle. They don't directly imply each other. 
+
+I don't think the hypothesis is entailed by the premise because the premise doesn't mention anything about hair styles or being Egyptian. Similarly, the hypothesis isn't contradicting the premise either because they're talking about different aspects. So, it's not a clear entailment or contradiction. 
+
+Therefore, the relationship between the premise and hypothesis is neutral because they don't support or oppose each other; they're just two separate statements about different things.
+</think>
+
+neutral"
+"La femme ne porte pas de lunettes ou une coiffe","Une femme porte une coiffe égyptienne","Ex 1:
+P: La femme noire porte des lunettes sur la coiffe
+H: Une femme porte une coiffe égyptienne
+L: 1
+
+Ex 2:
+P: La femme danse
+H: La femme ne danse pas
+L: 2
+
+Ex 3:
+P: Une femme porte une coiffe égyptienne
+H: Une femme porte une coiffe indienne
+L: 1
+
+Ex 4:
+P: Il n'y a pas de femme crayonnant sur l'ombre à paupières
+H: Une femme met des cosmétiques sur sa paupière
+L: 1
+
+Ex 5:
+P: Les femmes ne portent pas d’oreilles de lapin ni de numéros de course et ne pointent pas du doigt quelque chose au loin.
+H: Les femmes portent des oreilles de lapin et des numéros de course et pointent quelque chose au loin.
+L: 2","2","2","Okay, let's try to figure out the label for this example. The premise is ""La femme ne porte pas de lunettes ou une coiffe,"" which translates to ""The woman doesn't wear glasses or a hat."" The hypothesis is ""Une femme porte une coiffe égyptienne,"" meaning ""A woman wears an Egyptian hat.""
+
+First, I need to understand what each part means. The premise is saying that the woman isn't wearing glasses and isn't wearing a hat. The hypothesis is stating that she is wearing an Egyptian hat. So, the hypothesis is claiming that she is wearing a specific type of hat, but the premise is saying she isn't wearing any hat at all.
+
+Looking at the labels, we have entailment, neutral, and contradiction. Entailment would mean the hypothesis is necessarily true if the premise is true. But here, the premise says she doesn't wear a hat, so the hypothesis that she does wear one can't be entailed. It's not necessarily true; it's actually the opposite.
+
+Neutral would mean there's no logical connection—neither the hypothesis is supported nor contradicted. But in this case, the hypothesis directly contradicts the premise because the premise says she doesn't wear a hat, and the hypothesis says she does. So it's not neutral.
+
+Contradiction is when the hypothesis directly contradicts the premise. Since the premise says she doesn't wear a hat and the hypothesis says she does, they are conflicting. Therefore, the label should be contradiction.
+</think>
+
+contradiction"
+"Il n'y a pas de chien qui en poursuit un autre ou qui tient un bâton dans sa bouche","Deux chiens courent et portent un objet dans leur bouche","Ex 1:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 0
+
+Ex 2:
+P: Deux chiens courent et portent un objet dans leur bouche
+H: Un chien chasse un bâton et tient un autre chien dans sa bouche
+L: 1
+
+Ex 3:
+P: Un chien chasse une balle
+H: Il n'y a pas de chien chassant une balle
+L: 2
+
+Ex 4:
+P: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+H: Deux chiens courent et portent un objet dans leur bouche
+L: 1
+
+Ex 5:
+P: Un chien en poursuit un autre et tient un bâton dans sa bouche
+H: Un chien en poursuit un autre et tient un morceau de bois dans sa bouche
+L: 0","1","2","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas de chien qui en poursuit un autre ou qui tient un bâton dans sa bouche."" The hypothesis is ""Deux chiens courent et portent un objet dans leur bouche.""
+
+First, I need to understand what each part means. The premise is saying that there are no dogs chasing another dog or holding a stick. So, it's a negative statement about dogs not doing those actions.
+
+The hypothesis is saying that two dogs are running and carrying an object. So, it's a positive statement about dogs doing those actions.
+
+Now, I have to determine the relationship between the premise and the hypothesis. The premise is stating that certain actions are not happening, while the hypothesis is saying that those actions are happening. So, the premise is contradicting the hypothesis because it's denying the same actions that the hypothesis is confirming.
+
+In the examples given, when the premise and hypothesis were about the same actions but one was positive and the other negative, the label was ""contradiction."" For instance, when the premise was about a dog chasing another and the hypothesis was about a dog not doing that, it was a contradiction.
+
+So, applying that logic here, since the premise is saying that no dogs are doing those actions and the hypothesis is saying they are, they are directly contradictory. There's no neutral or entailment here because the premise isn't supporting or confirming the hypothesis; it's the opposite.
+
+Therefore, the label should be ""contradiction.""
+</think>
+
+contradiction"
+"Une personne qui joue au football donne un coup de pied dans le but","Un joueur de football donne un coup de pied dans le but","Ex 1:
+P: Un joueur de football marque un but
+H: Un joueur de football marque un but
+L: 0
+
+Ex 2:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne frappe un ballon de football entre ses pieds
+L: 1
+
+Ex 3:
+P: Un joueur de football marque un but
+H: Il n'y a pas de joueurs de football qui frappent un ballon de football dans le but
+L: 2
+
+Ex 4:
+P: Le joueur de football donne un coup de pied au ballon entre les jambes de quelqu'un
+H: Une personne donne un coup de pied à un ballon pour un match de football entre les pieds de quelqu'un
+L: 0
+
+Ex 5:
+P: Un joueur de football marque un but
+H: Les joueurs de football frappent un ballon de football dans le but
+L: 0","0","0","Okay, let's see. I need to determine the relationship between the premise and the hypothesis. The premise is ""Une personne qui joue au footballgive un coup de pied dans le but."" The hypothesis is ""Un joueur de footballgive un coup de pied dans le but.""
+
+Hmm, so the premise is saying that a person who plays football gives a kick into the goal. The hypothesis is that a football player does the same. Well, a football player is a type of person who plays football, right? So the premise is more general, and the hypothesis is a specific case of that general statement.
+
+Wait, but in the examples given, sometimes the premise and hypothesis were more similar. Like in the first example, the premise and hypothesis were the same, so it was an entailment. In another case, the premise was more specific, and the hypothesis was more general, but the label was still entailment.
+
+So here, the premise is a bit more specific because it mentions ""a person who plays football"" and the hypothesis is ""a football player."" But in French, ""un joueur de football"" is the same as ""une personne qui joue au football."" So they're essentially the same. Therefore, the hypothesis is a restatement of the premise, just using different words but meaning the same thing.
+
+So the relationship here is that the hypothesis is entailed by the premise because they both mean the same thing. There's no contradiction or neutrality; they're directly related.
+</think>
+
+entailment"
+"Certaines personnes sont debout","Un groupe d'éclaireurs marchent à travers l'herbe","Ex 1:
+P: Un groupe d'éclaireurs marchent à travers l'herbe
+H: Certaines personnes marchent
+L: 0
+
+Ex 2:
+P: Certaines personnes marchent
+H: Un groupe d'éclaireurs campent dans l'herbe
+L: 1
+
+Ex 3:
+P: Cinq personnes debout dans l'herbe sans chiens
+H: Cinq personnes sont debout avec trois chiens dans le champ vert à côté de la route
+L: 2
+
+Ex 4:
+P: Un groupe d'éclaireurs campent dans l'herbe
+H: Un groupe d'éclaireurs marchent à travers l'herbe
+L: 1
+
+Ex 5:
+P: Un groupe de personnes marchent
+H: Un groupe de personnes est debout
+L: 1","1","1","Okay, let's try to figure out the label for this example. The premise is ""Certaines personnes sont debout,"" which translates to ""Some people are standing."" The hypothesis is ""Un groupe d'éclaireurs marchent à travers l'herbe,"" meaning ""A group of lighters walks through the grass.""
+
+First, I need to understand what each part means. The premise is about people being standing, and the hypothesis is about lighters walking. There's no direct connection between the two. The premise doesn't provide any information about lighters or walking. They are completely different subjects. 
+
+So, the premise doesn't support the hypothesis, nor does it contradict it. It's just two separate statements about different things. Therefore, the relationship between them isn't one of entailment, where one logically follows from the other, nor is it a contradiction, where one directly opposes the other. 
+
+Since there's no logical connection or opposition, the correct label here should be ""neutral."" That means the hypothesis doesn't confirm or deny the premise, and vice versa. They're independent of each other.
+</think>
+
+neutral"
+"Trois personnes sont debout à côté d'un membre d'arbre","Deux enfants sont suspendus à une grande branche","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un homme ramasse un arbre
+H: Un arbre est ramassé par un homme
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Un homme ramasse un arbre
+H: Un homme fait tomber un arbre
+L: 1","1","1","Okay, let's try to figure out the label for this example. The premise is ""Trois personnes sont debout à côté d'un membre d'arbre,"" which translates to three people are standing next to a tree branch. The hypothesis is ""Deux enfants sont suspendus à une grande branche,"" meaning two children are hanging from a large branch.
+
+First, I need to understand what each part means. The premise talks about three people near a tree branch, while the hypothesis is about two children hanging from a branch. The key here is to see if the hypothesis logically follows, contradicts, or is neutral compared to the premise.
+
+In the premise, there are three people, but the hypothesis only mentions two children. The premise doesn't specify what the other person is doing, so we don't know if they're also hanging or just standing. The hypothesis introduces a scenario where two children are hanging, which isn't mentioned in the premise. Since the premise doesn't confirm or deny that the children are hanging, the hypothesis doesn't necessarily follow or contradict it. It's introducing a new detail without any support from the premise.
+
+Looking at the examples provided, when the hypothesis added a detail not mentioned in the premise, it was labeled as neutral. For instance, in one case, the premise was about people being debout, and the hypothesis added something about them grimping, which was neutral. Similarly, when the premise was about an action and the hypothesis added a different action, it was neutral.
+
+So, applying that logic here, since the hypothesis introduces a specific detail about the children that isn't covered in the premise, it doesn't logically follow or contradict it. Therefore, the label should be neutral.
+</think>
+
+neutral"
+"Deux enfants sont suspendus à une grande branche","Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre","Ex 1:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants sont suspendus à une grande branche
+L: 1
+
+Ex 2:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre
+L: 2
+
+Ex 3:
+P: Un garçon est en train de descendre une pente raide
+H: Un enfant est en train de descendre une pente raide
+L: 0
+
+Ex 4:
+P: Deux enfants et un adulte sont debout à côté d'un membre d'arbre
+H: Deux enfants grimpent à un arbre
+L: 1
+
+Ex 5:
+P: Deux garçons portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+H: Deux filles portent des chemises brunes et tirent sur une corde sur une plate-forme en bois
+L: 1","1","1","Okay, let's try to figure out the label for this example. The premise is ""Deux enfants sont suspendus à une grande branche,"" which translates to ""Two children are hanging from a large branch."" The hypothesis is ""Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre,"" meaning ""Two children and an adult are not standing next to a branch."" 
+
+First, I need to understand what each part is saying. The premise is about two children hanging from a branch. The hypothesis is saying that two children and an adult are not next to a branch. So, the premise is about children hanging from a branch, while the hypothesis is about the same group (two children and an adult) not being near a branch.
+
+Wait, but the premise doesn't mention an adult. It only talks about two children. The hypothesis is introducing an adult into the scenario, which wasn't in the premise. So, the premise doesn't provide any information about adults or their location relative to the branch. 
+
+Therefore, the hypothesis is adding information about an adult that wasn't present in the premise. Since the premise doesn't talk about adults at all, the hypothesis is making a statement that's not supported by the premise. It's introducing a new element that wasn't discussed before. 
+
+In terms of logical relationship, the premise doesn't confirm or contradict the hypothesis because the premise doesn't cover the scenario described in the hypothesis. The hypothesis is about a different situation involving an adult, which isn't addressed in the premise. So, there's no logical connection between the two statements. 
+
+Looking at the labels, ""neutral"" means that the hypothesis doesn't follow from the premise, isn't contradicted, or provide additional information. Since the premise doesn't mention adults or their position, the hypothesis isn't supported or contradicted by the premise. It's introducing new elements that weren't in the premise. 
+
+Therefore, the correct label should be ""neutral"" because the hypothesis doesn't logically relate to the premise; it's neither entailed nor contradictory.
+</think>
+
+neutral"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant tient une arme à feu","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 3:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 4:
+P: Cinq enfants sont debout ensemble et un enfant a une arme à feu
+H: Cinq enfants sont debout près l'un de l'autre et aucun des enfants n'a une arme à feu
+L: 2
+
+Ex 5:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0","2","2","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas d'enfant tenant une arme à feu,"" which translates to ""There is no child holding a fire extinguisher."" The hypothesis is ""Un enfant tient une arme à feu,"" meaning ""A child is holding a fire extinguisher.""
+
+So, the premise is saying that no child is holding a fire extinguisher. The hypothesis is stating that a child is holding one. These two statements are directly contradictory. If the premise is true, the hypothesis can't be true, and vice versa. There's no possibility where both could be true at the same time. Therefore, the relationship between the premise and the hypothesis is a contradiction because they cannot both be true simultaneously.
+
+I don't think it's an entailment because the premise doesn't support the hypothesis; in fact, it's the opposite. It's not neutral either because there's a clear contradiction here. So, the correct label should be contradiction.
+</think>
+
+contradiction"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau","Ex 1:
+P: Il n'y a pas d'enfant tenant un pistolet à eau ou se vaporiser avec de l'eau
+H: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+L: 2
+
+Ex 2:
+P: Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau
+H: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+L: 1
+
+Ex 3:
+P: Un enfant avec un pistolet qui pulvérise de l'eau rit et se fait frapper par d'autres garçons
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 4:
+P: Un garçon tient une arme à feu
+H: Un enfant tient une arme à feu
+L: 0
+
+Ex 5:
+P: Il n'y a pas d'enfant jouant avec un bec d'eau à l'extérieur avec le reste de sa famille qui regarde
+H: Un garçon tient un tuyau à côté d'un homme et un autre garçon regarde
+L: 1","2","1","Okay, let's try to figure out the label for this example. The premise is ""Il n'y a pas d'enfant tenant une arme à feu."" So, in English, that means ""There is no child carrying a fire weapon."" The hypothesis is ""Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau."" Translating that, it's ""A child who laughs is holding a water gun and gets wet from it.""
+
+So, the premise is saying that no child is carrying a fire weapon. The hypothesis is describing a child holding a water gun and getting wet. Now, I need to determine if the hypothesis is entailing, neutral, or contradictory to the premise.
+
+Entailment would mean that the hypothesis logically follows from the premise. But the premise is about fire weapons, and the hypothesis is about water guns. They're different types of weapons. The premise doesn't say anything about water guns, so the hypothesis doesn't necessarily follow from the premise.
+
+Neutral would mean that the hypothesis doesn't confirm or contradict the premise. Since the premise is about not having children with fire weapons, and the hypothesis is about children with water guns, there's no overlap or contradiction. They're talking about different things, so the hypothesis doesn't confirm or deny the premise.
+
+Contradiction would mean that the hypothesis directly contradicts the premise. But the premise is about fire weapons, and the hypothesis is about water guns. They don't contradict each other because they're about different weapons. So, the hypothesis doesn't contradict the premise either.
+
+Wait, but maybe I'm missing something. The premise is about not having children with fire weapons, but the hypothesis is about children with water guns. Are water guns considered weapons? Yes, they are. So, the premise is saying no children are carrying fire weapons, but the hypothesis is about children carrying water guns, which are also weapons. So, the premise doesn't say anything about whether children can carry water guns or not. It only restricts fire weapons.
+
+Therefore, the hypothesis introduces a new type of weapon (water gun) that the premise doesn't address. So, the hypothesis doesn't confirm or contradict the premise because the premise doesn't say anything about water guns. They're separate categories.
+
+So, the label should be neutral because the hypothesis doesn't affect or confirm the premise. It's introducing a different scenario that's not covered by the premise.
+</think>
+
+neutral"
+"Deux daschunds jouent avec une boule rouge","Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe","Ex 1:
+P: Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 2:
+P: Deux chiens courent et essaient d'attraper un ballon de football
+H: Deux chiens courent et essaient d'attraper une balle
+L: 0
+
+Ex 3:
+P: Deux daschunds jouent avec une boule rouge
+H: Deux chiens jouent avec une petite boule rouge
+L: 1
+
+Ex 4:
+P: Un chien chasse une balle sur l'herbe
+H: Un chien chasse une balle dans l'herbe
+L: 0
+
+Ex 5:
+P: Un chien chasse une balle sur l'herbe
+H: Une balle est poursuivie par un chien sur l'herbe
+L: 0","1","1","Okay, let's see. I need to determine the relationship between the premise and the hypothesis. The premise is ""Deux daschunds jouent avec une boule rouge"" which translates to ""Two schnauzers are playing with a red ball."" The hypothesis is ""Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe,"" meaning ""Two brown dogs are fighting for a red ball and are playing in the grass.""
+
+First, I should analyze the content. The premise mentions that two schnauzers are playing with a red ball. The hypothesis adds more details: they are fighting for the ball and also playing in the grass. So, the hypothesis is providing additional information about the context of the activity.
+
+Now, looking at the labels: entailment means the hypothesis is logically implied by the premise. Neutral means the hypothesis doesn't confirm or contradict the premise. Contradiction means the hypothesis directly opposes the premise.
+
+In this case, the premise doesn't mention anything about fighting or playing in the grass. The hypothesis adds these details, which aren't present in the premise. Therefore, the hypothesis is not entailed by the premise because it's adding new information that isn't covered. It's also not a contradiction because it's not directly opposing; it's just providing more context.
+
+So, the correct label should be neutral because the hypothesis doesn't confirm or contradict the premise; it's just adding more details that aren't specified in the premise.
+</think>
+
+neutral"

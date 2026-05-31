@@ -1,0 +1,481 @@
+"test_premise","test_hypothesis","dynamic_examples_used","true_label","pred_label","response"
+"Le jeu de basket-ball se compose d'une balle étant trempée par un homme avec un maillot","Un homme avec un maillot trempe le ballon lors d'un match de basket-ball","Ex 1:
+P: En 1999, Victor Conte a reçu deux flacons d'un nouveau médicament par un chimiste qu'il connaissait, et il a commencé à en donner à certains de ses clients. Dont, dit Conte, l'une des sportives les plus emblématiques des Amériques, Marion Jones, qui était sur le point de participer aux Jeux olympiques de Sydney en 2000.
+H: Des sportives ont été soupçonnées de dopage.
+L: 1
+
+Ex 2:
+P: Les Kinston Indians sont une équipe de baseball de ligue mineure à Kinston, en Caroline du Nord. L'équipe, affiliée de classe A aux Indians de Cleveland, joue dans la Carolina League.
+H: Les Kinston Indians participent à la Carolina League.
+L: 0
+
+Ex 3:
+P: La voiture qui s'est écrasée contre la boîte aux lettres appartenait à James Clark, 68 ans, une connaissance de la famille de James Jones.
+H: Clark est un parent de Jones.
+L: 2
+
+Ex 4:
+P: L'attaquant de Swansea, Lee Trundle, a négocié un lucratif contrat de droits d'image avec le club de League One.
+H: Lee Trundle est en affaires avec le club de League One.
+L: 0
+
+Ex 5:
+P: L'affaire de la Libye contre la Grande-Bretagne et les États-Unis concerne le différend relatif à leur demande d'extradition des Libyens accusés d'avoir fait exploser un avion de la Pan Am au-dessus de Lockerbie en 1988.
+H: Une affaire concernait l'extradition de suspects libyens dans l'attentat à la bombe de la Pan Am Lockerbie.
+L: 0","0","1","neutral"
+"Il n'y a pas d'homme qui trempe la balle dans un match de basket-ball","Le joueur plonge le basket dans le filet et une foule est en arrière-plan","Ex 1:
+P: Les Kinston Indians sont une équipe de baseball de ligue mineure à Kinston, en Caroline du Nord. L'équipe, affiliée de classe A aux Indians de Cleveland, joue dans la Carolina League.
+H: Les Kinston Indians participent à la Carolina League.
+L: 0
+
+Ex 2:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1
+
+Ex 3:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 4:
+P: Aux Jeux olympiques de 1932 à Los Angeles, Didrikson remporte des médailles d'or au javelot (record olympique) et aux 80 mètres haies (record du monde), ainsi qu'une médaille d'argent au saut en hauteur (part du record du monde).
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1
+
+Ex 5:
+P: Ronaldo Luiz Nazario da Silva est tout simplement l'un des plus grands attaquants de l'histoire du football mondial, capable de laisser toute une équipe sur le carreau par ses courses fulgurantes et ses dribbles, élu joueur mondial de l'année de la FIFA à trois reprises et déjà double vainqueur de la Coupe du monde de la FIFA.
+H: La FIFA désigne le joueur de football mondial de l'année 1994.
+L: 1","2","1","neutral"
+"Une petite fille regarde une femme en costume","Une jeune fille regarde une femme en costume","Ex 1:
+P: ""The Extra Girl"" (1923) est l'histoire d'une fille d'une petite ville, Sue Graham (jouée par Mabel Normand), qui vient à Hollywood pour faire du cinéma. Ce véhicule de Mabel Normand, produit par Mack Sennett, fait suite à des films antérieurs sur l'industrie cinématographique et ouvre également la voie à des films ultérieurs sur Hollywood, tels que Show People (1928) de King Vidors.
+H: Mabel Normand a joué dans The Extra Girl.
+L: 0
+
+Ex 2:
+P: Loraine, en plus de participer à la pièce Dreamgirls de Broadway, a également participé à la production Off-Broadway de ""Does A Tiger Have A Necktie"". En 1999, Loraine s'est rendue à Londres, au Royaume-Uni. Elle y a participé à la production de ""RENT"", où elle a été distribuée comme ""Mimi"" la doublure.
+H: ""Does A Tiger Have A Necktie"" a été produit à Londres.
+L: 1
+
+Ex 3:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 4:
+P: ""The Extra Girl"" (1923) est l'histoire d'une fille d'une petite ville, Sue Graham (jouée par Mabel Normand), qui vient à Hollywood pour faire du cinéma. Ce véhicule de Mabel Normand, produit par Mack Sennett, fait suite à des films antérieurs sur l'industrie cinématographique et ouvre également la voie à des films ultérieurs sur Hollywood, comme ""Show People"" (1928) de King Vidor.
+H: ""The Extra Girl"" a été produit par Sennett.
+L: 0
+
+Ex 5:
+P: À présent, GMFanuc Robotics a mis au point une solution robotique qui est trois fois plus rapide que la pulvérisation manuelle, qui peut reproduire un motif de pulvérisation avec une précision de 0,03 pouce et qui peut être programmée facilement pour traiter une large gamme de vêtements.
+H: Des robots sont utilisés pour pulvériser de la teinture sur les vêtements.
+L: 0","0","0","entailment"
+"Un joueur court avec la balle","Le football est joué par deux équipes en compétition","Ex 1:
+P: Ronaldo Luiz Nazario da Silva est tout simplement l'un des plus grands attaquants de l'histoire du football mondial, capable de laisser toute une équipe sur le carreau par ses courses fulgurantes et ses dribbles, élu joueur mondial de l'année de la FIFA à trois reprises et déjà double vainqueur de la Coupe du monde de la FIFA.
+H: La FIFA désigne le joueur de football mondial de l'année 1994.
+L: 1
+
+Ex 2:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 3:
+P: En 1975, un Wilkins de 19 ans se voit confier le capitanat de Chelsea, malgré la présence de joueurs plus âgés et plus expérimentés dans l'effectif.
+H: Wilkins devient le capitaine de Chelsea en 1975.
+L: 0
+
+Ex 4:
+P: Zinedine Zidane a devancé Thierry Henry et Ronaldo pour le prix Fifa 2003 du joueur mondial de l'année.
+H: La Fifa sélectionne le joueur de football mondial de l'année 1994.
+L: 1
+
+Ex 5:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1","1","1","neutral"
+"Les gens marchent à l'extérieur d'un bâtiment qui a beaucoup de peintures murales sur elle","Les gens marchent à l'extérieur du bâtiment qui a plusieurs peintures murales sur elle","Ex 1:
+P: Un faux art rupestre préhistorique représentant un homme des cavernes avec un caddie a été accroché aux murs du British Museum.
+H: Art préhistorique découvert en Afrique du Sud.
+L: 1
+
+Ex 2:
+P: Stony Brook, NY (1/10/02)- La découverte d'art paléolithique dans une grotte d'Afrique du Sud amène les chercheurs à envisager une vision plus ancienne et moins euro-centrée des origines de ce que l'on considère comme le ""comportement moderne"".
+H: Art préhistorique découvert en Afrique du Sud.
+L: 0
+
+Ex 3:
+P: Deux portraits, l'un de Reynolds, l'autre de Gainsborough, depuis 1990 parmi les œuvres les plus recherchées dans la base de données Art Loss Register, ont été récupérés cette semaine lorsqu'ils ont été apportés chez Sotheby's pour être évalués. De même, une lithographie de l'artiste norvégien Edvard Munch, volée dans une galerie d'art d'Oslo en avril, a été récupérée, ont indiqué les médias aujourd'hui.
+H: Ces deux portraits et une lithographie d'Edvard Munch ont été retrouvés grâce à la base de données Art Loss Register.
+L: 2
+
+Ex 4:
+P: En plus des bases de données et de la publicité, l'art volé est récupéré lorsque quelqu'un cherche à l'évaluer ou le propose à la vente à des marchands ou à des maisons de vente aux enchères, répond à une offre de récompense, tente de le faire passer par les douanes ou demande une rançon pour l'art.
+H: Les registres d'inventaire centralisés des musées aident à la sensibilisation au vol.
+L: 1
+
+Ex 5:
+P: Le cinquième festival du Coq d'Or et des Cent Fleurs, qui se tiendra dans la ville de Kunming (sud-est) du 9 au 13 octobre, proposera des cérémonies de remise de prix, des expositions de films, ainsi que des échanges commerciaux.
+H: La Palme d'or a été décernée au Festival du film de Cannes.
+L: 1","0","0","entailment"
+"Peu de gens mangent à des tables rouges dans un restaurant sans lumières","Diverses personnes mangent à des tables rouges dans un restaurant bondé avec des lumières violettes","Ex 1:
+P: Les personnes sourdes ou ayant une déficience auditive, les personnes aveugles ou ayant une déficience visuelle et les personnes à mobilité réduite peuvent être confrontées à des défis uniques en cas d'urgence. Leur capacité à détecter un incendie ou à échapper à ses effets peut être entravée par leurs déficiences. Par conséquent, les personnes atteintes de ces handicaps courent un plus grand risque de décès ou de blessures dus à un incendie.
+H: Les personnes sourdes rencontrent des problèmes dans la communauté sociale.
+L: 1
+
+Ex 2:
+P: Fiona North, conseillère ophtalmique auprès de la SHSSB a ajouté : Les blessures oculaires causées par les feux d'artifice sont extrêmement graves et peuvent endommager la vue de façon permanente. Je demande instamment à ceux qui coordonnent des feux d'artifice efficaces d'utiliser une protection oculaire appropriée.
+H: Les feux d'artifice peuvent causer des blessures graves.
+L: 0
+
+Ex 3:
+P: Des souris, auxquelles on a donné une substance présente dans le vin rouge, ont vécu plus longtemps malgré un régime gras, selon une étude.
+H: Des souris nourries au vin rouge ont vécu plus longtemps malgré un régime gras.
+L: 2
+
+Ex 4:
+P: Le cinquième festival du Coq d'Or et des Cent Fleurs, qui se tiendra dans la ville de Kunming (sud-est) du 9 au 13 octobre, proposera des cérémonies de remise de prix, des expositions de films, ainsi que des échanges commerciaux.
+H: La Palme d'or a été décernée au Festival du film de Cannes.
+L: 1
+
+Ex 5:
+P: Le Pharos, un phare monumental construit vers 280 avant JC et s'élevant à 330 pieds de haut, éclairait l'entrée du port d'Alexandrie pendant des siècles, mais les archéologues n'ont jamais pu identifier positivement des vestiges.
+H: Le phare du Pharos était situé à Alexandrie.
+L: 0","1","1","neutral"
+"Quelqu'un est sur une moto en noir et blanc et est debout sur le siège","Un coureur est sur un vélo noir et blanc et est debout sur le siège","Ex 1:
+P: L'acteur Christopher Reeve, surtout connu pour son rôle de Superman, est paralysé et ne peut pas respirer sans l'aide d'un respirateur après s'être brisé le cou dans un accident d'équitation à Culpeper, en Virginie, samedi.
+H: Christopher Reeve a eu un accident.
+L: 0
+
+Ex 2:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 3:
+P: Le président sud-africain Thabo Mbeki, principal médiateur dans le processus de paix en Côte d'Ivoire, a déclaré dimanche que Pretoria intensifiait son intervention dans la nation ouest-africaine pour ouvrir la voie à des élections plus tard cette année.
+H: Pretoria est située en Côte d'Ivoire.
+L: 1
+
+Ex 4:
+P: Mercedes-Benz USA (MBUSA), dont le siège social est situé à Montvale, dans le New Jersey, est responsable de la vente, du marketing et du service de tous les produits Mercedes-Benz et Maybach aux États-Unis.
+H: MBUSA est basée dans le New Yersey.
+L: 0
+
+Ex 5:
+P: Certains passagers ont été escortés hors du navire en fauteuil roulant par des membres d'équipage portant des gants bleus.
+H: Des fauteuils roulants ont été utilisés pour conduire les passagers hors du navire.
+L: 0","0","1","neutral"
+"Il n'y a pas de motocycliste à moto le long d'une chaussée","Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Ex 1:
+P: Certains passagers ont été escortés hors du navire en fauteuil roulant par des membres d'équipage portant des gants bleus.
+H: Des fauteuils roulants ont été utilisés pour conduire les passagers hors du navire.
+L: 0
+
+Ex 2:
+P: En Grande-Bretagne, ils canalisent leur énergie dans le jardinage et l'équitation. En Hollande, ils se déplacent à vélo pour montrer à quel peuple ils appartiennent. Mais, se conformant à un stéréotype national, la famille royale italienne, exilée de sa patrie depuis 60 ans, préfère les voitures rapides et les belles femmes.
+H: La famille royale italienne rentre au pays.
+L: 1
+
+Ex 3:
+P: Une association caritative musulmane aux Philippines, soutenue par Ben Laden et dirigée par un beau-frère, Mohammad Jamal Khalifa, a financé Shah et les autres comploteurs.
+H: Le beau-père de Mohammad Khalifa est Oussama Ben Laden.
+L: 2
+
+Ex 4:
+P: L'acteur Christopher Reeve, surtout connu pour son rôle de Superman, est paralysé et ne peut pas respirer sans l'aide d'un respirateur après s'être brisé le cou dans un accident d'équitation à Culpeper, en Virginie, samedi.
+H: Christopher Reeve a eu un accident.
+L: 0
+
+Ex 5:
+P: Les constructeurs automobiles étrangers gagnent du terrain en Russie. Les constructeurs comme Daewoo, Ford, Renault et d'autres ne peuvent pas produire assez vite.
+H: Les voitures européennes se vendent en Russie.
+L: 0","2","2","contradiction"
+"Un motocycliste avec un casque rouge conduit une moto bleue sur la route","Un motocycliste conduit une moto le long d'une chaussée","Ex 1:
+P: En Grande-Bretagne, ils canalisent leur énergie dans le jardinage et l'équitation. En Hollande, ils se déplacent à vélo pour montrer à quel peuple ils appartiennent. Mais, se conformant à un stéréotype national, la famille royale italienne, exilée de sa patrie depuis 60 ans, préfère les voitures rapides et les belles femmes.
+H: La famille royale italienne rentre au pays.
+L: 1
+
+Ex 2:
+P: Une association caritative musulmane aux Philippines, soutenue par Ben Laden et dirigée par un beau-frère, Mohammad Jamal Khalifa, a financé Shah et les autres comploteurs.
+H: Le beau-père de Mohammad Khalifa est Oussama Ben Laden.
+L: 2
+
+Ex 3:
+P: Les dealers de Morro da Rocinha sont en guerre contre les dealers de la favela voisine de Vidigal.
+H: Morro da Rocinha est proche de la favela Vidigal.
+L: 0
+
+Ex 4:
+P: Lin Piao, après tout, est le créateur du ""Petit livre rouge"" des citations de Mao.
+H: Lin Piao a écrit le ""Petit Livre Rouge"".
+L: 0
+
+Ex 5:
+P: L'assassinat de George Hawi intervient au lendemain de la conclusion du dernier tour des élections législatives, qui a vu une coalition de candidats de l'opposition menée par Saad Hariri, fils de l'ancien Premier ministre du Liban Rafic Hariri, s'emparer de la majorité des sièges.
+H: Saad Hariri a été élu Premier ministre du Liban.
+L: 1","0","0","entailment"
+"Il n'y a pas de chien qui saute dans l'air","Un chien saute haut dans les airs et un autre regarde","Ex 1:
+P: La plupart des gens connaissent l'idée de Saint-Bernard ou d'autres chiens participant aux efforts de sauvetage et de récupération. Les robots peuvent également prendre part à des missions de recherche et de sauvetage.
+H: Des robots sont utilisés pour retrouver des victimes disparues.
+L: 0
+
+Ex 2:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1
+
+Ex 3:
+P: Le 1er octobre 2001, l'UE et d'autres pays ont introduit la possibilité pour les propriétaires d'animaux domestiques de demander des passeports pour animaux de compagnie dans le cadre du Pets Travel Scheme (PETS en abrégé), pour les animaux de compagnie revenant de l'étranger au Royaume-Uni. Cela a remplacé l'ancien système de quarantaine obligatoire de 6 mois pour tous les animaux domestiques.
+H: En 2001, l'UE a introduit une quarantaine obligatoire de six mois pour tous les animaux domestiques.
+L: 2
+
+Ex 4:
+P: Le 1er octobre 2001, l'UE et d'autres pays ont introduit la possibilité pour les propriétaires d'animaux domestiques de demander des passeports pour animaux de compagnie dans le cadre du Pets Travel Scheme (PETS en abrégé), pour les animaux de compagnie revenant de l'étranger au Royaume-Uni. Cela a remplacé l'ancien système de quarantaine obligatoire de 6 mois pour tous les animaux domestiques.
+H: En 2001, l'UE a introduit un passeport pour les animaux de compagnie.
+L: 0
+
+Ex 5:
+P: Le passeport pour animaux de compagnie est une feuille A4 rose qui contient le numéro de la micropuce et la certification que le chien a été vacciné contre la rage, et qui doit être signée par un vétérinaire ayant le statut LVI. Le passeport ne doit pas être confondu avec la pochette violette beaucoup plus petite délivrée couramment par les vétérinaires, qui enregistre l'historique complet des vaccinations de l'animal.
+H: Le passeport pour animaux de compagnie contient l'historique complet des vaccinations des animaux de compagnie.
+L: 2","2","2","contradiction"
+"Une femme porte une coiffe égyptienne","Un Egyptien porte la coiffure d'une femme","Ex 1:
+P: Munir Mezyed, poète et critique, a suscité les sentiments et les émotions du public lorsqu'il a récité sa poésie fluide à la fois en arabe et en anglais, ce qui a démontré son style unique et bouleversant.
+H: Gotthold Ephraim Lessing a vécu de 1729 à 1781.
+L: 1
+
+Ex 2:
+P: El-Nashar a été détenu le 14 juillet au Caire après que la Grande-Bretagne a informé les autorités égyptiennes qu'elle le soupçonnait d'avoir des liens avec certains des attaquants.
+H: El-Nashar a été arrêté en Egypte.
+L: 0
+
+Ex 3:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 4:
+P: Pour écrire ""Les Perses"", qui débute jeudi au théâtre Aurora de Berkeley, Ellen McLaughlin a passé six jours. Compte tenu de l'orientation de la politique étrangère américaine, dit McLaughlin, les leçons de ""Les Perses"" sont particulièrement cruciales aujourd'hui, 2.500 ans après qu'il a été écrit.
+H: ""Les Perses"" a été écrit par Eschyle.
+L: 1
+
+Ex 5:
+P: Le Koweït devient le quatrième pays du Golfe où les femmes comme les hommes peuvent voter aux élections. L'Arabie saoudite organise des élections strictement limitées, réservées aux hommes.
+H: Les femmes peuvent voter aux élections en Arabie saoudite.
+L: 2","1","1","neutral"
+"La femme ne porte pas de lunettes ou une coiffe","Une femme porte une coiffe égyptienne","Ex 1:
+P: Ensuite, la Chine a déployé le faux Panchen Lama, Gyaltsen Norbu, un adolescent choisi par les dirigeants communistes athées comme la réincarnation d'un grand lama et entraîné depuis l'enfance à débiter des slogans nationalistes tout en portant des robes. Les journaux qui ont rendu compte de cette débâcle ont généralement essayé de présenter les deux côtés de la médaille, mais il semble juste de dire qu'il n'y a vraiment qu'un seul côté à cette imposture et que pratiquement personne dans la communauté tibétaine n'accepte que Norbu soit le véritable Panchen Lama. Le choix du Dalaï Lama pour le Panchen Lama, Gedhun Choekyi Nyima, est en détention secrète en Chine depuis 1995.
+H: Le Dalaï Lama et le gouvernement de la République populaire de Chine sont en conflit au sujet de la réincarnation du Panchen Lama.
+L: 0
+
+Ex 2:
+P: Le Koweït devient le quatrième pays du Golfe où les femmes comme les hommes peuvent voter aux élections. L'Arabie saoudite organise des élections strictement limitées, réservées aux hommes.
+H: Les femmes peuvent voter aux élections en Arabie saoudite.
+L: 2
+
+Ex 3:
+P: Il existe quatre sous-types identifiés du virus Ebola. Trois d'entre eux ont provoqué des maladies chez l'homme : Ebola-Zaïre, Ebola-Soudan, et Ebola-Côte d'Ivoire. Le quatrième, Ebola-Reston, a provoqué des maladies chez des primates non humains, mais pas chez l'homme.
+H: L'épidémie d'Ebola se déclare au Zaïre.
+L: 1
+
+Ex 4:
+P: Le 17 mai 2005, l'Assemblée nationale du Koweït a adopté, à une majorité de 35 contre 23 (avec 1 abstention), un amendement à sa loi électorale permettant aux femmes de voter et de se présenter comme candidates au Parlement.
+H: Un amendement favorable aux femmes a été rejeté par l'Assemblée nationale du Koweït.
+L: 2
+
+Ex 5:
+P: Les moustiques femelles sont infectées par le parasite du paludisme lorsqu'elles prélèvent du sang sur des humains atteints de paludisme. Les insectes peuvent alors le transmettre aux autres humains qu'ils piquent, mais ne tombent pas malades eux-mêmes.
+H: Les moustiques femelles propagent le paludisme.
+L: 0","2","1","neutral"
+"Il n'y a pas de chien qui en poursuit un autre ou qui tient un bâton dans sa bouche","Deux chiens courent et portent un objet dans leur bouche","Ex 1:
+P: Le passeport pour animaux de compagnie est une feuille A4 rose qui contient le numéro de la micropuce et la certification que le chien a été vacciné contre la rage, et qui doit être signée par un vétérinaire ayant le statut LVI. Le passeport ne doit pas être confondu avec la pochette violette beaucoup plus petite délivrée couramment par les vétérinaires, qui enregistre l'historique complet des vaccinations de l'animal.
+H: Le passeport pour animaux de compagnie contient l'historique complet des vaccinations des animaux de compagnie.
+L: 2
+
+Ex 2:
+P: La plupart des gens connaissent l'idée de Saint-Bernard ou d'autres chiens participant aux efforts de sauvetage et de récupération. Les robots peuvent également prendre part à des missions de recherche et de sauvetage.
+H: Des robots sont utilisés pour retrouver des victimes disparues.
+L: 0
+
+Ex 3:
+P: L'Argentine reste l'un des 17 pays qui interdisent encore l'élevage de bovins britanniques en raison de l'apparition de la maladie de la vache folle dans les années 1980.
+H: Le refus de l'Argentine d'acheter du bétail a créé de nouvelles tensions entre les deux pays.
+L: 1
+
+Ex 4:
+P: Les animaux sont autorisés à entrer au Royaume-Uni 6 mois plus tard sans quarantaine à condition qu'ils aient été traités contre les tiques, les puces et le ténia entre 24 et 48 heures avant de monter à bord du transport qui ramènera les animaux au Royaume-Uni.
+H: La quarantaine est obligatoire pour l'entrée des animaux au Royaume-Uni.
+L: 2
+
+Ex 5:
+P: Le passeport pour animaux de compagnie seul peut être utilisé pour entrer au Royaume-Uni, mais il ne suffira pas pour entrer dans de nombreux pays. Par exemple, le Guatemala, comme presque tous les pays, exige que tous les animaux domestiques importés soient vaccinés contre la rage, mais n'acceptera pas le passeport pour animaux de compagnie comme preuve de ladite vaccination.
+H: Le Guatemala accepte le passeport pour animaux de compagnie comme preuve de vaccination.
+L: 2","1","1","neutral"
+"Une personne qui joue au football donne un coup de pied dans le but","Un joueur de football donne un coup de pied dans le but","Ex 1:
+P: Ronaldo Luiz Nazario da Silva est tout simplement l'un des plus grands attaquants de l'histoire du football mondial, capable de laisser toute une équipe sur le carreau par ses courses fulgurantes et ses dribbles, élu joueur mondial de l'année de la FIFA à trois reprises et déjà double vainqueur de la Coupe du monde de la FIFA.
+H: La FIFA désigne le joueur de football mondial de l'année 1994.
+L: 1
+
+Ex 2:
+P: La Mozambicaine Maria Mutola et l'Israélien Alex Averbukh ont réalisé les meilleures performances de l'année, au 800 mètres féminin et au saut à la perche masculin, lors du Super Grand Prix de Madrid, samedi.
+H: La championne du dix mille mètres féminin est originaire du Mozambique.
+L: 2
+
+Ex 3:
+P: Après avoir obtenu son diplôme en 1977, Gallager a choisi d'accepter une bourse complète pour jouer au football à l'université de Temple.
+H: Gallager a fréquenté l'université de Temple.
+L: 0
+
+Ex 4:
+P: Zinedine Zidane a devancé Thierry Henry et Ronaldo pour le prix Fifa 2003 du joueur mondial de l'année.
+H: La Fifa sélectionne le joueur de football mondial de l'année 1994.
+L: 1
+
+Ex 5:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1","0","0","entailment"
+"Certaines personnes sont debout","Un groupe d'éclaireurs marchent à travers l'herbe","Ex 1:
+P: Des milliers de soldats sont déployés pour sécuriser la ville de Bogor, où Bush doit s'entretenir avec son homologue indonésien, Susilo Bambang Yudhoyono.
+H: Bush doit se rendre dans la ville de Bogor.
+L: 0
+
+Ex 2:
+P: L'équipe de 10 hommes devrait arriver au pied de la montagne à la fin du mois d'avril et a commencé son voyage vers le sommet de 8586 mètres au début du mois de mai.
+H: Le Kanchenjunga est haut de 8586 mètres.
+L: 1
+
+Ex 3:
+P: Des témoins auraient entendu et vu des documents être déchiquetés toute la nuit par Jorge Alvarez Aguirre et Rosario Piazza, deux ex-Opel qui avaient suivi leur chef chez VW.
+H: Les personnes quittant GM avec Lopez comprenaient Jose Gutierrez, Jorge Alvarez Aguirre et Rosario Piazza.
+L: 2
+
+Ex 4:
+P: Ils se sont nommés en l'honneur de Sainte Jeanne d'Arc. La brigade a commencé avec 17 femmes, mais elle a rapidement atteint 135 membres. Sa mission était d'obtenir de l'argent, des armes, des provisions et des informations pour les hommes combattants. Beaucoup faisaient entrer clandestinement des armes dans les zones de combat en les transportant dans des charrettes remplies de céréales ou de ciment.
+H: La brigade de Sainte Jeanne d'Arc se procurait des armes pour les combattants.
+L: 0
+
+Ex 5:
+P: L'opération FALCON a été menée pendant une semaine, du 4 au 10 avril 2005, choisie pour coïncider avec la semaine nationale des droits des victimes de crimes, du 10 au 16 avril, les dates étant choisies pour ""honorer les victimes"" de crimes violents en Amérique. ""En retirant les fugitifs violents des rues et en les mettant derrière les barreaux, là où ils doivent être,"" a déclaré le procureur général Alberto Gonzales, ""nous avons honoré les victimes et rendu nos rues plus sûres.""
+H: L'Opération Condor était un génocide et une campagne de contre-terrorisme mise en œuvre par les dictatures de droite qui ont dominé le Cône Sud en Amérique latine des années 1950 à 1980.
+L: 1","1","1","neutral"
+"Trois personnes sont debout à côté d'un membre d'arbre","Deux enfants sont suspendus à une grande branche","Ex 1:
+P: Une équipe d'alpinistes tibétains composée de sept membres a conquis le mont Kanchenjunga, troisième plus haut sommet du monde, qui culmine à 8586 mètres, a confirmé dimanche ici l'association chinoise d'alpinisme.
+H: Le Kanchenjunga fait 8586 mètres de haut.
+L: 0
+
+Ex 2:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1
+
+Ex 3:
+P: Des témoins auraient entendu et vu des documents être déchiquetés toute la nuit par Jorge Alvarez Aguirre et Rosario Piazza, deux ex-Opel qui avaient suivi leur chef chez VW.
+H: Les personnes quittant GM avec Lopez comprenaient Jose Gutierrez, Jorge Alvarez Aguirre et Rosario Piazza.
+L: 2
+
+Ex 4:
+P: Contrairement à ce qui se passe dans certaines autres parties de l'Amazonie, où la forêt est coupée et brûlée à un rythme alarmant, ceux qui veulent sauver la forêt d'Acre semblent gagner.
+H: Le cycle de défrichement par coupe et brûlis cause de nombreux problèmes dans la forêt tropicale.
+L: 0
+
+Ex 5:
+P: Le ""sniffage de colle"" est plus courant chez les adolescents. Ils en sortent généralement lorsqu'ils ont accès à d'autres drogues comme l'alcool et le cannabis. On sait qu'il y a des enfants de sept ans qui commencent à ""sniffer de la colle"". En raison de la stigmatisation sociale liée au ""sniffage de colle"", la plupart des sniffeurs arrêtent vers 16 ou 17 ans, à moins qu'ils ne soient sérieusement dépendants.
+H: Le ""sniffage de colle"" est courant chez les jeunes.
+L: 0","1","1","neutral"
+"Deux enfants sont suspendus à une grande branche","Deux enfants et un adulte ne sont pas debout à côté d'un membre d'arbre","Ex 1:
+P: Chaque année, environ un quart des enfants subissent une blessure suffisamment grave pour nécessiter des soins médicaux, des absences scolaires et/ou un repos au lit.
+H: Les feux d'artifice peuvent causer des blessures graves.
+L: 1
+
+Ex 2:
+P: Le ""sniffage de colle"" est plus courant chez les adolescents. Ils en sortent généralement lorsqu'ils ont accès à d'autres drogues comme l'alcool et le cannabis. On sait qu'il y a des enfants de sept ans qui commencent à ""sniffer de la colle"". En raison de la stigmatisation sociale liée au ""sniffage de colle"", la plupart des sniffeurs arrêtent vers 16 ou 17 ans, à moins qu'ils ne soient sérieusement dépendants.
+H: Le ""sniffage de colle"" est courant chez les jeunes.
+L: 0
+
+Ex 3:
+P: Les parents doivent également contribuer ""beaucoup plus pleinement"", tandis que les écoles ""en roue libre"" seront combattues, a déclaré Mme Kelly aux députés. Mais le secrétaire d'ombre de l'éducation, David Cameron, qui a soutenu certaines idées, a déclaré que d'autres parties étaient un ""fouillis complet"".
+H: David Cameron travaille comme secrétaire d'ombre de l'éducation.
+L: 0
+
+Ex 4:
+P: Le saut de Beamon était un record du monde qui a éclipsé le record précédent de 21 3/4 pouces. Ce saut est toujours un record olympique, et est resté un record du monde jusqu'à ce que Mike Powell fasse un saut de 29' 4 1/2"" aux championnats du monde de 1991 à Tokyo.
+H: 2,45 m est le record du monde du saut en hauteur.
+L: 1
+
+Ex 5:
+P: Le ""travail des enfants"" est, de manière générale, le travail effectué par des enfants qui leur nuit ou les exploite d'une manière ou d'une autre (physiquement, mentalement, moralement, ou en bloquant l'accès à l'éducation).
+H: Le travail des enfants est largement répandu en Asie.
+L: 1","1","1","neutral"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant tient une arme à feu","Ex 1:
+P: Le ""sniffage"" de colle et d'autres formes d'abus de solvants sont négligés dans la lutte contre les drogues, selon un nouveau rapport.
+H: Le ""sniffage"" de colle est courant chez les jeunes.
+L: 1
+
+Ex 2:
+P: Le ""sniffage de colle"" est plus courant chez les adolescents. Ils en sortent généralement lorsqu'ils ont accès à d'autres drogues comme l'alcool et le cannabis. On sait qu'il y a des enfants de sept ans qui commencent à ""sniffer de la colle"". En raison de la stigmatisation sociale liée au ""sniffage de colle"", la plupart des sniffeurs arrêtent vers 16 ou 17 ans, à moins qu'ils ne soient sérieusement dépendants.
+H: Le ""sniffage de colle"" est courant chez les jeunes.
+L: 0
+
+Ex 3:
+P: Chaque année, environ un quart des enfants subissent une blessure suffisamment grave pour nécessiter des soins médicaux, des absences scolaires et/ou un repos au lit.
+H: Les feux d'artifice peuvent causer des blessures graves.
+L: 1
+
+Ex 4:
+P: Une grande partie des jeunes enfants en Ukraine souffrent de divers problèmes de santé qui n'ont probablement pas été diagnostiqués jusqu'à présent, mais qui sont détectés en lien avec la catastrophe de Tchernobyl. Cela pourrait bien indiquer un système de soins de santé faible et des conditions de vie difficiles.
+H: La catastrophe de Tchernobyl a eu des répercussions en dehors de l'ex-URSS.
+L: 1
+
+Ex 5:
+P: Une adolescente en état de mort cérébrale a été retirée de l'équipement de maintien en vie après avoir donné naissance à une fille prématurée.
+H: Les femmes enceintes sont autorisées à mourir après avoir accouché de leur bébé.
+L: 1","2","2","contradiction"
+"Il n'y a pas d'enfant tenant une arme à feu","Un enfant qui rit tient un pistolet à eau et se fait pulvériser avec de l'eau","Ex 1:
+P: Le ""sniffage"" de colle et d'autres formes d'abus de solvants sont négligés dans la lutte contre les drogues, selon un nouveau rapport.
+H: Le ""sniffage"" de colle est courant chez les jeunes.
+L: 1
+
+Ex 2:
+P: Le ""sniffage de colle"" est plus courant chez les adolescents. Ils en sortent généralement lorsqu'ils ont accès à d'autres drogues comme l'alcool et le cannabis. On sait qu'il y a des enfants de sept ans qui commencent à ""sniffer de la colle"". En raison de la stigmatisation sociale liée au ""sniffage de colle"", la plupart des sniffeurs arrêtent vers 16 ou 17 ans, à moins qu'ils ne soient sérieusement dépendants.
+H: Le ""sniffage de colle"" est courant chez les jeunes.
+L: 0
+
+Ex 3:
+P: Chaque année, environ un quart des enfants subissent une blessure suffisamment grave pour nécessiter des soins médicaux, des absences scolaires et/ou un repos au lit.
+H: Les feux d'artifice peuvent causer des blessures graves.
+L: 1
+
+Ex 4:
+P: Une grande partie des jeunes enfants en Ukraine souffrent de divers problèmes de santé qui n'ont probablement pas été diagnostiqués jusqu'à présent, mais qui sont détectés en lien avec la catastrophe de Tchernobyl. Cela pourrait bien indiquer un système de soins de santé faible et des conditions de vie difficiles.
+H: La catastrophe de Tchernobyl a eu des répercussions en dehors de l'ex-URSS.
+L: 1
+
+Ex 5:
+P: Une adolescente en état de mort cérébrale a été retirée de l'équipement de maintien en vie après avoir donné naissance à une fille prématurée.
+H: Les femmes enceintes sont autorisées à mourir après avoir accouché de leur bébé.
+L: 1","2","1","neutral"
+"Deux daschunds jouent avec une boule rouge","Deux chiens bruns se battent pour une boule rouge et jouent dans l'herbe","Ex 1:
+P: Ronaldo Luiz Nazario da Silva est tout simplement l'un des plus grands attaquants de l'histoire du football mondial, capable de laisser toute une équipe sur le carreau par ses courses fulgurantes et ses dribbles, élu joueur mondial de l'année de la FIFA à trois reprises et déjà double vainqueur de la Coupe du monde de la FIFA.
+H: La FIFA désigne le joueur de football mondial de l'année 1994.
+L: 1
+
+Ex 2:
+P: Le passeport pour animaux de compagnie est une feuille A4 rose qui contient le numéro de la micropuce et la certification que le chien a été vacciné contre la rage, et qui doit être signée par un vétérinaire ayant le statut LVI. Le passeport ne doit pas être confondu avec la pochette violette beaucoup plus petite délivrée couramment par les vétérinaires, qui enregistre l'historique complet des vaccinations de l'animal.
+H: Le passeport pour animaux de compagnie contient l'historique complet des vaccinations des animaux de compagnie.
+L: 2
+
+Ex 3:
+P: Le 1er octobre 2001, l'UE et d'autres pays ont introduit la possibilité pour les propriétaires d'animaux domestiques de demander des passeports pour animaux de compagnie dans le cadre du Pets Travel Scheme (PETS en abrégé), pour les animaux de compagnie revenant de l'étranger au Royaume-Uni. Cela a remplacé l'ancien système de quarantaine obligatoire de 6 mois pour tous les animaux domestiques.
+H: En 2001, l'UE a introduit un passeport pour les animaux de compagnie.
+L: 0
+
+Ex 4:
+P: Les animaux sont autorisés à entrer au Royaume-Uni 6 mois plus tard sans quarantaine à condition qu'ils aient été traités contre les tiques, les puces et le ténia entre 24 et 48 heures avant de monter à bord du transport qui ramènera les animaux au Royaume-Uni.
+H: La quarantaine est obligatoire pour l'entrée des animaux au Royaume-Uni.
+L: 2
+
+Ex 5:
+P: Le 1er octobre 2001, l'UE et d'autres pays ont introduit la possibilité pour les propriétaires d'animaux domestiques de demander des passeports pour animaux de compagnie dans le cadre du Pets Travel Scheme (PETS en abrégé), pour les animaux de compagnie revenant de l'étranger au Royaume-Uni. Cela a remplacé l'ancien système de quarantaine obligatoire de 6 mois pour tous les animaux domestiques.
+H: En 2001, l'UE a introduit une quarantaine obligatoire de six mois pour tous les animaux domestiques.
+L: 2","1","1","neutral"
